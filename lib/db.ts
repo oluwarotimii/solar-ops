@@ -1,10 +1,16 @@
 import { neon } from "@neondatabase/serverless"
 
+// Use v0's DATABASE_URL environment variable
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required")
 }
 
 export const sql = neon(process.env.DATABASE_URL)
+
+// Test the connection immediately
+sql`SELECT 1`.catch((err) => {
+  console.error("Database connection failed:", err)
+})
 
 // Helper function to convert snake_case to camelCase
 export function toCamelCase(obj: any): any {

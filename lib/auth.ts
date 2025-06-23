@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import { sql, toCamelCase } from "./db"
 import type { User } from "@/types"
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
@@ -26,53 +26,63 @@ export function verifyToken(token: string): { userId: string } | null {
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const result = await sql`
-    SELECT u.*, r.name as role_name, r.description as role_description, 
-           r.is_admin as role_is_admin, r.permissions as role_permissions
-    FROM users u
-    LEFT JOIN roles r ON u.role_id = r.id
-    WHERE u.id = ${id} AND u.status = 'active'
-  `
+  try {
+    const result = await sql`
+      SELECT u.*, r.name as role_name, r.description as role_description, 
+             r.is_admin as role_is_admin, r.permissions as role_permissions
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE u.id = ${id} AND u.status = 'active'
+    `
 
-  if (result.length === 0) return null
+    if (result.length === 0) return null
 
-  const user = toCamelCase(result[0])
-  if (user.roleName) {
-    user.role = {
-      id: user.roleId,
-      name: user.roleName,
-      description: user.roleDescription,
-      isAdmin: user.roleIsAdmin,
-      permissions: user.rolePermissions,
+    const user = toCamelCase(result[0])
+    if (user.roleName) {
+      user.role = {
+        id: user.roleId,
+        name: user.roleName,
+        description: user.roleDescription,
+        isAdmin: user.roleIsAdmin,
+        permissions: user.rolePermissions,
+      }
     }
-  }
 
-  return user
+    return user
+  } catch (error) {
+    console.error("Error getting user by ID:", error)
+    return null
+  }
 }
 
 export async function getUserByEmail(email: string): Promise<(User & { passwordHash: string }) | null> {
-  const result = await sql`
-    SELECT u.*, r.name as role_name, r.description as role_description, 
-           r.is_admin as role_is_admin, r.permissions as role_permissions
-    FROM users u
-    LEFT JOIN roles r ON u.role_id = r.id
-    WHERE u.email = ${email}
-  `
+  try {
+    const result = await sql`
+      SELECT u.*, r.name as role_name, r.description as role_description, 
+             r.is_admin as role_is_admin, r.permissions as role_permissions
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE u.email = ${email}
+    `
 
-  if (result.length === 0) return null
+    if (result.length === 0) return null
 
-  const user = toCamelCase(result[0])
-  if (user.roleName) {
-    user.role = {
-      id: user.roleId,
-      name: user.roleName,
-      description: user.roleDescription,
-      isAdmin: user.roleIsAdmin,
-      permissions: user.rolePermissions,
+    const user = toCamelCase(result[0])
+    if (user.roleName) {
+      user.role = {
+        id: user.roleId,
+        name: user.roleName,
+        description: user.roleDescription,
+        isAdmin: user.roleIsAdmin,
+        permissions: user.rolePermissions,
+      }
     }
-  }
 
-  return user
+    return user
+  } catch (error) {
+    console.error("Error getting user by email:", error)
+    return null
+  }
 }
 
 export function hasPermission(user: User, permission: string): boolean {
