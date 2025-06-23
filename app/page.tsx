@@ -1,14 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Sun, Zap, MapPin, Users } from "lucide-react"
+import { Sun, Zap, MapPin, Users } from "lucide-react"
 
 export default function HomePage() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSetup, setIsSetup] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -16,41 +14,8 @@ export default function HomePage() {
     const token = localStorage.getItem("token")
     if (token) {
       router.push("/dashboard")
-      return
     }
-
-    // Check if database is set up
-    checkDatabaseSetup()
   }, [router])
-
-  const checkDatabaseSetup = async () => {
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "test@test.com", password: "test" }),
-      })
-
-      // If we get any response (even error), database is set up
-      setIsSetup(true)
-    } catch (error) {
-      // If we get network error, database might not be set up
-      setIsSetup(false)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading Solar Field Operations...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -99,29 +64,16 @@ export default function HomePage() {
             <CardHeader>
               <CardTitle className="text-center">Get Started</CardTitle>
               <CardDescription className="text-center">
-                {isSetup
-                  ? "Database is ready! Sign in to access your dashboard."
-                  : "Set up your database first, then sign in to get started."}
+                Sign in to access your dashboard or create a new account.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!isSetup && (
-                <Button onClick={() => router.push("/setup")} className="w-full" size="lg">
-                  Setup Database
-                </Button>
-              )}
-
-              <Button
-                onClick={() => router.push("/login")}
-                variant={isSetup ? "default" : "outline"}
-                className="w-full"
-                size="lg"
-              >
+              <Button onClick={() => router.push("/login")} className="w-full" size="lg">
                 Sign In
               </Button>
 
               <Button onClick={() => router.push("/register")} variant="outline" className="w-full">
-                Register New Account
+                Create Account
               </Button>
             </CardContent>
           </Card>

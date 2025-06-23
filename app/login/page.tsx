@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle, Info } from "lucide-react"
+import { Loader2, AlertCircle, Info, Sun } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -48,9 +48,9 @@ export default function LoginPage() {
     }
   }
 
-  const quickLogin = (demoEmail: string) => {
-    setEmail(demoEmail)
-    setPassword("demo123")
+  const useDefaultAdmin = () => {
+    setEmail("admin@solar.com")
+    setPassword("admin123")
   }
 
   return (
@@ -58,8 +58,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">🌞 Solar Field Operations</CardTitle>
-            <CardDescription>Sign in to your Nigerian solar operations dashboard</CardDescription>
+            <div className="flex justify-center mb-4">
+              <Sun className="h-12 w-12 text-yellow-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Solar Field Operations</CardTitle>
+            <CardDescription>Sign in to your dashboard</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,61 +106,40 @@ export default function LoginPage() {
                   "Sign In"
                 )}
               </Button>
+
+              <div className="text-center">
+                <Button type="button" variant="link" onClick={() => router.push("/register")}>
+                  Don't have an account? Register
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
 
-        {/* Demo Accounts Card */}
+        {/* Default Admin Info */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <Info className="mr-2 h-5 w-5" />
-              Demo Accounts
+              Default Admin Account
             </CardTitle>
-            <CardDescription>Click to quickly fill login form (Password: demo123)</CardDescription>
+            <CardDescription>Use this to access the system initially</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => quickLogin("admin@demo.com")}
-                className="justify-start"
-              >
-                👨‍💼 Admin - John Admin
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => quickLogin("supervisor@demo.com")}
-                className="justify-start"
-              >
-                👩‍💼 Supervisor - Sarah Supervisor
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => quickLogin("tech1@demo.com")}
-                className="justify-start"
-              >
-                🔧 Technician - Emeka Okafor
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => quickLogin("tech2@demo.com")}
-                className="justify-start"
-              >
-                🔧 Technician - Adebayo Adeyemi
-              </Button>
+            <div className="bg-gray-50 p-3 rounded-lg text-sm">
+              <p>
+                <strong>Email:</strong> admin@solar.com
+              </p>
+              <p>
+                <strong>Password:</strong> admin123
+              </p>
             </div>
 
-            <div className="text-xs text-gray-500 pt-2 border-t">
-              💡 Need to setup database first?{" "}
-              <a href="/setup" className="text-blue-600 hover:underline">
-                Go to Setup
-              </a>
-            </div>
+            <Button variant="outline" size="sm" onClick={useDefaultAdmin} className="w-full">
+              Use Default Admin Login
+            </Button>
+
+            <p className="text-xs text-gray-500 text-center">💡 Change this password after first login for security</p>
           </CardContent>
         </Card>
       </div>

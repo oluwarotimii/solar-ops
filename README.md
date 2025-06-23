@@ -1,95 +1,74 @@
-# Solar Field Operations Management Platform 🇳🇬
+# Solar Field Operations System
 
-A comprehensive platform for managing solar field operations in Nigeria, including job management, technician tracking, maintenance scheduling, and performance tracking with real-time GPS monitoring.
+A complete field operations management system for Nigerian solar installations, maintenance, and technician tracking.
 
 ## 🚀 Quick Setup
 
-### Prerequisites
-- Node.js 18+ 
-- Neon PostgreSQL database
-- Nigerian phone number for SMS notifications (optional)
+### 1. Environment Variables
 
-### Installation
+Create a `.env.local` file in the root directory:
 
-1. **Clone and install dependencies**
-   \`\`\`bash
-   git clone <repository-url>
-   cd solar-ops-platform
-   npm install
-   \`\`\`
+\`\`\`
+DATABASE_URL="your-neon-database-url-here"
+JWT_SECRET="your-secure-jwt-secret-at-least-32-characters"
+\`\`\`
 
-2. **Environment Setup**
-   Create `.env.local` file:
-   \`\`\`bash
-   # Database (Required)
-   DATABASE_URL=postgresql://username:password@host:5432/database
+### 2. Database Setup
 
-   # Authentication (Required)
-   JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-   
-   # Cron Jobs (Required)
-   CRON_SECRET=your-cron-secret-key
+Run these SQL scripts in your database SQL editor (in order):
 
-   # Push Notifications (Optional)
-   NEXT_PUBLIC_VAPID_PUBLIC_KEY=your-vapid-public-key
-   VAPID_PRIVATE_KEY=your-vapid-private-key
-   VAPID_EMAIL=mailto:your-email@domain.com
+1. **Create Tables**: Run `database/01-create-tables.sql`
+2. **Insert Default Data**: Run `database/02-insert-default-data.sql`
 
-   # SMS Notifications (Optional - Nigerian providers)
-   SMS_API_KEY=your-sms-provider-api-key
-   SMS_SENDER_ID=YourCompany
-   \`\`\`
+### 3. Start the Application
 
-3. **Database Setup**
-   \`\`\`bash
-   npm run setup-db
-   npm run test-db
-   \`\`\`
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
 
-4. **Start Development**
-   \`\`\`bash
-   npm run dev
-   \`\`\`
+### 4. First Login
 
-5. **Access Application**
-   - Web: http://localhost:3000
-   - Login with demo accounts (see below)
+Visit `http://localhost:3000/login` and use:
+- **Email**: admin@solar.com  
+- **Password**: admin123
 
-## 👥 Demo Accounts
+**⚠️ Change this password immediately after first login!**
 
-All demo accounts use password: **`demo123`**
+## 🔧 Features
 
-| Role | Email | Access Level |
-|------|-------|-------------|
-| **Super Admin** | `superadmin@demo.com` | Full system access |
-| **Admin** | `admin@demo.com` | User management, job creation |
-| **Supervisor** | `supervisor@demo.com` | Job management, tracking |
-| **Technician** | `tech1@demo.com` | Emeka Okafor - View jobs, check-in/out |
-| **Technician** | `tech2@demo.com` | Adebayo Adeyemi - View jobs, check-in/out |
-| **Technician** | `tech3@demo.com` | Fatima Aliyu - View jobs, check-in/out |
-| **Technician** | `tech4@demo.com` | Chinedu Okwu - View jobs, check-in/out |
+- ✅ Job Management with multi-technician assignments
+- ✅ Real-time GPS tracking with OpenStreetMap
+- ✅ Earnings management with percentage-based calculations
+- ✅ Maintenance scheduling and reminders
+- ✅ Push notifications
+- ✅ Nigerian localization (Naira currency, WAT timezone)
+- ✅ Complete REST API for mobile apps
 
-## 📱 Mobile App API Routes
+## 📱 API Endpoints
 
-### Authentication
-```http
-POST /api/auth/login
-Content-Type: application/json
+All API endpoints are documented in the original README. Key endpoints:
 
-{
-  "email": "tech1@demo.com",
-  "password": "demo123"
-}
+- `POST /api/auth/login` - Authentication
+- `GET /api/jobs` - Job management
+- `POST /api/tracking/gps` - GPS tracking
+- `GET /api/tracking/technicians` - Live technician locations
 
-Response:
-{
-  "success": true,
-  "token": "jwt-token-here",
-  "user": {
-    "id": "user-id",
-    "email": "tech1@demo.com",
-    "firstName": "Emeka",
-    "lastName": "Okafor",
-    "role": "Technician"
-  }
-}
+## 🇳🇬 Nigerian Context
+
+- Currency: Nigerian Naira (₦)
+- Timezone: West Africa Time (WAT)
+- Phone format: +234-XXX-XXX-XXXX
+- Locations: Lagos, Abuja, Port Harcourt, etc.
+
+## 🔐 Security
+
+- JWT-based authentication
+- Role-based access control
+- Secure password hashing
+- Input validation and sanitization
+
+## 📞 Support
++2349033349548
+
+Built for Nigerian Solar Field Operations with ❤️
