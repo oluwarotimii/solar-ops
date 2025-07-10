@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { getDbSql, toCamelCase } from '@/lib/db';
+import { authenticateApiRequest } from "@/lib/api-auth";
 
 export const revalidate = 0; // Ensure no caching for this API route
 
-export async function GET(request: Request) {
-  const isAdmin = request.headers.get('x-user-is-admin') === 'true';
+export async function GET(request: NextRequest) {
+  const { user, response } = await authenticateApiRequest(request);
+  if (response) {
+    return response;
+  }
 
-  if (!isAdmin) {
+  if (!user || !user.role?.isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

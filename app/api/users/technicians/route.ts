@@ -5,9 +5,9 @@ import { verifyToken } from "@/lib/auth"
 export async function GET(request: NextRequest) {
   try {
     const sql = getDbSql();
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
+    const token = request.cookies.get("token")?.value
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized: No token provided" }, { status: 401 })
     }
 
     const decoded = verifyToken(token)

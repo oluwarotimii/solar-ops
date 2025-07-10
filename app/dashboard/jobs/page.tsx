@@ -59,16 +59,7 @@ export default function JobsPage() {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
-      const response = await fetch("/api/jobs", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/jobs")
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -86,16 +77,7 @@ export default function JobsPage() {
 
   const fetchJobTypes = async () => {
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
-      const response = await fetch("/api/job-types", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/job-types")
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -132,16 +114,8 @@ export default function JobsPage() {
   const handleJobDelete = async (jobId: string) => {
     if (!confirm("Are you sure you want to delete this job?")) return;
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication token not found.");
-      }
-
       const response = await fetch(`/api/jobs/${jobId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {

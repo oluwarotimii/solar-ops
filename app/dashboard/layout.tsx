@@ -14,7 +14,10 @@ export default async function DashboardLayout({
   const cookieStore = cookies()
   const token = cookieStore.get('token')?.value
 
+  console.log(`[Auth Debug] Token in dashboard layout: ${token ? token.substring(0, 10) + '...' : 'not found'}`);
+
   if (!token) {
+    console.log("[Auth Debug] Redirecting to login because token is missing.");
     redirect('/login')
   }
 
