@@ -39,18 +39,7 @@ export default function TrackingPage() {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        setError("Authentication token not found.")
-        setLoading(false)
-        return
-      }
-
-      const response = await fetch("/api/tracking/technicians", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/tracking/technicians")
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -97,12 +86,10 @@ export default function TrackingPage() {
 
   const handleStartTracking = async (technicianId: string) => {
     try {
-      const token = localStorage.getItem("token")
       const response = await fetch("/api/tracking/start-journey", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ technicianId }),
       })
@@ -118,12 +105,10 @@ export default function TrackingPage() {
 
   const handleStopTracking = async (technicianId: string) => {
     try {
-      const token = localStorage.getItem("token")
       const response = await fetch("/api/tracking/end-journey", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ technicianId }),
       })

@@ -42,18 +42,7 @@ export default function TechniciansPage() {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        setError("Authentication token not found.")
-        setLoading(false)
-        return
-      }
-
-      const response = await fetch("/api/users/technicians", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/users/technicians")
 
       if (!response.ok) {
         const errorData = await response.json()

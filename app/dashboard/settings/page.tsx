@@ -71,15 +71,7 @@ export default function SettingsPage() {
     setLoadingPage(true)
     setError(null)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
-      // Fetch Company and System Settings (assuming a single /api/settings endpoint for all system_settings)
-      const systemSettingsResponse = await fetch("/api/settings", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const systemSettingsResponse = await fetch("/api/settings")
       if (!systemSettingsResponse.ok) {
         const errorData = await systemSettingsResponse.json()
         throw new Error(errorData.error || "Failed to fetch system settings.")
@@ -116,9 +108,7 @@ export default function SettingsPage() {
       })
 
       // Fetch Job Types
-      const jobTypesResponse = await fetch("/api/job-types", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const jobTypesResponse = await fetch("/api/job-types")
       if (!jobTypesResponse.ok) {
         const errorData = await jobTypesResponse.json()
         throw new Error(errorData.error || "Failed to fetch job types.")
@@ -140,23 +130,10 @@ export default function SettingsPage() {
     setLoadingSave(true)
     setError(null)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
-      // Prepare data for saving (combine all settings into one payload if API supports it)
-      const payload = {
-        ...companySettings,
-        ...notificationSettings,
-        ...systemSettings,
-      }
-
       const response = await fetch("/api/settings", {
         method: "PUT", // Or PATCH
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       })
@@ -177,16 +154,10 @@ export default function SettingsPage() {
 
   const handleJobTypeCreated = async (newJobType: any) => {
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
       const response = await fetch("/api/job-types", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(newJobType),
       })
@@ -205,16 +176,8 @@ export default function SettingsPage() {
 
   const removeJobType = async (id: string) => {
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
       const response = await fetch(`/api/job-types/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
 
       if (!response.ok) {

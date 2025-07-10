@@ -20,16 +20,7 @@ export default function ReportsPage() {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        throw new Error("Authentication token not found.")
-      }
-
-      const response = await fetch(`/api/dashboard/reports?type=${reportType}&range=${dateRange}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch(`/api/dashboard/reports?type=${reportType}&range=${dateRange}`)
 
       if (!response.ok) {
         const errorData = await response.json()
