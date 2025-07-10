@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { Settings, Bell, Shield, Database, Save, Plus, Trash2, Edit, Building } from "lucide-react"
+import { Settings, Bell, Shield, Database, Save, Plus, Trash2, Edit, Building, Loader2, AlertCircle } from "lucide-react"
 import CreateJobTypeDialog from "@/components/create-job-type-dialog"
 
 interface CompanySettings {
@@ -46,71 +46,186 @@ interface SystemSettings {
   defaultJobShare: number
 }
 
+interface JobType {
+  id: string
+  name: string
+  baseValue: number
+  defaultPercentage: number
+  color: string
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("company")
-  const [loading, setLoading] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [loadingPage, setLoadingPage] = useState(true)
+  const [loadingSave, setLoadingSave] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showCreateJobType, setShowCreateJobType] = useState(false)
 
-  // Company Settings
-  const [companySettings, setCompanySettings] = useState<CompanySettings>({
-    name: "Solar Field Operations Nigeria",
-    address: "123 Herbert Macaulay Way, Yaba, Lagos State, Nigeria",
-    phone: "+234-801-SOLAR-1",
-    email: "info@solarfieldops.ng",
-    website: "https://solarfieldops.ng",
-    logo: "",
-    timezone: "Africa/Lagos",
-    currency: "NGN",
-  })
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(null)
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null)
+  const [jobTypes, setJobTypes] = useState<JobType[]>([])
 
-  // Notification Settings
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: true,
-    jobAssignments: true,
-    maintenanceReminders: true,
-    systemAlerts: true,
-    weeklyReports: false,
-  })
+  const fetchSettings = async () => {
+    setLoadingPage(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found.")
+      }
 
-  // System Settings
-  const [systemSettings, setSystemSettings] = useState<SystemSettings>({
-    autoAssignJobs: false,
-    requireGPSCheckin: true,
-    allowOfflineMode: true,
-    dataRetentionDays: 365,
-    maxJobsPerTechnician: 5,
-    defaultJobShare: 60,
-  })
+      // Fetch Company and System Settings (assuming a single /api/settings endpoint for all system_settings)
+      const systemSettingsResponse = await fetch("/api/settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!systemSettingsResponse.ok) {
+        const errorData = await systemSettingsResponse.json()
+        throw new Error(errorData.error || "Failed to fetch system settings.")
+      }
+      const systemSettingsData = await systemSettingsResponse.json()
+      // Map fetched data to respective states
+      setCompanySettings({
+        name: systemSettingsData.companyName || "",
+        address: systemSettingsData.companyAddress || "",
+        phone: systemSettingsData.companyPhone || "",
+        email: systemSettingsData.companyEmail || "",
+        website: systemSettingsData.companyWebsite || "",
+        logo: systemSettingsData.companyLogo || "",
+        timezone: systemSettingsData.timezone || "",
+        currency: systemSettingsData.currency || "",
+      })
+      setSystemSettings({
+        autoAssignJobs: systemSettingsData.autoAssignJobs || false,
+        requireGPSCheckin: systemSettingsData.requireGpsCheckin || false,
+        allowOfflineMode: systemSettingsData.allowOfflineMode || false,
+        dataRetentionDays: systemSettingsData.dataRetentionDays || 0,
+        maxJobsPerTechnician: systemSettingsData.maxJobsPerTechnician || 0,
+        defaultJobShare: systemSettingsData.defaultJobShare || 0,
+      })
+      // Assuming notification settings are also part of system settings or user settings
+      setNotificationSettings({
+        emailNotifications: systemSettingsData.emailNotifications || false,
+        smsNotifications: systemSettingsData.smsNotifications || false,
+        pushNotifications: systemSettingsData.pushNotifications || false,
+        jobAssignments: systemSettingsData.jobAssignments || false,
+        maintenanceReminders: systemSettingsData.maintenanceReminders || false,
+        systemAlerts: systemSettingsData.systemAlerts || false,
+        weeklyReports: systemSettingsData.weeklyReports || false,
+      })
 
-  // Job Types Management
-  const [jobTypes, setJobTypes] = useState([
-    { id: "1", name: "Solar Installation", baseValue: 500000, defaultPercentage: 60, color: "#10B981" },
-    { id: "2", name: "Maintenance Check", baseValue: 75000, defaultPercentage: 70, color: "#F59E0B" },
-    { id: "3", name: "Repair Service", baseValue: 150000, defaultPercentage: 65, color: "#EF4444" },
-    { id: "4", name: "System Inspection", baseValue: 100000, defaultPercentage: 55, color: "#3B82F6" },
-    { id: "5", name: "Emergency Call", baseValue: 200000, defaultPercentage: 70, color: "#DC2626" },
-  ])
+      // Fetch Job Types
+      const jobTypesResponse = await fetch("/api/job-types", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!jobTypesResponse.ok) {
+        const errorData = await jobTypesResponse.json()
+        throw new Error(errorData.error || "Failed to fetch job types.")
+      }
+      const jobTypesData = await jobTypesResponse.json()
+      setJobTypes(jobTypesData)
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred while fetching settings.")
+    } finally {
+      setLoadingPage(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
 
   const handleSave = async () => {
-    setLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    }, 1000)
+    setLoadingSave(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found.")
+      }
+
+      // Prepare data for saving (combine all settings into one payload if API supports it)
+      const payload = {
+        ...companySettings,
+        ...notificationSettings,
+        ...systemSettings,
+      }
+
+      const response = await fetch("/api/settings", {
+        method: "PUT", // Or PATCH
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to save settings.")
+      }
+
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred while saving settings.")
+    } finally {
+      setLoadingSave(false)
+    }
   }
 
-  const handleJobTypeCreated = (newJobType: any) => {
-    setJobTypes([...jobTypes, { ...newJobType, id: Date.now().toString() }])
-    setShowCreateJobType(false)
+  const handleJobTypeCreated = async (newJobType: any) => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found.")
+      }
+
+      const response = await fetch("/api/job-types", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newJobType),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create job type.")
+      }
+
+      setShowCreateJobType(false)
+      fetchSettings() // Re-fetch all settings to update job types list
+    } catch (err: any) {
+      setError(err.message || "Error creating job type.")
+    }
   }
 
-  const removeJobType = (id: string) => {
-    setJobTypes(jobTypes.filter((jt) => jt.id !== id))
+  const removeJobType = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found.")
+      }
+
+      const response = await fetch(`/api/job-types/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete job type.")
+      }
+
+      fetchSettings() // Re-fetch all settings to update job types list
+    } catch (err: any) {
+      setError(err.message || "Error deleting job type.")
+    }
   }
 
   const formatNaira = (amount: number) => {
@@ -121,6 +236,24 @@ export default function SettingsPage() {
     }).format(amount)
   }
 
+  if (loadingPage) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="ml-2 text-lg">Loading settings...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        <AlertCircle className="h-8 w-8 mr-2" />
+        <p className="text-lg">Error: {error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -128,13 +261,13 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold">Settings</h1>
           <p className="text-muted-foreground">Manage your system configuration and preferences</p>
         </div>
-        <Button onClick={handleSave} disabled={loading}>
+        <Button onClick={handleSave} disabled={loadingSave}>
           <Save className="mr-2 h-4 w-4" />
-          {loading ? "Saving..." : "Save Changes"}
+          {loadingSave ? "Saving..." : "Save Changes"}
         </Button>
       </div>
 
-      {saved && (
+      {saveSuccess && (
         <Alert>
           <AlertDescription>Settings saved successfully!</AlertDescription>
         </Alert>
@@ -177,16 +310,16 @@ export default function SettingsPage() {
                   <Label htmlFor="companyName">Company Name</Label>
                   <Input
                     id="companyName"
-                    value={companySettings.name}
-                    onChange={(e) => setCompanySettings((prev) => ({ ...prev, name: e.target.value }))}
+                    value={companySettings?.name || ""}
+                    onChange={(e) => setCompanySettings((prev) => (prev ? { ...prev, name: e.target.value } : null))}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="website">Website</Label>
                   <Input
                     id="website"
-                    value={companySettings.website}
-                    onChange={(e) => setCompanySettings((prev) => ({ ...prev, website: e.target.value }))}
+                    value={companySettings?.website || ""}
+                    onChange={(e) => setCompanySettings((prev) => (prev ? { ...prev, website: e.target.value } : null))}
                   />
                 </div>
               </div>
@@ -195,8 +328,8 @@ export default function SettingsPage() {
                 <Label htmlFor="address">Address</Label>
                 <Textarea
                   id="address"
-                  value={companySettings.address}
-                  onChange={(e) => setCompanySettings((prev) => ({ ...prev, address: e.target.value }))}
+                  value={companySettings?.address || ""}
+                  onChange={(e) => setCompanySettings((prev) => (prev ? { ...prev, address: e.target.value } : null))}
                   rows={2}
                 />
               </div>
@@ -206,8 +339,8 @@ export default function SettingsPage() {
                   <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
-                    value={companySettings.phone}
-                    onChange={(e) => setCompanySettings((prev) => ({ ...prev, phone: e.target.value }))}
+                    value={companySettings?.phone || ""}
+                    onChange={(e) => setCompanySettings((prev) => (prev ? { ...prev, phone: e.target.value } : null))}
                     placeholder="+234-XXX-XXX-XXXX"
                   />
                 </div>
@@ -216,8 +349,8 @@ export default function SettingsPage() {
                   <Input
                     id="email"
                     type="email"
-                    value={companySettings.email}
-                    onChange={(e) => setCompanySettings((prev) => ({ ...prev, email: e.target.value }))}
+                    value={companySettings?.email || ""}
+                    onChange={(e) => setCompanySettings((prev) => (prev ? { ...prev, email: e.target.value } : null))}
                   />
                 </div>
               </div>
@@ -226,8 +359,8 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="timezone">Timezone</Label>
                   <Select
-                    value={companySettings.timezone}
-                    onValueChange={(value) => setCompanySettings((prev) => ({ ...prev, timezone: value }))}
+                    value={companySettings?.timezone || ""}
+                    onValueChange={(value) => setCompanySettings((prev) => (prev ? { ...prev, timezone: value } : null))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -241,8 +374,8 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>
                   <Select
-                    value={companySettings.currency}
-                    onValueChange={(value) => setCompanySettings((prev) => ({ ...prev, currency: value }))}
+                    value={companySettings?.currency || ""}
+                    onValueChange={(value) => setCompanySettings((prev) => (prev ? { ...prev, currency: value } : null))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -274,9 +407,9 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">Receive notifications via email</p>
                     </div>
                     <Switch
-                      checked={notificationSettings.emailNotifications}
+                      checked={notificationSettings?.emailNotifications || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, emailNotifications: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, emailNotifications: checked } : null))
                       }
                     />
                   </div>
@@ -286,9 +419,9 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
                     </div>
                     <Switch
-                      checked={notificationSettings.smsNotifications}
+                      checked={notificationSettings?.smsNotifications || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, smsNotifications: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, smsNotifications: checked } : null))
                       }
                     />
                   </div>
@@ -298,9 +431,9 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">Receive browser push notifications</p>
                     </div>
                     <Switch
-                      checked={notificationSettings.pushNotifications}
+                      checked={notificationSettings?.pushNotifications || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, pushNotifications: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, pushNotifications: checked } : null))
                       }
                     />
                   </div>
@@ -315,36 +448,36 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <Label>Job Assignments</Label>
                     <Switch
-                      checked={notificationSettings.jobAssignments}
+                      checked={notificationSettings?.jobAssignments || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, jobAssignments: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, jobAssignments: checked } : null))
                       }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Maintenance Reminders</Label>
                     <Switch
-                      checked={notificationSettings.maintenanceReminders}
+                      checked={notificationSettings?.maintenanceReminders || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, maintenanceReminders: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, maintenanceReminders: checked } : null))
                       }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>System Alerts</Label>
                     <Switch
-                      checked={notificationSettings.systemAlerts}
+                      checked={notificationSettings?.systemAlerts || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, systemAlerts: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, systemAlerts: checked } : null))
                       }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Weekly Reports</Label>
                     <Switch
-                      checked={notificationSettings.weeklyReports}
+                      checked={notificationSettings?.weeklyReports || false}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({ ...prev, weeklyReports: checked }))
+                        setNotificationSettings((prev) => (prev ? { ...prev, weeklyReports: checked } : null))
                       }
                     />
                   </div>
@@ -373,8 +506,10 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     <Switch
-                      checked={systemSettings.autoAssignJobs}
-                      onCheckedChange={(checked) => setSystemSettings((prev) => ({ ...prev, autoAssignJobs: checked }))}
+                      checked={systemSettings?.autoAssignJobs || false}
+                      onCheckedChange={(checked) =>
+                        setSystemSettings((prev) => (prev ? { ...prev, autoAssignJobs: checked } : null))
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -383,9 +518,9 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">Require GPS verification for job site check-ins</p>
                     </div>
                     <Switch
-                      checked={systemSettings.requireGPSCheckin}
+                      checked={systemSettings?.requireGPSCheckin || false}
                       onCheckedChange={(checked) =>
-                        setSystemSettings((prev) => ({ ...prev, requireGPSCheckin: checked }))
+                        setSystemSettings((prev) => (prev ? { ...prev, requireGPSCheckin: checked } : null))
                       }
                     />
                   </div>
@@ -395,9 +530,9 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">Allow technicians to work offline</p>
                     </div>
                     <Switch
-                      checked={systemSettings.allowOfflineMode}
+                      checked={systemSettings?.allowOfflineMode || false}
                       onCheckedChange={(checked) =>
-                        setSystemSettings((prev) => ({ ...prev, allowOfflineMode: checked }))
+                        setSystemSettings((prev) => (prev ? { ...prev, allowOfflineMode: checked } : null))
                       }
                     />
                   </div>
@@ -414,12 +549,11 @@ export default function SettingsPage() {
                     <Input
                       id="dataRetention"
                       type="number"
-                      value={systemSettings.dataRetentionDays}
+                      value={systemSettings?.dataRetentionDays || 0}
                       onChange={(e) =>
-                        setSystemSettings((prev) => ({
-                          ...prev,
-                          dataRetentionDays: Number(e.target.value),
-                        }))
+                        setSystemSettings((prev) =>
+                          prev ? { ...prev, dataRetentionDays: Number(e.target.value) } : null,
+                        )
                       }
                     />
                   </div>
@@ -428,12 +562,11 @@ export default function SettingsPage() {
                     <Input
                       id="maxJobs"
                       type="number"
-                      value={systemSettings.maxJobsPerTechnician}
+                      value={systemSettings?.maxJobsPerTechnician || 0}
                       onChange={(e) =>
-                        setSystemSettings((prev) => ({
-                          ...prev,
-                          maxJobsPerTechnician: Number(e.target.value),
-                        }))
+                        setSystemSettings((prev) =>
+                          prev ? { ...prev, maxJobsPerTechnician: Number(e.target.value) } : null,
+                        )
                       }
                     />
                   </div>
@@ -445,12 +578,11 @@ export default function SettingsPage() {
                     type="number"
                     min="0"
                     max="100"
-                    value={systemSettings.defaultJobShare}
+                    value={systemSettings?.defaultJobShare || 0}
                     onChange={(e) =>
-                      setSystemSettings((prev) => ({
-                        ...prev,
-                        defaultJobShare: Number(e.target.value),
-                      }))
+                      setSystemSettings((prev) =>
+                        prev ? { ...prev, defaultJobShare: Number(e.target.value) } : null,
+                      )
                     }
                   />
                 </div>
@@ -484,28 +616,35 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               {/* Existing Job Types */}
               <div className="space-y-3">
-                {jobTypes.map((jobType) => (
-                  <div key={jobType.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: jobType.color }} />
-                      <div>
-                        <p className="font-medium">{jobType.name}</p>
-                        <div className="flex gap-4 text-sm text-muted-foreground">
-                          <span>Base value: {formatNaira(jobType.baseValue)}</span>
-                          <span>Default share: {jobType.defaultPercentage}%</span>
+                {jobTypes.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No job types found.</p>
+                    <p className="text-sm">Add a new job type to get started.</p>
+                  </div>
+                ) : (
+                  jobTypes.map((jobType) => (
+                    <div key={jobType.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: jobType.color }} />
+                        <div>
+                          <p className="font-medium">{jobType.name}</p>
+                          <div className="flex gap-4 text-sm text-muted-foreground">
+                            <span>Base value: {formatNaira(jobType.baseValue)}</span>
+                            <span>Default share: {jobType.defaultPercentage}%</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => removeJobType(jobType.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => removeJobType(jobType.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql, toCamelCase } from "@/lib/db"
+import { toCamelCase, getDbSql } from "@/lib/db"
 import { verifyToken, getUserById } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
+    const sql = getDbSql();
     const token = request.headers.get("authorization")?.replace("Bearer ", "")
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const sql = getDbSql();
     const token = request.headers.get("authorization")?.replace("Bearer ", "")
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

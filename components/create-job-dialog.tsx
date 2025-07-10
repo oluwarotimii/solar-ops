@@ -13,27 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Plus, Trash2, User } from "lucide-react"
 
-const jobTypes = [
-  { id: "1", name: "Solar Installation", color: "#10B981", defaultPercentage: 60 },
-  { id: "2", name: "Maintenance Check", color: "#F59E0B", defaultPercentage: 70 },
-  { id: "3", name: "Repair Service", color: "#EF4444", defaultPercentage: 65 },
-  { id: "4", name: "System Inspection", color: "#3B82F6", defaultPercentage: 55 },
-  { id: "5", name: "Emergency Call", color: "#DC2626", defaultPercentage: 70 },
-]
-
-const technicians = [
-  { id: "1", firstName: "Emeka", lastName: "Okafor" },
-  { id: "2", firstName: "Adebayo", lastName: "Adeyemi" },
-  { id: "3", firstName: "Fatima", lastName: "Ibrahim" },
-  { id: "4", firstName: "Chinedu", lastName: "Okwu" },
-]
-
-interface JobTechnician {
-  technicianId: string
-  sharePercentage: number
-  role: "lead" | "assistant" | "specialist"
-}
-
 interface CreateJobDialogProps {
   onJobCreated: (job: any) => void
 }
@@ -56,6 +35,51 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
   const [assignedTechnicians, setAssignedTechnicians] = useState<JobTechnician[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [jobTypes, setJobTypes] = useState<any[]>([])
+  const [technicians, setTechnicians] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchJobTypes = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/job-types", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setJobTypes(data);
+        } else {
+          console.error("Failed to fetch job types");
+        }
+      } catch (error) {
+        console.error("Error fetching job types:", error);
+      }
+    };
+
+    const fetchTechnicians = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/users/technicians", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setTechnicians(data);
+        } else {
+          console.error("Failed to fetch technicians");
+        }
+      } catch (error) {
+        console.error("Error fetching technicians:", error);
+      }
+    };
+
+    fetchJobTypes();
+    fetchTechnicians();
+  }, []);
 
   // Auto-populate technician shares when job type changes
   useEffect(() => {
@@ -72,7 +96,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         ])
       }
     }
-  }, [formData.jobTypeId])
+  }, [formData.jobTypeId, jobTypes])
 
   const addTechnician = () => {
     const selectedJobType = jobTypes.find((jt) => jt.id === formData.jobTypeId)
@@ -133,13 +157,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
       return
     }
 
-    const totalShare = getTotalShare()
-    if (totalShare !== 100) {
-      setError(`Total share percentage must equal 100% (currently ${totalShare}%)`)
-      setLoading(false)
-      return
-    }
-
     // Check for duplicate technicians
     const techIds = assignedTechnicians.map((t) => t.technicianId)
     if (new Set(techIds).size !== techIds.length) {
@@ -149,34 +166,33 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     }
 
     try {
-      const selectedJobType = jobTypes.find((jt) => jt.id === formData.jobTypeId)
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...formData,
+          assignedTechnicians: assignedTechnicians,
+          jobValue: Number.parseFloat(formData.jobValue) || 0,
+          estimatedDuration: Number.parseInt(formData.estimatedDuration) || 0,
+          totalTechnicianShare: totalShare,
+        }),
+      });
 
-      // Build technicians array with full details
-      const technicianDetails = assignedTechnicians.map((tech) => {
-        const techInfo = technicians.find((t) => t.id === tech.technicianId)
-        return {
-          ...tech,
-          technician: techInfo,
-        }
-      })
-
-      const newJob = {
-        ...formData,
-        jobType: selectedJobType,
-        technicians: technicianDetails,
-        status: "assigned" as const,
-        jobValue: Number.parseFloat(formData.jobValue) || 0,
-        estimatedDuration: Number.parseInt(formData.estimatedDuration) || 0,
-        totalTechnicianShare: totalShare,
+      if (response.ok) {
+        const newJob = await response.json();
+        onJobCreated(newJob);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to create job");
       }
-
-      setTimeout(() => {
-        onJobCreated(newJob)
-        setLoading(false)
-      }, 1000)
     } catch (error) {
-      setError("Failed to create job")
-      setLoading(false)
+      setError("Failed to create job");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -322,8 +338,8 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
               <div>
                 <CardTitle className="text-lg">Assign Technicians</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Total Share: {getTotalShare()}%
-                  {getTotalShare() !== 100 && <span className="text-red-500 ml-2">(Must equal 100%)</span>}
+                  Total Technician Share: {getTotalShare()}%
+                  <span className="ml-4">Company Share: {100 - getTotalShare()}%</span>
                 </p>
               </div>
               <Button type="button" variant="outline" onClick={addTechnician}>
@@ -430,7 +446,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="submit" disabled={loading || getTotalShare() !== 100}>
+          <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Job
           </Button>

@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql, toCamelCase } from "@/lib/db"
+import { toCamelCase, getDbSql } from "@/lib/db"
 import { verifyToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
+    const sql = getDbSql();
     const token = request.headers.get("authorization")?.replace("Bearer ", "")
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
         ) as journey_start_time
       FROM users u
       JOIN roles r ON u.role_id = r.id
-      LEFT JOIN jobs j ON j.assigned_to = u.id AND j.status IN ('assigned', 'in_progress')
+      LEFT JOIN job_technicians jt ON jt.technician_id = u.id
+      LEFT JOIN jobs j ON jt.job_id = j.id AND j.status IN ('assigned', 'in_progress')
       LEFT JOIN LATERAL (
         SELECT latitude, longitude, timestamp, journey_type
         FROM gps_logs

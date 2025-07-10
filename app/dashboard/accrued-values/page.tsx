@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,66 +33,61 @@ interface AccruedValue {
   createdAt: string
 }
 
-// Demo accrued values data with Nigerian context
-const demoAccruedValues: AccruedValue[] = [
-  {
-    id: "1",
-    technician: { id: "1", name: "Emeka Okafor", email: "tech1@demo.com" },
-    job: { id: "1", title: "Solar Panel Installation - Residential Lagos", type: "Solar Installation" },
-    sharePercentage: 60,
-    jobValue: 750000.0,
-    earnedAmount: 450000.0,
-    rating: 4.8,
-    month: 1,
-    year: 2024,
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: "2",
-    technician: { id: "2", name: "Adebayo Adeyemi", email: "tech2@demo.com" },
-    job: { id: "1", title: "Solar Panel Installation - Residential Lagos", type: "Solar Installation" },
-    sharePercentage: 40,
-    jobValue: 750000.0,
-    earnedAmount: 300000.0,
-    rating: 4.6,
-    month: 1,
-    year: 2024,
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: "3",
-    technician: { id: "3", name: "Fatima Ibrahim", email: "tech3@demo.com" },
-    job: { id: "2", title: "Quarterly Maintenance Check - Abuja", type: "Maintenance Check" },
-    sharePercentage: 100,
-    jobValue: 85000.0,
-    earnedAmount: 85000.0,
-    rating: 4.9,
-    month: 1,
-    year: 2024,
-    createdAt: "2024-01-12T14:00:00Z",
-  },
-  {
-    id: "4",
-    technician: { id: "4", name: "Chinedu Okwu", email: "tech4@demo.com" },
-    job: { id: "4", title: "System Inspection - Commercial", type: "System Inspection" },
-    sharePercentage: 100,
-    jobValue: 120000.0,
-    earnedAmount: 120000.0,
-    rating: 4.7,
-    month: 1,
-    year: 2024,
-    createdAt: "2024-01-10T09:00:00Z",
-  },
-]
-
 export default function AccruedValuesPage() {
-  const [accruedValues, setAccruedValues] = useState<AccruedValue[]>(demoAccruedValues)
+  const [accruedValues, setAccruedValues] = useState<AccruedValue[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [technicianFilter, setTechnicianFilter] = useState("all")
   const [monthFilter, setMonthFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("2024")
   const [showAddDialog, setShowAddDialog] = useState(false)
+
+  useEffect(() => {
+    const fetchAccruedValues = async () => {
+      setLoading(true)
+      try {
+        const response = await fetch('/api/accrued-values', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setAccruedValues(data);
+        } else {
+          console.error("Fetched data is not an array:", data);
+          setAccruedValues([]); // Ensure it's always an array
+        }
+      } catch (error) {
+        console.error('Error fetching accrued values:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAccruedValues()
+  }, [])
+
+  const handleAddAccruedValue = async (newValue: any) => {
+    try {
+      const response = await fetch("/api/accrued-values", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newValue),
+      });
+
+      if (response.ok) {
+        setShowAddDialog(false);
+        fetchAccruedValues();
+      } else {
+        console.error("Failed to create accrued value");
+      }
+    } catch (error) {
+      console.error("Error creating accrued value:", error);
+    }
+  };
 
   const filteredValues = accruedValues.filter((value) => {
     const matchesSearch =
@@ -126,10 +121,7 @@ export default function AccruedValuesPage() {
       .toUpperCase()
   }
 
-  const handleAddAccruedValue = (newValue: any) => {
-    setAccruedValues([...accruedValues, { ...newValue, id: Date.now().toString() }])
-    setShowAddDialog(false)
-  }
+  
 
   const months = [
     { value: "1", label: "January" },

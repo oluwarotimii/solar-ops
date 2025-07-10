@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     estimated_duration INTEGER, -- minutes
     job_value DECIMAL(12,2) DEFAULT 0, -- Changed to accommodate Naira amounts
     total_technician_share DECIMAL(5,2) DEFAULT 100.00, -- Total percentage for all technicians
+    company_share_percentage DECIMAL(5,2) DEFAULT 0.00, -- Company's retained percentage
     instructions TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

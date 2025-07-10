@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import { sql, toCamelCase } from "./db"
+import { toCamelCase, getDbSql } from "./db"
 import type { User } from "@/types"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
@@ -10,11 +10,17 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword)
+  console.log(`[Auth Debug] Verifying password...`);
+  const isValid = await bcrypt.compare(password, hashedPassword);
+  console.log(`[Auth Debug] Password verification result: ${isValid}`);
+  return isValid;
 }
 
 export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" })
+  console.log(`[Auth Debug] Generating token for userId: ${userId}`);
+  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
+  console.log(`[Auth Debug] Token generated (first 10 chars): ${token.substring(0, 10)}...`);
+  return token;
 }
 
 export function verifyToken(token: string): { userId: string } | null {
@@ -27,7 +33,7 @@ export function verifyToken(token: string): { userId: string } | null {
 
 export async function getUserById(id: string): Promise<User | null> {
   try {
-    const result = await sql`
+    const result = await getDbSql()`
       SELECT u.*, r.name as role_name, r.description as role_description, 
              r.is_admin as role_is_admin, r.permissions as role_permissions
       FROM users u
@@ -57,7 +63,8 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function getUserByEmail(email: string): Promise<(User & { passwordHash: string }) | null> {
   try {
-    const result = await sql`
+    console.log(`[Auth Debug] Attempting to get user by email: ${email}`);
+    const result = await getDbSql()`
       SELECT u.*, r.name as role_name, r.description as role_description, 
              r.is_admin as role_is_admin, r.permissions as role_permissions
       FROM users u
@@ -65,9 +72,13 @@ export async function getUserByEmail(email: string): Promise<(User & { passwordH
       WHERE u.email = ${email}
     `
 
-    if (result.length === 0) return null
+    if (result.length === 0) {
+      console.log(`[Auth Debug] User with email ${email} not found.`);
+      return null;
+    }
 
-    const user = toCamelCase(result[0])
+    const user = toCamelCase(result[0]);
+    console.log(`[Auth Debug] User found: ${user.email}, Status: ${user.status}`);
     if (user.roleName) {
       user.role = {
         id: user.roleId,
@@ -75,13 +86,13 @@ export async function getUserByEmail(email: string): Promise<(User & { passwordH
         description: user.roleDescription,
         isAdmin: user.roleIsAdmin,
         permissions: user.rolePermissions,
-      }
+      };
     }
 
-    return user
+    return user;
   } catch (error) {
-    console.error("Error getting user by email:", error)
-    return null
+    console.error("Error getting user by email:", error);
+    return null;
   }
 }
 

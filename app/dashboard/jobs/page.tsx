@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Search, MapPin, Calendar, User, Eye, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, MapPin, Calendar, User, Eye, Edit, Trash2, Loader2, AlertCircle } from "lucide-react"
 import CreateJobDialog from "@/components/create-job-dialog"
 
 const statusColors = {
@@ -25,69 +25,94 @@ const priorityColors = {
   urgent: "bg-red-100 text-red-800",
 }
 
-// Demo jobs data
-const demoJobs = [
-  {
-    id: "1",
-    title: "Solar Panel Installation - Residential",
-    description: "Install 20 solar panels on residential rooftop",
-    jobType: { name: "Solar Installation", color: "#10B981" },
-    assignedUser: { firstName: "Mike", lastName: "Johnson" },
-    status: "assigned" as const,
-    priority: "high" as const,
-    locationAddress: "123 Sunny Street, Phoenix, AZ 85001",
-    scheduledDate: "2024-01-15",
-    jobValue: 2500.0,
-    estimatedDuration: 480,
-  },
-  {
-    id: "2",
-    title: "Quarterly Maintenance Check",
-    description: "Routine quarterly maintenance and performance check",
-    jobType: { name: "Maintenance Check", color: "#F59E0B" },
-    assignedUser: { firstName: "David", lastName: "Smith" },
-    status: "in_progress" as const,
-    priority: "medium" as const,
-    locationAddress: "456 Solar Avenue, Tempe, AZ 85281",
-    scheduledDate: "2024-01-12",
-    jobValue: 300.0,
-    estimatedDuration: 120,
-  },
-  {
-    id: "3",
-    title: "Emergency Inverter Repair",
-    description: "Inverter failure - system completely down",
-    jobType: { name: "Emergency Call", color: "#DC2626" },
-    assignedUser: { firstName: "Lisa", lastName: "Wilson" },
-    status: "assigned" as const,
-    priority: "urgent" as const,
-    locationAddress: "789 Desert Road, Scottsdale, AZ 85250",
-    scheduledDate: "2024-01-13",
-    jobValue: 450.0,
-    estimatedDuration: 180,
-  },
-  {
-    id: "4",
-    title: "System Inspection - Commercial",
-    description: "Annual inspection of commercial solar installation",
-    jobType: { name: "System Inspection", color: "#3B82F6" },
-    assignedUser: { firstName: "Robert", lastName: "Brown" },
-    status: "completed" as const,
-    priority: "medium" as const,
-    locationAddress: "321 Business Park Drive, Mesa, AZ 85201",
-    scheduledDate: "2024-01-10",
-    jobValue: 800.0,
-    estimatedDuration: 240,
-  },
-]
+interface Job {
+  id: string
+  title: string
+  description: string
+  jobType: { name: string; color: string }
+  assignedUser?: { firstName: string; lastName: string }
+  status: "assigned" | "in_progress" | "completed" | "cancelled"
+  priority: "low" | "medium" | "high" | "urgent"
+  locationAddress: string
+  scheduledDate?: string
+  jobValue: number
+  estimatedDuration: number
+}
+
+interface JobType {
+  id: string
+  name: string
+  color: string
+}
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState(demoJobs)
-  const [loading, setLoading] = useState(false)
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [jobTypes, setJobTypes] = useState<JobType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  const fetchJobs = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found.")
+      }
+
+      const response = await fetch("/api/jobs", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to fetch jobs.")
+      }
+
+      const data = await response.json()
+      setJobs(data)
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred while fetching jobs.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchJobTypes = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        throw new Error("Authentication token not found.")
+      }
+
+      const response = await fetch("/api/job-types", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to fetch job types.")
+      }
+
+      const data = await response.json()
+      setJobTypes(data)
+    } catch (error) {
+      console.error("Failed to fetch job types:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchJobs()
+    fetchJobTypes()
+  }, [])
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
@@ -99,9 +124,61 @@ export default function JobsPage() {
     return matchesSearch && matchesStatus && matchesType
   })
 
-  const handleJobCreated = (newJob: any) => {
-    setJobs([...jobs, { ...newJob, id: Date.now().toString() }])
+  const handleJobCreated = async () => {
+    fetchJobs() // Refresh the list after creation
     setShowCreateDialog(false)
+  }
+
+  const handleJobDelete = async (jobId: string) => {
+    if (!confirm("Are you sure you want to delete this job?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token not found.");
+      }
+
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete job.");
+      }
+
+      fetchJobs(); // Refresh the list after deletion
+    } catch (err: any) {
+      setError(err.message || "Error deleting job.");
+    }
+  };
+
+  const formatNaira = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="ml-2 text-lg">Loading jobs...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        <AlertCircle className="h-8 w-8 mr-2" />
+        <p className="text-lg">Error: {error}</p>
+      </div>
+    )
   }
 
   return (
@@ -162,10 +239,11 @@ export default function JobsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Solar Installation">Solar Installation</SelectItem>
-                <SelectItem value="Maintenance Check">Maintenance Check</SelectItem>
-                <SelectItem value="Emergency Call">Emergency Call</SelectItem>
-                <SelectItem value="System Inspection">System Inspection</SelectItem>
+                {jobTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.name}>
+                    {type.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -195,81 +273,89 @@ export default function JobsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredJobs.map((job) => (
-                  <TableRow key={job.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{job.title}</p>
-                        {job.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">{job.description}</p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        style={{
-                          backgroundColor: job.jobType.color + "20",
-                          color: job.jobType.color,
-                        }}
-                      >
-                        {job.jobType.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {job.assignedUser ? (
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          <span>
-                            {job.assignedUser.firstName} {job.assignedUser.lastName}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Unassigned</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[job.status]}>{job.status.replace("_", " ")}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={priorityColors[job.priority]} variant="outline">
-                        {job.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 max-w-[200px]">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="truncate">{job.locationAddress}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {job.scheduledDate ? (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Not scheduled</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">${job.jobValue.toFixed(2)}</span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {filteredJobs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      No jobs found matching your criteria.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredJobs.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{job.title}</p>
+                          {job.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-1">{job.description}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          style={{
+                            backgroundColor: job.jobType.color + "20",
+                            color: job.jobType.color,
+                          }}
+                        >
+                          {job.jobType.name}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {job.assignedUser ? (
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span>
+                              {job.assignedUser.firstName} {job.assignedUser.lastName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Unassigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={statusColors[job.status]}>{job.status.replace("_", " ")}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={priorityColors[job.priority]} variant="outline">
+                          {job.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 max-w-[200px]">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="truncate">{job.locationAddress}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {job.scheduledDate ? (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Not scheduled</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium">{formatNaira(job.jobValue)}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleJobDelete(job.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,14 +8,15 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Search, Phone, Mail, MapPin, Clock, TrendingUp, User, Eye } from "lucide-react"
+import { Search, Phone, Mail, MapPin, Clock, TrendingUp, User, Eye, Loader2, AlertTriangle } from "lucide-react"
 
 interface Technician {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
-  status: "active" | "idle" | "offline"
+  status: "active" | "idle" | "offline" | "pending" | "suspended" | "deactivated"
   currentJob?: {
     id: string
     title: string
@@ -30,85 +31,52 @@ interface Technician {
   lastSeen: string
 }
 
-// Demo technicians data
-const demoTechnicians: Technician[] = [
-  {
-    id: "1",
-    name: "Mike Johnson",
-    email: "tech1@demo.com",
-    phone: "+1-555-0101",
-    status: "active",
-    currentJob: {
-      id: "1",
-      title: "Solar Panel Installation - Residential",
-      status: "in_progress",
-    },
-    stats: {
-      totalJobs: 45,
-      completedJobs: 42,
-      avgRating: 4.8,
-      totalEarned: 18750.0,
-    },
-    lastSeen: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "2",
-    name: "David Smith",
-    email: "tech2@demo.com",
-    phone: "+1-555-0102",
-    status: "active",
-    currentJob: {
-      id: "2",
-      title: "Quarterly Maintenance Check",
-      status: "in_progress",
-    },
-    stats: {
-      totalJobs: 38,
-      completedJobs: 36,
-      avgRating: 4.6,
-      totalEarned: 15200.0,
-    },
-    lastSeen: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    name: "Lisa Wilson",
-    email: "tech3@demo.com",
-    phone: "+1-555-0103",
-    status: "idle",
-    stats: {
-      totalJobs: 52,
-      completedJobs: 50,
-      avgRating: 4.9,
-      totalEarned: 22100.0,
-    },
-    lastSeen: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "4",
-    name: "Robert Brown",
-    email: "tech4@demo.com",
-    phone: "+1-555-0104",
-    status: "offline",
-    stats: {
-      totalJobs: 29,
-      completedJobs: 28,
-      avgRating: 4.7,
-      totalEarned: 12800.0,
-    },
-    lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-]
-
 export default function TechniciansPage() {
-  const [technicians, setTechnicians] = useState<Technician[]>(demoTechnicians)
-  const [loading, setLoading] = useState(false)
+  const [technicians, setTechnicians] = useState<Technician[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
+  const fetchTechnicians = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("Authentication token not found.")
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch("/api/users/technicians", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to fetch technicians.")
+      }
+
+      const data = await response.json()
+      setTechnicians(data)
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred while fetching technicians.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTechnicians()
+  }, [])
+
   const filteredTechnicians = technicians.filter((tech) => {
     const matchesSearch =
-      tech.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tech.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tech.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tech.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || tech.status === statusFilter
 
@@ -123,6 +91,12 @@ export default function TechniciansPage() {
         return "bg-yellow-100 text-yellow-800"
       case "offline":
         return "bg-red-100 text-red-800"
+      case "pending":
+        return "bg-blue-100 text-blue-800"
+      case "suspended":
+        return "bg-orange-100 text-orange-800"
+      case "deactivated":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -137,16 +111,20 @@ export default function TechniciansPage() {
   }
 
   const formatLastSeen = (timestamp: string) => {
+    if (!timestamp) return "N/A"
     const now = new Date()
     const lastSeen = new Date(timestamp)
     const diffMs = now.getTime() - lastSeen.getTime()
     const diffMins = Math.floor(diffMs / (1000 * 60))
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
     if (diffMins < 60) {
       return `${diffMins} minutes ago`
-    } else {
+    } else if (diffHours < 24) {
       return `${diffHours} hours ago`
+    } else {
+      return `${diffDays} days ago`
     }
   }
 
@@ -154,9 +132,37 @@ export default function TechniciansPage() {
   const totalTechnicians = technicians.length
   const activeTechnicians = technicians.filter((t) => t.status === "active").length
   const avgCompletionRate =
-    technicians.reduce((sum, tech) => sum + (tech.stats.completedJobs / tech.stats.totalJobs) * 100, 0) /
-    technicians.length
+    technicians.length > 0
+      ? technicians.reduce((sum, tech) => sum + (tech.stats.completedJobs / tech.stats.totalJobs) * 100, 0) /
+        technicians.length
+      : 0
   const totalEarned = technicians.reduce((sum, tech) => sum + tech.stats.totalEarned, 0)
+
+  const formatNaira = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="ml-2 text-lg">Loading technicians...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        <AlertTriangle className="h-8 w-8 mr-2" />
+        <p className="text-lg">Error: {error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -219,7 +225,7 @@ export default function TechniciansPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Total Earned</p>
-                <p className="text-2xl font-bold">${totalEarned.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatNaira(totalEarned)}</p>
               </div>
             </div>
           </CardContent>
@@ -281,85 +287,87 @@ export default function TechniciansPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTechnicians.map((tech) => (
-                  <TableRow key={tech.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarFallback>{getInitials(tech.name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{tech.name}</p>
-                          <p className="text-sm text-muted-foreground">{tech.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(tech.status)}>{tech.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {tech.currentJob ? (
-                        <div>
-                          <p className="font-medium text-sm">{tech.currentJob.title}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {tech.currentJob.status.replace("_", " ")}
-                          </Badge>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No active job</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Phone className="h-3 w-3" />
-                          <span>{tech.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3" />
-                          <span className="truncate max-w-[150px]">{tech.email}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm">
-                          <span className="font-medium">{tech.stats.completedJobs}</span>
-                          <span className="text-muted-foreground">/{tech.stats.totalJobs} jobs</span>
-                        </div>
-                        <div className="text-sm">
-                          <span className="font-medium">${tech.stats.totalEarned.toLocaleString()}</span>
-                          <span className="text-muted-foreground"> earned</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span>{formatLastSeen(tech.lastSeen)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <MapPin className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {filteredTechnicians.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No technicians found matching your criteria.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredTechnicians.map((tech) => (
+                    <TableRow key={tech.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback>{getInitials(`${tech.firstName} ${tech.lastName}`)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{tech.firstName} {tech.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{tech.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(tech.status)}>{tech.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {tech.currentJob ? (
+                          <div>
+                            <p className="font-medium text-sm">{tech.currentJob.title}</p>
+                            <Badge variant="outline" className="text-xs">
+                              {tech.currentJob.status.replace("_", " ")}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">No active job</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="h-3 w-3" />
+                            <span>{tech.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate max-w-[150px]">{tech.email}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm">
+                            <span className="font-medium">{tech.stats.completedJobs}</span>
+                            <span className="text-muted-foreground">/{tech.stats.totalJobs} jobs</span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">${tech.stats.totalEarned.toLocaleString()}</span>
+                            <span className="text-muted-foreground"> earned</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span>{formatLastSeen(tech.lastSeen)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <MapPin className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
-
-          {filteredTechnicians.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No technicians found matching your criteria.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

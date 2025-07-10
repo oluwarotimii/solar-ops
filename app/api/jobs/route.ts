@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql, toCamelCase } from "@/lib/db"
+import { toCamelCase, getDbSql } from "@/lib/db"
 import { verifyToken, getUserById } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
@@ -19,18 +19,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const result = await sql`
-      SELECT 
-        j.*,
+    let query;
+    const sql = getDbSql();
+    if (user.role?.isAdmin) {
+      // Admins can see all jobs
+      query = sql`
+        SELECT 
+          j.*,
         jt.name as job_type_name, jt.color as job_type_color,
         au.first_name as assigned_first_name, au.last_name as assigned_last_name,
         cu.first_name as created_first_name, cu.last_name as created_last_name
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      LEFT JOIN users au ON j.assigned_to = au.id
+      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
+      LEFT JOIN users au ON jtech.technician_id = au.id
       LEFT JOIN users cu ON j.created_by = cu.id
       ORDER BY j.created_at DESC
     `
+    } else {
+      // Technicians only see jobs assigned to them
+      query = sql`
+        SELECT 
+          j.*,
+        jt.name as job_type_name, jt.color as job_type_color,
+        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
+        cu.first_name as created_first_name, cu.last_name as created_last_name
+      FROM jobs j
+      LEFT JOIN job_types jt ON j.job_type_id = jt.id
+      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
+      LEFT JOIN users au ON jtech.technician_id = au.id
+      LEFT JOIN users cu ON j.created_by = cu.id
+        WHERE jtech.technician_id = ${user.id}
+        ORDER BY j.created_at DESC
+      `
+    }
+
+    const result = await query
 
     const jobs = result.map((row: any) => {
       const job = toCamelCase(row)
@@ -46,7 +70,6 @@ export async function GET(request: NextRequest) {
 
       if (job.assignedFirstName) {
         job.assignedUser = {
-          id: job.assignedTo,
           firstName: job.assignedFirstName,
           lastName: job.assignedLastName,
         }
@@ -101,17 +124,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
     }
 
+    const sql = getDbSql();
+
+    // Calculate total technician share and company share
+    const totalTechnicianShare = jobData.assignedTechnicians.reduce((sum: number, tech: any) => sum + tech.sharePercentage, 0);
+    const companySharePercentage = 100 - totalTechnicianShare;
+
     const result = await sql`
       INSERT INTO jobs (
-        title, description, job_type_id, assigned_to, created_by,
+        title, description, job_type_id, created_by,
         priority, location_address, location_lat, location_lng,
-        scheduled_date, estimated_duration, job_value, technician_share,
+        scheduled_date, estimated_duration, job_value, total_technician_share, company_share_percentage,
         instructions, status
       ) VALUES (
         ${jobData.title},
         ${jobData.description || null},
         ${jobData.jobTypeId},
-        ${jobData.assignedTo || null},
         ${user.id},
         ${jobData.priority || "medium"},
         ${jobData.locationAddress},
@@ -120,25 +148,36 @@ export async function POST(request: NextRequest) {
         ${jobData.scheduledDate || null},
         ${jobData.estimatedDuration || null},
         ${jobData.jobValue || 0},
-        ${jobData.technicianShare || 0},
+        ${totalTechnicianShare},
+        ${companySharePercentage},
         ${jobData.instructions || null},
         'assigned'
       ) RETURNING id
     `
 
-    // Send notification to assigned technician if one is assigned
-    if (jobData.assignedTo) {
-      await sql`
-        INSERT INTO notifications (recipient_id, sender_id, title, message, type, related_job_id)
-        VALUES (
-          ${jobData.assignedTo},
-          ${user.id},
-          'New Job Assignment',
-          ${`You have been assigned a new job: ${jobData.title}`},
-          'job_assignment',
-          ${result[0].id}
-        )
-      `
+    const jobId = result[0].id;
+
+    // Insert into job_technicians table for each assigned technician
+    if (jobData.assignedTechnicians && jobData.assignedTechnicians.length > 0) {
+      for (const assignedTech of jobData.assignedTechnicians) {
+        await sql`
+          INSERT INTO job_technicians (job_id, technician_id, share_percentage, role)
+          VALUES (${jobId}, ${assignedTech.technicianId}, ${assignedTech.sharePercentage}, ${assignedTech.role})
+        `;
+
+        // Send notification to assigned technician
+        await sql`
+          INSERT INTO notifications (recipient_id, sender_id, title, message, type, related_job_id)
+          VALUES (
+            ${assignedTech.technicianId},
+            ${user.id},
+            'New Job Assignment',
+            ${`You have been assigned a new job: ${jobData.title}`},
+            'job_assignment',
+            ${jobId}
+          )
+        `;
+      }
     }
 
     return NextResponse.json({

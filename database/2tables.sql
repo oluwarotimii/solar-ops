@@ -1,7 +1,4 @@
--- Solar Field Operations Default Data
--- Run this script after creating tables
 
--- Insert default roles
 INSERT INTO roles (name, description, is_admin, permissions) VALUES
 ('Super Admin', 'Full system access', true, '{"all": true}'),
 ('Admin', 'Administrative access', true, '{"jobs": true, "users": true, "reports": true, "maintenance": true}'),
@@ -9,12 +6,11 @@ INSERT INTO roles (name, description, is_admin, permissions) VALUES
 ('Technician', 'Field worker access', false, '{"jobs": "assigned_only", "checkin": true, "media_upload": true}')
 ON CONFLICT (name) DO NOTHING;
 
--- Insert default admin user (email: admin@solar.com, password: admin123)
--- You can change this password after first login
+
 INSERT INTO users (email, password_hash, first_name, last_name, phone, role_id, status) 
 SELECT 
     'admin@solar.com',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/hL.ckstG.',
+    '$2b$12$4O.j59ckScBmbC7qKovs9ujwOBIaIYGB4QX5mjfQsev1YqVKAXFIC',
     'System',
     'Administrator',
     '+234-800-000-0000',
@@ -24,7 +20,7 @@ FROM roles r
 WHERE r.name = 'Super Admin'
 ON CONFLICT (email) DO NOTHING;
 
--- Insert default job types with Nigerian context
+
 INSERT INTO job_types (name, description, base_value, default_percentage, color) VALUES
 ('Solar Installation', 'New solar panel installation', 500000.00, 60.00, '#10B981'),
 ('Maintenance Check', 'Routine maintenance and inspection', 75000.00, 70.00, '#F59E0B'),
@@ -33,7 +29,7 @@ INSERT INTO job_types (name, description, base_value, default_percentage, color)
 ('Emergency Call', 'Urgent repair or service call', 200000.00, 70.00, '#DC2626')
 ON CONFLICT (name) DO NOTHING;
 
--- Insert system settings
+
 INSERT INTO system_settings (key, value, description) VALUES
 ('company_name', 'Solar Field Operations', 'Company name displayed in the system'),
 ('default_job_duration', '240', 'Default estimated job duration in minutes'),

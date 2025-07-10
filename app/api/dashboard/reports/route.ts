@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { getDbSql } from "@/lib/db"
 import { verifyToken, getUserById } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
+    const sql = getDbSql();
     const token = request.headers.get("authorization")?.replace("Bearer ", "")
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -38,9 +39,10 @@ export async function GET(request: NextRequest) {
 
     // Get active technicians (users with technician role who have active jobs)
     const activeTechniciansResult = await sql`
-      SELECT COUNT(DISTINCT j.assigned_to) as count
-      FROM jobs j
-      JOIN users u ON j.assigned_to = u.id
+      SELECT COUNT(DISTINCT jt.technician_id) as count
+      FROM job_technicians jt
+      JOIN jobs j ON jt.job_id = j.id
+      JOIN users u ON jt.technician_id = u.id
       JOIN roles r ON u.role_id = r.id
       WHERE j.status IN ('assigned', 'in_progress')
       AND r.name = 'Technician'

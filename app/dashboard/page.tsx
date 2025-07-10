@@ -4,37 +4,90 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle } from "lucide-react"
+import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
+  const [stats, setStats] = useState<any>(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Get demo user from localStorage
-    const demoUser = localStorage.getItem("demoUser")
-    if (demoUser) {
-      setUser(JSON.parse(demoUser))
+    // Fetch actual user from localStorage
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      setUser(JSON.parse(storedUser))
     }
+
+    // Fetch dashboard stats
+    const fetchStats = async () => {
+      setLoadingStats(true)
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          setError("Authentication token not found.")
+          setLoadingStats(false)
+          return
+        }
+
+        const response = await fetch("/api/dashboard/reports", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to fetch dashboard stats.")
+        }
+
+        const data = await response.json()
+        setStats(data)
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred while fetching stats.")
+      } finally {
+        setLoadingStats(false)
+      }
+    }
+
+    fetchStats()
   }, [])
 
-  // Demo stats data
-  const stats = {
-    totalJobs: 24,
-    activeJobs: 8,
-    completedJobs: 16,
-    activeTechnicians: 4,
-    pendingMaintenance: 3,
-    totalRevenue: 12500,
+  if (loadingStats) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="ml-2 text-lg">Loading dashboard...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        <AlertTriangle className="h-8 w-8 mr-2" />
+        <p className="text-lg">Error: {error}</p>
+      </div>
+    )
+  }
+
+  // Render null or a message if stats are not available after loading
+  if (!stats) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-lg text-muted-foreground">No dashboard data available.</p>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to Solar Field Operations{user ? `, ${user.name}` : ""}</p>
-        {user && (
+        <p className="text-muted-foreground">Welcome to Solar Field Operations{user ? `, ${user.firstName}` : ""}</p>
+        {user && user.role && (
           <Badge variant="outline" className="mt-2">
-            {user.role}
+            {user.role.name}
           </Badge>
         )}
       </div>
@@ -82,7 +135,7 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -96,37 +149,10 @@ export default function DashboardPage() {
             <CardDescription>Latest job updates and technician check-ins</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-full">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Solar Installation completed</p>
-                <p className="text-xs text-muted-foreground">Mike Johnson • 2 hours ago</p>
-              </div>
-              <Badge variant="outline">Completed</Badge>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-full">
-                <MapPin className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Technician checked in</p>
-                <p className="text-xs text-muted-foreground">David Smith • 3 hours ago</p>
-              </div>
-              <Badge variant="outline">Check-in</Badge>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-full">
-                <Clock className="h-4 w-4 text-orange-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Maintenance reminder</p>
-                <p className="text-xs text-muted-foreground">Lisa Wilson • 4 hours ago</p>
-              </div>
-              <Badge variant="outline">Reminder</Badge>
+            {/* Placeholder for Recent Activity - Data will be fetched from API */}
+            <div className="text-center text-muted-foreground py-8">
+              <p>No recent activity to display.</p>
+              <p className="text-sm">Data will load here from API.</p>
             </div>
           </CardContent>
         </Card>
@@ -137,35 +163,10 @@ export default function DashboardPage() {
             <CardDescription>This month's performance metrics</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Installations</span>
-                <span>85%</span>
-              </div>
-              <Progress value={85} className="h-2" />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Maintenance</span>
-                <span>92%</span>
-              </div>
-              <Progress value={92} className="h-2" />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Inspections</span>
-                <span>78%</span>
-              </div>
-              <Progress value={78} className="h-2" />
-            </div>
-
-            <div className="pt-2 border-t">
-              <div className="flex items-center gap-2 text-sm text-green-600">
-                <TrendingUp className="h-4 w-4" />
-                <span>12% improvement from last month</span>
-              </div>
+            {/* Placeholder for Job Completion Rate - Data will be fetched from API */}
+            <div className="text-center text-muted-foreground py-8">
+              <p>No completion rate data available.</p>
+              <p className="text-sm">Data will load here from API.</p>
             </div>
           </CardContent>
         </Card>

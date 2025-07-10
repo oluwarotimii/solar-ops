@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,20 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Star } from "lucide-react"
-
-const technicians = [
-  { id: "1", name: "Emeka Okafor", email: "tech1@demo.com" },
-  { id: "2", name: "Adebayo Adeyemi", email: "tech2@demo.com" },
-  { id: "3", name: "Fatima Ibrahim", email: "tech3@demo.com" },
-  { id: "4", name: "Chinedu Okwu", email: "tech4@demo.com" },
-]
-
-const jobs = [
-  { id: "1", title: "Solar Panel Installation - Residential Lagos", type: "Solar Installation", value: 750000 },
-  { id: "2", title: "Quarterly Maintenance Check - Abuja", type: "Maintenance Check", value: 85000 },
-  { id: "3", title: "Emergency Inverter Repair - Port Harcourt", type: "Emergency Call", value: 180000 },
-  { id: "4", title: "System Inspection - Commercial", type: "System Inspection", value: 120000 },
-]
 
 interface AddAccruedValueDialogProps {
   onValueAdded: (value: any) => void
@@ -39,6 +25,51 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [technicians, setTechnicians] = useState<any[]>([])
+  const [jobs, setJobs] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchTechnicians = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/users/technicians", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setTechnicians(data);
+        } else {
+          console.error("Failed to fetch technicians");
+        }
+      } catch (error) {
+        console.error("Error fetching technicians:", error);
+      }
+    };
+
+    const fetchJobs = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/jobs", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setJobs(data);
+        } else {
+          console.error("Failed to fetch jobs");
+        }
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+      }
+    };
+
+    fetchTechnicians();
+    fetchJobs();
+  }, []);
 
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -64,34 +95,45 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
       }
 
       const sharePercentage = Number(formData.sharePercentage)
-      const jobValue = selectedJob.value
+      const jobValue = selectedJob.jobValue // Use jobValue from fetched job
       const earnedAmount = (jobValue * sharePercentage) / 100
 
-      const newValue = {
-        technician: selectedTechnician,
-        job: selectedJob,
-        sharePercentage,
-        jobValue,
-        earnedAmount,
-        rating: Number(formData.rating),
-        month: formData.month,
-        year: formData.year,
-        createdAt: new Date().toISOString(),
-      }
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/accrued-values", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: formData.technicianId,
+          jobId: formData.jobId,
+          jobValue: jobValue,
+          sharePercentage: sharePercentage,
+          earnedAmount: earnedAmount,
+          rating: Number(formData.rating),
+          month: formData.month,
+          year: formData.year,
+        }),
+      });
 
-      setTimeout(() => {
-        onValueAdded(newValue)
-        setLoading(false)
-      }, 1000)
+      if (response.ok) {
+        const newAccruedValue = await response.json();
+        onValueAdded(newAccruedValue);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to add accrued value");
+      }
     } catch (error) {
       setError("Failed to add accrued value")
+    } finally {
       setLoading(false)
     }
   }
 
   const selectedJob = jobs.find((j) => j.id === formData.jobId)
   const calculatedEarning =
-    selectedJob && formData.sharePercentage ? (selectedJob.value * Number(formData.sharePercentage)) / 100 : 0
+    selectedJob && formData.sharePercentage ? (selectedJob.jobValue * Number(formData.sharePercentage)) / 100 : 0
 
   return (
     <>
@@ -119,7 +161,7 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
               <SelectContent>
                 {technicians.map((tech) => (
                   <SelectItem key={tech.id} value={tech.id}>
-                    {tech.name}
+                    {tech.firstName} {tech.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>

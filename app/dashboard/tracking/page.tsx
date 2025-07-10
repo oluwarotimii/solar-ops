@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Clock, User, RefreshCw, Eye, Phone, Play, Square } from "lucide-react"
+import { MapPin, Clock, User, RefreshCw, Eye, Phone, Play, Square, Loader2, AlertTriangle } from "lucide-react"
 import TechnicianMap from "@/components/technician-map"
 
 interface TechnicianLocation {
@@ -29,84 +29,49 @@ interface TechnicianLocation {
   isTracking: boolean
 }
 
-// Demo technician locations
-const demoTechnicianLocations: TechnicianLocation[] = [
-  {
-    id: "1",
-    name: "Mike Johnson",
-    email: "tech1@demo.com",
-    phone: "+1-555-0101",
-    currentJob: {
-      id: "1",
-      title: "Solar Panel Installation - Residential",
-      locationAddress: "123 Sunny Street, Phoenix, AZ 85001",
-      status: "in_progress",
-    },
-    lastLocation: {
-      latitude: 33.4484,
-      longitude: -112.074,
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      accuracy: 5,
-    },
-    status: "active",
-    journeyStartTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    isTracking: true,
-  },
-  {
-    id: "2",
-    name: "David Smith",
-    email: "tech2@demo.com",
-    phone: "+1-555-0102",
-    currentJob: {
-      id: "2",
-      title: "Quarterly Maintenance Check",
-      locationAddress: "456 Solar Avenue, Tempe, AZ 85281",
-      status: "in_progress",
-    },
-    lastLocation: {
-      latitude: 33.4255,
-      longitude: -111.94,
-      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      accuracy: 3,
-    },
-    status: "active",
-    journeyStartTime: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    isTracking: true,
-  },
-  {
-    id: "3",
-    name: "Lisa Wilson",
-    email: "tech3@demo.com",
-    phone: "+1-555-0103",
-    lastLocation: {
-      latitude: 33.4942,
-      longitude: -111.9261,
-      timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      accuracy: 8,
-    },
-    status: "idle",
-    isTracking: false,
-  },
-  {
-    id: "4",
-    name: "Robert Brown",
-    email: "tech4@demo.com",
-    phone: "+1-555-0104",
-    lastLocation: {
-      latitude: 33.4152,
-      longitude: -111.8315,
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      accuracy: 10,
-    },
-    status: "offline",
-    isTracking: false,
-  },
-]
-
 export default function TrackingPage() {
-  const [technicianLocations, setTechnicianLocations] = useState<TechnicianLocation[]>(demoTechnicianLocations)
-  const [loading, setLoading] = useState(false)
+  const [technicianLocations, setTechnicianLocations] = useState<TechnicianLocation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedTechnician, setSelectedTechnician] = useState<string | null>(null)
+
+  const fetchTechnicianLocations = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("Authentication token not found.")
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch("/api/tracking/technicians", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to fetch technician locations.")
+      }
+
+      const data = await response.json()
+      setTechnicianLocations(data)
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred while fetching locations.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTechnicianLocations()
+    // Set up interval to refresh locations every 30 seconds
+    const interval = setInterval(fetchTechnicianLocations, 30000);
+    return () => clearInterval(interval);
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -130,30 +95,68 @@ export default function TrackingPage() {
     return `${hours}h ${minutes}m`
   }
 
-  const handleStartTracking = (technicianId: string) => {
-    setTechnicianLocations((prev) =>
-      prev.map((tech) =>
-        tech.id === technicianId
-          ? { ...tech, isTracking: true, status: "active", journeyStartTime: new Date().toISOString() }
-          : tech,
-      ),
-    )
+  const handleStartTracking = async (technicianId: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/tracking/start-journey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ technicianId }),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to start tracking.")
+      }
+      fetchTechnicianLocations() // Refresh data after action
+    } catch (err: any) {
+      setError(err.message || "Error starting tracking.")
+    }
   }
 
-  const handleStopTracking = (technicianId: string) => {
-    setTechnicianLocations((prev) =>
-      prev.map((tech) =>
-        tech.id === technicianId ? { ...tech, isTracking: false, status: "idle", journeyStartTime: undefined } : tech,
-      ),
-    )
+  const handleStopTracking = async (technicianId: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/tracking/end-journey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ technicianId }),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to stop tracking.")
+      }
+      fetchTechnicianLocations() // Refresh data after action
+    } catch (err: any) {
+      setError(err.message || "Error stopping tracking.")
+    }
   }
 
   const refreshLocations = () => {
-    setLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+    fetchTechnicianLocations()
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="ml-2 text-lg">Loading technician locations...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        <AlertTriangle className="h-8 w-8 mr-2" />
+        <p className="text-lg">Error: {error}</p>
+      </div>
+    )
   }
 
   return (
@@ -245,87 +248,94 @@ export default function TrackingPage() {
 
       {/* Technician Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {technicianLocations.map((location) => (
-          <Card key={location.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{location.name}</CardTitle>
-                <Badge className={getStatusColor(location.status)}>{location.status}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Current Job */}
-              {location.currentJob ? (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="font-medium text-blue-900">{location.currentJob.title}</p>
-                  <p className="text-sm text-blue-700">{location.currentJob.locationAddress}</p>
-                  {location.journeyStartTime && (
-                    <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
-                      <Clock className="h-3 w-3" />
-                      <span>Active for {formatDuration(location.journeyStartTime)}</span>
+        {technicianLocations.length === 0 ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <p>No technicians found or tracking data available.</p>
+            <p className="text-sm">Ensure technicians are active and tracking.</p>
+          </div>
+        ) : (
+          technicianLocations.map((location) => (
+            <Card key={location.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{location.name}</CardTitle>
+                  <Badge className={getStatusColor(location.status)}>{location.status}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Current Job */}
+                {location.currentJob ? (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="font-medium text-blue-900">{location.currentJob.title}</p>
+                    <p className="text-sm text-blue-700">{location.currentJob.locationAddress}</p>
+                    {location.journeyStartTime && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
+                        <Clock className="h-3 w-3" />
+                        <span>Active for {formatDuration(location.journeyStartTime)}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">No active job</p>
+                  </div>
+                )}
+
+                {/* Last Location */}
+                {location.lastLocation && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Last Location</span>
                     </div>
+                    <p className="text-xs text-muted-foreground ml-6">
+                      {location.lastLocation.latitude.toFixed(6)}, {location.lastLocation.longitude.toFixed(6)}
+                    </p>
+                    <p className="text-xs text-muted-foreground ml-6">
+                      {new Date(location.lastLocation.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Tracking Controls */}
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  {location.isTracking ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleStopTracking(location.id)}
+                    >
+                      <Square className="h-3 w-3 mr-1" />
+                      Stop Tracking
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleStartTracking(location.id)}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Start Tracking
+                    </Button>
+                  )}
+
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTechnician(location.id)}>
+                    <Eye className="h-3 w-3 mr-1" />
+                    View
+                  </Button>
+
+                  {location.phone && (
+                    <Button variant="outline" size="sm">
+                      <Phone className="h-3 w-3" />
+                    </Button>
                   )}
                 </div>
-              ) : (
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">No active job</p>
-                </div>
-              )}
-
-              {/* Last Location */}
-              {location.lastLocation && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Last Location</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground ml-6">
-                    {location.lastLocation.latitude.toFixed(6)}, {location.lastLocation.longitude.toFixed(6)}
-                  </p>
-                  <p className="text-xs text-muted-foreground ml-6">
-                    {new Date(location.lastLocation.timestamp).toLocaleString()}
-                  </p>
-                </div>
-              )}
-
-              {/* Tracking Controls */}
-              <div className="flex items-center gap-2 pt-2 border-t">
-                {location.isTracking ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleStopTracking(location.id)}
-                  >
-                    <Square className="h-3 w-3 mr-1" />
-                    Stop Tracking
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleStartTracking(location.id)}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Start Tracking
-                  </Button>
-                )}
-
-                <Button variant="outline" size="sm" onClick={() => setSelectedTechnician(location.id)}>
-                  <Eye className="h-3 w-3 mr-1" />
-                  View
-                </Button>
-
-                {location.phone && (
-                  <Button variant="outline" size="sm">
-                    <Phone className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   )

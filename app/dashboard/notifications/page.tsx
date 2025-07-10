@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,67 +32,85 @@ interface Notification {
   createdAt: string
 }
 
-// Demo notifications data
-const demoNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "New Job Assignment",
-    message: "You have been assigned a new emergency repair job in Scottsdale.",
-    type: "job_assignment",
-    recipient: { id: "3", name: "Lisa Wilson", email: "tech3@demo.com" },
-    sender: { id: "admin", name: "Admin User" },
-    relatedJob: { id: "3", title: "Emergency Inverter Repair" },
-    createdAt: "2024-01-12T10:30:00Z",
-  },
-  {
-    id: "2",
-    title: "Maintenance Task Overdue",
-    message: "Your quarterly inverter check at Site B is now overdue.",
-    type: "maintenance_reminder",
-    recipient: { id: "2", name: "David Smith", email: "tech2@demo.com" },
-    sender: { id: "admin", name: "Admin User" },
-    readAt: "2024-01-12T11:15:00Z",
-    createdAt: "2024-01-12T09:00:00Z",
-  },
-  {
-    id: "3",
-    title: "Job Completion Confirmed",
-    message: "Your solar installation job has been marked as completed. Great work!",
-    type: "general",
-    recipient: { id: "1", name: "Mike Johnson", email: "tech1@demo.com" },
-    sender: { id: "supervisor", name: "Sarah Supervisor" },
-    relatedJob: { id: "1", title: "Solar Panel Installation - Residential" },
-    readAt: "2024-01-11T16:45:00Z",
-    createdAt: "2024-01-11T16:30:00Z",
-  },
-  {
-    id: "4",
-    title: "System Maintenance Scheduled",
-    message: "System maintenance is scheduled for tonight from 11 PM to 1 AM.",
-    type: "admin_message",
-    recipient: { id: "all", name: "All Users", email: "all@demo.com" },
-    sender: { id: "admin", name: "Admin User" },
-    createdAt: "2024-01-11T14:00:00Z",
-  },
-  {
-    id: "5",
-    title: "Performance Bonus Earned",
-    message: "Congratulations! You've earned a performance bonus for completing 5 jobs this week.",
-    type: "general",
-    recipient: { id: "4", name: "Robert Brown", email: "tech4@demo.com" },
-    sender: { id: "admin", name: "Admin User" },
-    readAt: "2024-01-10T18:20:00Z",
-    createdAt: "2024-01-10T18:00:00Z",
-  },
-]
+
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(demoNotifications)
-  const [loading, setLoading] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true)
+      try {
+        const response = await fetch("/api/notifications")
+        const data = await response.json()
+        setNotifications(data)
+      } catch (error) {
+        console.error("Error fetching notifications:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotifications()
+  }, [])
+
+  const handleNotificationCreated = async (newNotification: any) => {
+    try {
+      const response = await fetch("/api/notifications/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newNotification),
+      });
+
+      if (response.ok) {
+        setShowCreateDialog(false);
+        fetchNotifications();
+      } else {
+        console.error("Failed to create notification");
+      }
+    } catch (error) {
+      console.error("Error creating notification:", error);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, {
+        method: "PATCH",
+      });
+
+      if (response.ok) {
+        fetchNotifications();
+      } else {
+        console.error("Failed to mark notification as read");
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchNotifications();
+      } else {
+        console.error("Failed to delete notification");
+      }
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
 
   const filteredNotifications = notifications.filter((notification) => {
     const matchesSearch =
@@ -134,20 +152,7 @@ export default function NotificationsPage() {
     }
   }
 
-  const handleNotificationCreated = (newNotification: any) => {
-    setNotifications([{ ...newNotification, id: Date.now().toString() }, ...notifications])
-    setShowCreateDialog(false)
-  }
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notif) => (notif.id === id ? { ...notif, readAt: new Date().toISOString() } : notif)),
-    )
-  }
-
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((notif) => notif.id !== id))
-  }
+  
 
   // Calculate stats
   const totalNotifications = notifications.length

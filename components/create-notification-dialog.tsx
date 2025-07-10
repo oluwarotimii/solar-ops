@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,14 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
-
-const recipients = [
-  { id: "all", name: "All Users", email: "all@demo.com" },
-  { id: "1", name: "Mike Johnson", email: "tech1@demo.com" },
-  { id: "2", name: "David Smith", email: "tech2@demo.com" },
-  { id: "3", name: "Lisa Wilson", email: "tech3@demo.com" },
-  { id: "4", name: "Robert Brown", email: "tech4@demo.com" },
-]
 
 interface CreateNotificationDialogProps {
   onNotificationCreated: (notification: any) => void
@@ -32,6 +24,24 @@ export default function CreateNotificationDialog({ onNotificationCreated }: Crea
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [technicians, setTechnicians] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchTechnicians = async () => {
+      try {
+        const response = await fetch("/api/users/technicians");
+        if (response.ok) {
+          const data = await response.json();
+          setTechnicians(data);
+        } else {
+          console.error("Failed to fetch technicians");
+        }
+      } catch (error) {
+        console.error("Error fetching technicians:", error);
+      }
+    };
+    fetchTechnicians();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,21 +55,29 @@ export default function CreateNotificationDialog({ onNotificationCreated }: Crea
     }
 
     try {
-      const selectedRecipient = recipients.find((r) => r.id === formData.recipientId)
+      const response = await fetch("/api/notifications/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          message: formData.message,
+          type: formData.type,
+          recipientId: formData.recipientId,
+        }),
+      });
 
-      const newNotification = {
-        ...formData,
-        recipient: selectedRecipient,
-        sender: { id: "admin", name: "Admin User" },
-        createdAt: new Date().toISOString(),
+      if (response.ok) {
+        const newNotification = await response.json();
+        onNotificationCreated(newNotification);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to send notification");
       }
-
-      setTimeout(() => {
-        onNotificationCreated(newNotification)
-        setLoading(false)
-      }, 1000)
     } catch (error) {
       setError("Failed to send notification")
+    } finally {
       setLoading(false)
     }
   }
@@ -126,9 +144,9 @@ export default function CreateNotificationDialog({ onNotificationCreated }: Crea
                 <SelectValue placeholder="Select recipient" />
               </SelectTrigger>
               <SelectContent>
-                {recipients.map((recipient) => (
-                  <SelectItem key={recipient.id} value={recipient.id}>
-                    {recipient.name}
+                {technicians.map((technician) => (
+                  <SelectItem key={technician.id} value={technician.id}>
+                    {technician.firstName} {technician.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
