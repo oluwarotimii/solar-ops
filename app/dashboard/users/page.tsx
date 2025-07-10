@@ -43,14 +43,11 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
+      const response = await fetch("/api/users", {});
 
       if (response.ok) {
         const data = await response.json()
+        console.log('[Frontend] Users data received after refresh:', data);
         setUsers(data)
       }
     } catch (error) {
@@ -62,11 +59,7 @@ export default function UsersPage() {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("/api/roles", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
+      const response = await fetch("/api/roles", {});
 
       if (response.ok) {
         const data = await response.json()
@@ -83,13 +76,16 @@ export default function UsersPage() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({ status }),
       })
 
       if (response.ok) {
+        console.log('[Frontend] User status updated successfully. Refreshing users...');
         fetchUsers() // Refresh the list
+      } else {
+        const errorData = await response.json();
+        console.error('[Frontend] Failed to update user status:', errorData);
       }
     } catch (error) {
       console.error("Failed to update user status:", error)
@@ -102,7 +98,6 @@ export default function UsersPage() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({ roleId }),
       })
@@ -127,6 +122,8 @@ export default function UsersPage() {
   })
 
   const pendingUsers = users.filter((user) => user.status === "pending")
+  console.log('[Frontend] Current users array:', users);
+  console.log('[Frontend] Filtered pending users:', pendingUsers);
 
   if (loading) {
     return (

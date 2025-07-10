@@ -6,6 +6,7 @@ export interface User {
   phone?: string
   roleId: string
   status: "pending" | "active" | "suspended" | "deactivated"
+  approved: boolean
   role?: Role
   createdAt: string
   updatedAt: string

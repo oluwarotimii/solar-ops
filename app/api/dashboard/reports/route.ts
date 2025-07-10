@@ -1,24 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDbSql } from "@/lib/db"
-import { verifyToken, getUserById } from "@/lib/auth"
+import { authenticateApiRequest } from "@/lib/api-auth"
 
 export async function GET(request: NextRequest) {
   try {
-    const sql = getDbSql();
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const { user, response } = await authenticateApiRequest(request)
+    if (response) {
+      return response
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
-
-    const user = await getUserById(decoded.userId)
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
+    const sql = getDbSql();
 
     // Get total jobs
     const totalJobsResult = await sql`SELECT COUNT(*) as count FROM jobs`

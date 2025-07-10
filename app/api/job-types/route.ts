@@ -1,19 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
+import { authenticateApiRequest } from "@/lib/api-auth"
 
 export async function GET(request: NextRequest) {
   try {
+    const { user, response } = await authenticateApiRequest(request)
+    if (response) {
+      return response
+    }
     const sql = getDbSql();
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
 
     const result = await sql`SELECT * FROM job_types ORDER BY name`
     const jobTypes = result.map(toCamelCase)
@@ -27,16 +22,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const { user, response } = await authenticateApiRequest(request)
+    if (response) {
+      return response
+    }
     const sql = getDbSql();
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
 
     const { name, description, color } = await request.json()
 
@@ -58,3 +48,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+

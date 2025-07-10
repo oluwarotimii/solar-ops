@@ -23,6 +23,7 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    console.log("[Login Debug] handleSubmit triggered.");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -36,8 +37,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        localStorage.setItem("token", data.token)
-        localStorage.setItem("user", JSON.stringify(data.user))
+        localStorage.setItem("userEmail", data.email); // Store user email
         router.push("/dashboard")
       } else {
         setError(data.error || "Login failed")

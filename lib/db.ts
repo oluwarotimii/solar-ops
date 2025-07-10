@@ -1,10 +1,16 @@
 import { neon } from "@neondatabase/serverless"
 
+const sql = neon(process.env.DATABASE_URL);
+
+export { sql };
+
 export function getDbSql() {
   if (!process.env.DATABASE_URL) {
+    console.error("[DB Debug] DATABASE_URL environment variable is not set!");
     throw new Error("DATABASE_URL environment variable is required");
   }
-  return neon(process.env.DATABASE_URL);
+  console.log("[DB Debug] DATABASE_URL is set. Attempting to connect.");
+  return sql;
 }
 
 // Helper function to convert snake_case to camelCase

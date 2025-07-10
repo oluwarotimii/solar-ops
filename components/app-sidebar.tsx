@@ -109,19 +109,18 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: { email: string } }) {
   const router = useRouter()
   const pathname = usePathname()
 
   // Get user info from localStorage (demo)
-  const userEmail =
-    typeof window !== "undefined" ? localStorage.getItem("userEmail") || "admin@demo.com" : "admin@demo.com"
-  const userName = userEmail
+  const userEmail = user.email
+  const userName = user.email
     .split("@")[0]
     .replace(/\d+/g, "")
     .replace(/[^a-zA-Z]/g, " ")
     .trim()
-  const displayName = userName.charAt(0).toUpperCase() + userName.slice(1) || "Admin User"
+  const displayName = userName.charAt(0).toUpperCase() + userName.slice(1) || "User"
 
   const handleLogout = () => {
     localStorage.removeItem("token")

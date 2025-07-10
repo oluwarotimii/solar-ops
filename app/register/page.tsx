@@ -36,11 +36,37 @@ export default function RegisterPage() {
       return
     }
 
-    // Simulate successful registration for demo
-    setTimeout(() => {
-      setSuccess(true)
-      setLoading(false)
-    }, 1000)
+    // Make actual API call
+    try {
+      console.log('[Frontend] Sending registration data:', formData);
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone || null, // Send null if empty
+        }),
+      });
+
+      const data = await response.json();
+      console.log('[Frontend] Registration API response:', data);
+
+      if (response.ok) {
+        setSuccess(true);
+      } else {
+        setError(data.error || "Registration failed");
+      }
+    } catch (err) {
+      console.error('[Frontend] Registration fetch error:', err);
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (success) {
