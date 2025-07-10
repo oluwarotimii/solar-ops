@@ -130,6 +130,13 @@ export default function SettingsPage() {
     setLoadingSave(true)
     setError(null)
     try {
+      // Prepare data for saving (combine all settings into one payload if API supports it)
+      const payload = {
+        ...companySettings,
+        ...notificationSettings,
+        ...systemSettings,
+      }
+
       const response = await fetch("/api/settings", {
         method: "PUT", // Or PATCH
         headers: {
