@@ -1,27 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { authenticateApiRequest } from "@/lib/api-auth"
+import { getDbSql } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, jobId, latitude, longitude } = await request.json()
-
-    // End tracking journey
-    const journeyEnd = {
-      id: Date.now().toString(),
-      userId,
-      jobId,
-      latitude,
-      longitude,
-      timestamp: new Date().toISOString(),
-      journeyType: "return",
-      status: "completed",
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
     }
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const { jobId, latitude, longitude } = await request.json()
+
+    const sql = getDbSql();
+    await sql`
+      INSERT INTO gps_logs (user_id, job_id, latitude, longitude, journey_type, status)
+      VALUES (${user.id}, ${jobId}, ${latitude}, ${longitude}, 'return', 'completed')
+    `;
 
     return NextResponse.json({
       success: true,
-      journey: journeyEnd,
       message: "Journey tracking ended - back to base",
     })
   } catch (error) {

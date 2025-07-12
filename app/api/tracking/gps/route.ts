@@ -1,27 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { authenticateApiRequest } from "@/lib/api-auth"
+import { getDbSql } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, jobId, latitude, longitude, accuracy, journeyType } = await request.json()
-
-    // In a real app, this would save to database
-    const gpsLog = {
-      id: Date.now().toString(),
-      userId,
-      jobId,
-      latitude,
-      longitude,
-      accuracy,
-      timestamp: new Date().toISOString(),
-      journeyType, // "start", "active", "site_arrival", "site_departure", "return"
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
     }
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const { jobId, latitude, longitude, accuracy, journeyType } = await request.json()
+
+    const sql = getDbSql();
+    await sql`
+      INSERT INTO gps_logs (user_id, job_id, latitude, longitude, accuracy, journey_type)
+      VALUES (${user.id}, ${jobId}, ${latitude}, ${longitude}, ${accuracy}, ${journeyType})
+    `;
 
     return NextResponse.json({
       success: true,
-      gpsLog,
       message: "GPS location logged successfully",
     })
   } catch (error) {

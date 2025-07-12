@@ -1,13 +1,27 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextResponse, type NextRequest } from 'next/server';
+import { authenticateApiRequest } from "@/lib/api-auth";
+import { getDbSql } from "@/lib/db";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const { user, response } = await authenticateApiRequest(req);
+    if (response) {
+      return response;
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const { title, message, type, recipientId } = await req.json();
 
-    // For now, we'll just return a success message.
-    // In the future, this will save the notification to the database
-    // and potentially send it to the recipient.
+    // In a real app, this would save to database
+    const sql = getDbSql();
+    await sql`
+      INSERT INTO notifications (recipient_id, sender_id, title, message, type)
+      VALUES (${recipientId}, ${user.id}, ${title}, ${message}, ${type})
+    `;
+
     return NextResponse.json({ message: 'Notification sent successfully' });
   } catch (error) {
     console.error('[NOTIFICATIONS_SEND_POST]', error);

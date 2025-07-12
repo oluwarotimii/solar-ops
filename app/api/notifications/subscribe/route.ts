@@ -1,16 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken } from "@/lib/auth"
+import { authenticateApiRequest } from "@/lib/api-auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { subscription } = await request.json()
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
     // In production, store subscription in database
     // await sql`
     //   INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key, created_at)
-    //   VALUES (${decoded.userId}, ${subscription.endpoint}, ${subscription.keys.p256dh}, ${subscription.keys.auth}, NOW())
+    //   VALUES (${user.id}, ${subscription.endpoint}, ${subscription.keys.p256dh}, ${subscription.keys.auth}, NOW())
     //   ON CONFLICT (user_id, endpoint)
     //   DO UPDATE SET
     //     p256dh_key = ${subscription.keys.p256dh},

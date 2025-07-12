@@ -1,14 +1,28 @@
 
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextResponse, type NextRequest } from 'next/server';
+import { getDbSql } from '@/lib/db';
+import { authenticateApiRequest } from "@/lib/api-auth";
 
 export async function DELETE(
-  req: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // For now, we'll just return a success message.
-    // In the future, this will delete the notification from the database.
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const sql = getDbSql();
+    await sql`
+      DELETE FROM notifications
+      WHERE id = ${params.id} AND recipient_id = ${user.id}
+    `;
+
     return NextResponse.json({ message: 'Notification deleted' });
   } catch (error) {
     console.error('[NOTIFICATION_DELETE]', error);
