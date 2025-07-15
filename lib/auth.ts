@@ -97,22 +97,28 @@ export async function getUserByEmail(email: string): Promise<(User & { passwordH
 }
 
 export function hasPermission(user: User, permission: string): boolean {
-  if (!user.role) return false
-  if (user.role.isAdmin) return true
+  if (!user.role || !user.role.permissions) {
+    return false;
+  }
 
-  const permissions = user.role.permissions
-  if (permissions.all) return true
+  // Super Admins with 'all: true' have all permissions
+  if (user.role.permissions.all === true) {
+    return true;
+  }
 
-  return permissions[permission] === true
-}
+  // Check for the specific permission
+  const permissionParts = permission.split(':');
+  let currentPermission = user.role.permissions;
 
-export function canAccessJob(user: User, job: any): boolean {
-  if (!user.role) return false
-  if (user.role.isAdmin) return true
+  for (const part of permissionParts) {
+    if (currentPermission[part] === undefined) {
+      return false;
+    }
+    if (typeof currentPermission[part] === 'boolean') {
+      return currentPermission[part];
+    }
+    currentPermission = currentPermission[part];
+  }
 
-  const permissions = user.role.permissions
-  if (permissions.jobs === true) return true
-  if (permissions.jobs === "assigned_only" && job.assignedTo === user.id) return true
-
-  return false
+  return false;
 }

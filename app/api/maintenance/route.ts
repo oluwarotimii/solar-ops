@@ -1,24 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
-import { verifyToken, getUserById } from "@/lib/auth"
+import { authenticateApiRequest } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
+  const { user, response } = await authenticateApiRequest(request)
+  if (response) {
+    return response
+  }
+
+  if (!user || !hasPermission(user, 'maintenance:read')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const sql = getDbSql();
-    const token = request.cookies.get("token")?.value
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized: No token provided" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
-
-    const user = await getUserById(decoded.userId)
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
 
     const result = await sql`
       SELECT 
@@ -75,22 +71,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { user, response } = await authenticateApiRequest(request)
+  if (response) {
+    return response
+  }
+
+  if (!user || !hasPermission(user, 'maintenance:create')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const sql = getDbSql();
-    const token = request.cookies.get("token")?.value
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized: No token provided" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
-
-    const user = await getUserById(decoded.userId)
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
 
     const taskData = await request.json()
 

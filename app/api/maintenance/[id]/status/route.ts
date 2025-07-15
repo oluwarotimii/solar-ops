@@ -1,18 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/auth"
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  const { user, response } = await authenticateApiRequest(request);
+  if (response) {
+    return response;
+  }
+
+  if (!user || !hasPermission(user, 'maintenance:update')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
-    const { user, response } = await authenticateApiRequest(request);
-    if (response) {
-      return response;
-    }
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const { status } = await request.json()
     if (!status || !["scheduled", "in_progress", "completed", "overdue"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 })

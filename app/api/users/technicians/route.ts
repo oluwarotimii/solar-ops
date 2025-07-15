@@ -1,21 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
+import { authenticateApiRequest } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
+  const { user, response } = await authenticateApiRequest(request)
+  if (response) {
+    return response
+  }
+
+  if (!user || !hasPermission(user, 'users:read')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const sql = getDbSql();
-    const token = request.cookies.get("token")?.value
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized: No token provided" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
-
-    const result = await sql`
       SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone, u.status,
         COUNT(j.id) AS total_jobs,

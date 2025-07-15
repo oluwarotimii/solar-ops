@@ -100,15 +100,17 @@ export default function UsersPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ roleId }),
-      })
+      });
 
       if (response.ok) {
-        fetchUsers() // Refresh the list
+        fetchUsers(); // Refresh the list
+      } else {
+        console.error("Failed to update user role");
       }
     } catch (error) {
-      console.error("Failed to update user role:", error)
+      console.error("Failed to update user role:", error);
     }
-  }
+  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =

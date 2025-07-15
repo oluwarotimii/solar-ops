@@ -31,6 +31,7 @@ import {
   ChevronUp,
   User,
   DollarSign,
+  Shield
 } from "lucide-react"
 
 // Navigation items
@@ -93,6 +94,11 @@ const data = {
           title: "Users",
           url: "/dashboard/users",
           icon: User,
+        },
+        {
+          title: "Roles",
+          url: "/dashboard/roles",
+          icon: Shield,
         },
         {
           title: "Notifications",

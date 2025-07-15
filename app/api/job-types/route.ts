@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +9,11 @@ export async function GET(request: NextRequest) {
     if (response) {
       return response
     }
+
+    if (!user || !hasPermission(user, 'job_types:read')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const sql = getDbSql();
 
     const result = await sql`SELECT * FROM job_types ORDER BY name`
@@ -26,6 +32,11 @@ export async function POST(request: NextRequest) {
     if (response) {
       return response
     }
+
+    if (!user || !hasPermission(user, 'job_types:create')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const sql = getDbSql();
 
     const { name, description, color } = await request.json()

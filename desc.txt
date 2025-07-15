@@ -1,0 +1,106 @@
+This application, "Solar Field Operations," is designed to streamline and optimize the management of solar
+  installation and maintenance tasks. It consists of two main components: a web-based administration platform and a
+  mobile application tailored for field operations.
+
+
+  Overall Application Description
+
+
+   * Web Platform (Admin Dashboard): This is the central control hub, accessible via a web browser, exclusively for
+     Administrators. It provides a comprehensive overview of all operations, user management, system settings, and
+     high-level reporting. Its purpose is to configure the system, manage all users (including supervisors and
+     technicians), and oversee the entire workflow.
+   * Mobile Application (Field Operations): This is the core tool for your field teams – Supervisors and
+     Technicians. It's designed to be intuitive and efficient, allowing them to manage their daily tasks directly
+     from their mobile devices. The mobile app leverages the same robust backend as the web platform, ensuring data
+     consistency and real-time updates.
+
+  The Mobile App: Simplicity, Clarity, and Blue
+
+
+  The mobile application is specifically crafted with ease of use in mind, recognizing that some users may be
+  less familiar with complex digital interfaces. Our design philosophy prioritizes:
+
+
+   * Intuitive Navigation: Clear, large buttons and a logical flow to minimize confusion.
+   * Minimal Steps: Reducing the number of taps or screens required to complete a task.
+   * Clear Feedback: Instant visual confirmation for every action (e.g., a green checkmark for success, a red alert
+     for errors).
+   * Consistent Layout: Predictable placement of elements so users always know where to find what they need.
+   * Readability: Large, legible fonts and high-contrast elements.
+
+
+  Primary Color: Blue
+  The app will predominantly feature blue as its primary color. Blue evokes feelings of trust, reliability, and
+  calmness. It will be used for:
+   * Key Action Buttons: Making them stand out and easy to identify.
+   * Highlighting Important Information: Drawing attention to critical data points.
+   * Branding Elements: Providing a consistent and professional aesthetic.
+   * Backgrounds and Accents: Creating a clean, uncluttered visual environment that is easy on the eyes and reduces
+     cognitive load.
+
+  Mobile App for Technicians
+
+
+  The Technician's app is their daily companion for executing assigned work. It's designed to be straightforward
+  and task-oriented.
+
+
+   * Core Purpose: To provide technicians with all the information they need for their assigned jobs and maintenance
+     tasks, enable them to update progress, and track their location efficiently.
+   * Key Features:
+       * My Jobs: A simple list of jobs assigned directly to the technician, showing status, location, and scheduled
+         time. Tapping a job reveals detailed instructions and contact information.
+       * Job Status Updates: Large, clear buttons to change job status (e.g., "Start Job," "Mark In Progress,"
+         "Complete Job").
+       * Maintenance Tasks: A list of assigned maintenance tasks with similar status update capabilities.
+       * GPS Tracking & Check-ins: Easy-to-use functions to start/end journeys, log GPS locations (often automated
+         in the background), and check-in/out at job sites.
+       * Notifications: A dedicated section for receiving alerts about new assignments or important updates.
+   * Simplicity Focus:
+       * Action-Oriented Interface: Buttons are clearly labeled with actions (e.g., "Check-in," "Complete").
+       * Minimal Data Entry: Technicians primarily interact by tapping buttons and selecting options, reducing the
+         need for typing.
+       * Visual Cues: Color-coded statuses (e.g., green for completed, yellow for in-progress) for quick
+         understanding.
+
+  Mobile App for Supervisors (Managers)
+
+
+  The Supervisor's app builds upon the Technician's functionality, adding tools for team oversight and operational
+  management.
+
+
+   * Core Purpose: To empower department managers to efficiently oversee their teams, assign work, monitor progress,
+     and manage key operational aspects without needing to be at a desktop.
+   * Key Features (All Technician features, plus):
+       * Team Overview: A dashboard showing the status and availability of all technicians under their supervision.
+       * Live Technician Tracking: A map view displaying the real-time locations of their team members, allowing for
+         efficient dispatch and oversight.
+       * Job Creation & Assignment: Streamlined forms to create new jobs and assign them directly to technicians.
+       * Maintenance Scheduling: Ability to schedule and assign maintenance tasks to technicians.
+       * Job Type Management: Tools to create and manage different categories of jobs (e.g., "Solar Installation,"
+         "Inverter Repair").
+       * Team Jobs: A comprehensive view of all jobs assigned to their team, not just their own.
+       * Notifications: Ability to send targeted notifications to individual technicians or the entire team.
+   * Simplicity Focus:
+       * Streamlined Workflows: Complex tasks like job creation are broken down into simple, guided steps.
+       * Dashboard Summaries: Key team and operational metrics are presented visually for quick understanding.
+       * Direct Actions: Supervisors can initiate actions (e.g., "Assign Job," "Send Alert") directly from relevant
+         screens.
+
+  Underlying Technology
+
+
+  The mobile application is powered by the same robust Next.js backend that drives your web administration platform.
+   This ensures:
+
+
+   * Real-time Data: All updates from the field are immediately reflected across the system.
+   * Security: Role-based permissions ensure that users only see and interact with the data and features relevant to
+     their role.
+   * Scalability: The system is built to handle a growing number of users and tasks.
+
+
+  This integrated approach provides a powerful yet user-friendly solution for managing your solar field
+  operations, with the mobile app specifically designed to be accessible and efficient for all field personnel.

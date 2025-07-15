@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getDbSql, toCamelCase } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 
 export const revalidate = 0; // Ensure no caching for this API route
 
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  if (!user || !user.role?.isAdmin) {
+  if (!user || !hasPermission(user, 'users:read')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,11 +14,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    let query;
     const sql = getDbSql();
-    if (user.role?.isAdmin) {
-      // Admins can see all jobs
-      query = sql`
+    // Check if the user has permission to read all jobs or only their own
+    if (hasPermission(user, 'jobs:read:all')) {
+      // Admins/Supervisors can see all jobs
+      const result = await sql`
         SELECT 
           j.*,
         jt.name as job_type_name, jt.color as job_type_color,
@@ -30,26 +31,6 @@ export async function GET(request: NextRequest) {
       LEFT JOIN users cu ON j.created_by = cu.id
       ORDER BY j.created_at DESC
     `
-    } else {
-      // Technicians only see jobs assigned to them
-      query = sql`
-        SELECT 
-          j.*,
-        jt.name as job_type_name, jt.color as job_type_color,
-        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
-        cu.first_name as created_first_name, cu.last_name as created_last_name
-      FROM jobs j
-      LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
-      LEFT JOIN users au ON jtech.technician_id = au.id
-      LEFT JOIN users cu ON j.created_by = cu.id
-        WHERE jtech.technician_id = ${user.id}
-        ORDER BY j.created_at DESC
-      `
-    }
-
-    const result = await query
-
     const jobs = result.map((row: any) => {
       const job = toCamelCase(row)
 
@@ -87,8 +68,118 @@ export async function GET(request: NextRequest) {
 
       return job
     })
-
     return NextResponse.json(jobs)
+    } else if (hasPermission(user, 'jobs:read:team')) {
+      // Supervisors can see all jobs assigned to their team
+      const result = await sql`
+        SELECT 
+          j.*,
+        jt.name as job_type_name, jt.color as job_type_color,
+        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
+        cu.first_name as created_first_name, cu.last_name as created_last_name
+      FROM jobs j
+      LEFT JOIN job_types jt ON j.job_type_id = jt.id
+      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
+      LEFT JOIN users au ON jtech.technician_id = au.id
+      LEFT JOIN users cu ON j.created_by = cu.id
+      WHERE jtech.technician_id IN (SELECT technician_id FROM supervisor_technicians WHERE supervisor_id = ${user.id})
+      ORDER BY j.created_at DESC
+      `
+      const jobs = result.map((row: any) => {
+      const job = toCamelCase(row)
+
+      // Build nested objects
+      if (job.jobTypeName) {
+        job.jobType = {
+          id: job.jobTypeId,
+          name: job.jobTypeName,
+          color: job.jobTypeColor,
+        }
+      }
+
+      if (job.assignedFirstName) {
+        job.assignedUser = {
+          firstName: job.assignedFirstName,
+          lastName: job.assignedLastName,
+        }
+      }
+
+      if (job.createdFirstName) {
+        job.createdUser = {
+          id: job.createdBy,
+          firstName: job.createdFirstName,
+          lastName: job.createdLastName,
+        }
+      }
+
+      // Clean up the flat fields
+      delete job.jobTypeName
+      delete job.jobTypeColor
+      delete job.assignedFirstName
+      delete job.assignedLastName
+      delete job.createdFirstName
+      delete job.createdLastName
+
+      return job
+    })
+    return NextResponse.json(jobs)
+    } else if (hasPermission(user, 'jobs:read:assigned')) {
+      // Technicians only see jobs assigned to them
+      const result = await sql`
+        SELECT 
+          j.*,
+        jt.name as job_type_name, jt.color as job_type_color,
+        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
+        cu.first_name as created_first_name, cu.last_name as created_last_name
+      FROM jobs j
+      LEFT JOIN job_types jt ON j.job_type_id = jt.id
+      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
+      LEFT JOIN users au ON jtech.technician_id = au.id
+      LEFT JOIN users cu ON j.created_by = cu.id
+        WHERE jtech.technician_id = ${user.id}
+        ORDER BY j.created_at DESC
+      `
+      const jobs = result.map((row: any) => {
+      const job = toCamelCase(row)
+
+      // Build nested objects
+      if (job.jobTypeName) {
+        job.jobType = {
+          id: job.jobTypeId,
+          name: job.jobTypeName,
+          color: job.jobTypeColor,
+        }
+      }
+
+      if (job.assignedFirstName) {
+        job.assignedUser = {
+          firstName: job.assignedFirstName,
+          lastName: job.assignedLastName,
+        }
+      }
+
+      if (job.createdFirstName) {
+        job.createdUser = {
+          id: job.createdBy,
+          firstName: job.createdFirstName,
+          lastName: job.createdLastName,
+        }
+      }
+
+      // Clean up the flat fields
+      delete job.jobTypeName
+      delete job.jobTypeColor
+      delete job.assignedFirstName
+      delete job.assignedLastName
+      delete job.createdFirstName
+      delete job.createdLastName
+
+      return job
+    })
+    return NextResponse.json(jobs)
+    } else {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   } catch (error) {
     console.error("Jobs fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -102,8 +193,8 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!user || !hasPermission(user, 'jobs:create')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const jobData = await request.json()
