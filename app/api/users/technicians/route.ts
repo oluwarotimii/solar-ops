@@ -14,8 +14,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const sql = getDbSql();
-      SELECT 
+    const sql = getDbSql()
+    const result = await sql`
+      SELECT
         u.id, u.first_name, u.last_name, u.email, u.phone, u.status,
         COUNT(j.id) AS total_jobs,
         COUNT(CASE WHEN j.status = 'completed' THEN j.id END) AS completed_jobs,
