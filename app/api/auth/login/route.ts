@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       user: safeUser,
+      token,
       email: user.email, // Include user's email in the response
     });
 
