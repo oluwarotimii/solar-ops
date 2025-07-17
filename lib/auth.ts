@@ -25,9 +25,12 @@ export function generateToken(userId: string): string {
 
 export function verifyToken(token: string): { userId: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string }
-  } catch {
-    return null
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    console.log(`[Auth Debug] Token verified successfully for userId: ${decoded.userId}`);
+    return decoded;
+  } catch (error) {
+    console.error(`[Auth Debug] Token verification failed:`, error);
+    return null;
   }
 }
 
