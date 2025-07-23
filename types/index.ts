@@ -25,7 +25,6 @@ export interface JobTechnician {
   id: string
   jobId: string
   technicianId: string
-  sharePercentage: number
   role: "lead" | "assistant" | "specialist"
   rating?: number
   feedback?: string
@@ -47,7 +46,7 @@ export interface Job {
   scheduledDate?: string
   estimatedDuration?: number
   jobValue: number
-  totalTechnicianShare: number
+  
   instructions?: string
   completedAt?: string
   jobType?: JobType
@@ -62,7 +61,6 @@ export interface JobType {
   name: string
   description?: string
   baseValue: number
-  defaultPercentage: number // Default percentage for this job type
   color: string
   createdAt: string
 }
@@ -125,7 +123,6 @@ export interface AccruedValue {
   userId: string
   jobId: string
   jobValue: number
-  sharePercentage: number
   earnedAmount: number
   rating?: number
   month: number

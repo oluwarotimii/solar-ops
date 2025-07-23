@@ -206,14 +206,11 @@ export async function POST(request: NextRequest) {
     const sql = getDbSql();
 
     // Calculate total technician share and company share
-    const totalTechnicianShare = jobData.assignedTechnicians.reduce((sum: number, tech: any) => sum + tech.sharePercentage, 0);
-    const companySharePercentage = 100 - totalTechnicianShare;
-
     const result = await sql`
       INSERT INTO jobs (
         title, description, job_type_id, created_by,
         priority, location_address, location_lat, location_lng,
-        scheduled_date, estimated_duration, job_value, total_technician_share, company_share_percentage,
+        scheduled_date, estimated_duration, job_value,
         instructions, status
       ) VALUES (
         ${jobData.title},
@@ -227,8 +224,6 @@ export async function POST(request: NextRequest) {
         ${jobData.scheduledDate || null},
         ${jobData.estimatedDuration || null},
         ${jobData.jobValue || 0},
-        ${totalTechnicianShare},
-        ${companySharePercentage},
         ${jobData.instructions || null},
         'assigned'
       ) RETURNING id
@@ -240,8 +235,8 @@ export async function POST(request: NextRequest) {
     if (jobData.assignedTechnicians && jobData.assignedTechnicians.length > 0) {
       for (const assignedTech of jobData.assignedTechnicians) {
         await sql`
-          INSERT INTO job_technicians (job_id, technician_id, share_percentage, role)
-          VALUES (${jobId}, ${assignedTech.technicianId}, ${assignedTech.sharePercentage}, ${assignedTech.role})
+          INSERT INTO job_technicians (job_id, technician_id, role)
+          VALUES (${jobId}, ${assignedTech.technicianId}, ${assignedTech.role})
         `;
 
         // Send notification to assigned technician

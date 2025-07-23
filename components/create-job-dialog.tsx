@@ -17,6 +17,11 @@ interface CreateJobDialogProps {
   onJobCreated: (job: any) => void
 }
 
+interface JobTechnician {
+  technicianId: string;
+  role: "lead" | "assistant" | "specialist";
+}
+
 export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -90,7 +95,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         setAssignedTechnicians([
           {
             technicianId: "",
-            sharePercentage: selectedJobType.defaultPercentage,
             role: "lead",
           },
         ])
@@ -99,16 +103,10 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
   }, [formData.jobTypeId, jobTypes])
 
   const addTechnician = () => {
-    const selectedJobType = jobTypes.find((jt) => jt.id === formData.jobTypeId)
-    const defaultPercentage = selectedJobType?.defaultPercentage || 50
-    const currentTotal = getTotalShare()
-    const remainingPercentage = Math.max(0, 100 - currentTotal)
-
     setAssignedTechnicians([
       ...assignedTechnicians,
       {
         technicianId: "",
-        sharePercentage: Math.min(defaultPercentage, remainingPercentage),
         role: "assistant",
       },
     ])
@@ -122,10 +120,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
 
   const removeTechnician = (index: number) => {
     setAssignedTechnicians(assignedTechnicians.filter((_, i) => i !== index))
-  }
-
-  const getTotalShare = () => {
-    return assignedTechnicians.reduce((sum, tech) => sum + tech.sharePercentage, 0)
   }
 
   const getAvailableTechnicians = (currentIndex: number) => {
@@ -178,7 +172,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
           assignedTechnicians: assignedTechnicians,
           jobValue: Number.parseFloat(formData.jobValue) || 0,
           estimatedDuration: Number.parseInt(formData.estimatedDuration) || 0,
-          totalTechnicianShare: totalShare,
         }),
       });
 
@@ -241,9 +234,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.color }} />
                           {type.name}
-                          <Badge variant="outline" className="ml-2">
-                            {type.defaultPercentage}%
-                          </Badge>
                         </div>
                       </SelectItem>
                     ))}
@@ -338,8 +328,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
               <div>
                 <CardTitle className="text-lg">Assign Technicians</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Total Technician Share: {getTotalShare()}%
-                  <span className="ml-4">Company Share: {100 - getTotalShare()}%</span>
+                  All job value will be distributed equally among assigned technicians.
                 </p>
               </div>
               <Button type="button" variant="outline" onClick={addTechnician}>
@@ -400,18 +389,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Share Percentage *</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={tech.sharePercentage}
-                      onChange={(e) => updateTechnician(index, "sharePercentage", Number(e.target.value))}
-                      placeholder="60"
-                    />
-                  </div>
-
                   {tech.technicianId && (
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">
@@ -419,12 +396,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                         {technicians.find((t) => t.id === tech.technicianId)?.firstName}{" "}
                         {technicians.find((t) => t.id === tech.technicianId)?.lastName}
                       </Badge>
-                      <Badge variant="secondary">{tech.sharePercentage}% share</Badge>
-                      {formData.jobValue && (
-                        <Badge variant="outline">
-                          {formatNaira(((Number(formData.jobValue) * tech.sharePercentage) / 100).toString())}
-                        </Badge>
-                      )}
                     </div>
                   )}
                 </div>
@@ -455,3 +426,4 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     </>
   )
 }
+

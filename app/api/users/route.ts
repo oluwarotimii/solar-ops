@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getDbSql, toCamelCase } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
-import { hasPermission } from "@/lib/auth";
+import { hasPermission, hashPassword } from "@/lib/auth";
 
 export const revalidate = 0; // Ensure no caching for this API route
 
@@ -57,5 +57,47 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const { user, response } = await authenticateApiRequest(request);
+  if (response) {
+    return response;
+  }
+
+  if (!user || !hasPermission(user, 'users:create')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  try {
+    const { email, password, firstName, lastName, phone, roleId, status } = await request.json();
+
+    if (!email || !password || !firstName || !lastName || !roleId) {
+      return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
+    }
+
+    const db = getDbSql();
+
+    const existingUser = await db`
+      SELECT id FROM users WHERE email = ${email}
+    `;
+
+    if (existingUser.length > 0) {
+      return NextResponse.json({ error: "User with this email already exists" }, { status: 409 });
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    const result = await db`
+      INSERT INTO users (email, password_hash, first_name, last_name, phone, role_id, status)
+      VALUES (${email}, ${hashedPassword}, ${firstName}, ${lastName}, ${phone || null}, ${roleId}, ${status || 'pending'})
+      RETURNING id;
+    `;
+
+    return NextResponse.json({ id: result[0].id, message: 'User created successfully' }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

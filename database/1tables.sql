@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS job_types (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     base_value DECIMAL(12,2) DEFAULT 0,
-    default_percentage DECIMAL(5,2) DEFAULT 50.00,
     color VARCHAR(7) DEFAULT '#3B82F6',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -51,7 +50,6 @@ CREATE TABLE IF NOT EXISTS jobs (
     scheduled_date DATE,
     estimated_duration INTEGER,
     job_value DECIMAL(12,2) DEFAULT 0,
-    total_technician_share DECIMAL(5,2) DEFAULT 100.00,
     instructions TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -63,7 +61,6 @@ CREATE TABLE IF NOT EXISTS job_technicians (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
     technician_id UUID REFERENCES users(id),
-    share_percentage DECIMAL(5,2) NOT NULL,
     role VARCHAR(20) DEFAULT 'assistant',
     rating DECIMAL(3,2),
     feedback TEXT,
@@ -130,7 +127,6 @@ CREATE TABLE IF NOT EXISTS accrued_values (
     user_id UUID REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
     job_value DECIMAL(12,2) NOT NULL,
-    share_percentage DECIMAL(5,2) NOT NULL,
     earned_amount DECIMAL(12,2) NOT NULL,
     rating DECIMAL(3,2),
     month INTEGER NOT NULL,

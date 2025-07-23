@@ -46,7 +46,7 @@ export async function GET(request: Request) {
           title: value.jobTitle,
           type: value.jobTypeName,
         },
-        sharePercentage: value.sharePercentage,
+        
         jobValue: value.jobValue,
         earnedAmount: value.earnedAmount,
         rating: value.rating,
@@ -74,16 +74,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const { userId, jobId, jobValue, sharePercentage, earnedAmount, rating, month, year } = await req.json();
+    const { userId, jobId, jobValue, rating, month, year } = await req.json();
 
-    if (!userId || !jobId || !jobValue || !sharePercentage || !earnedAmount || !month || !year) {
+    if (!userId || !jobId || !jobValue || !month || !year) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const sql = getDbSql();
+
+    // Get the number of technicians assigned to the job
+    const technicianCountResult = await sql`
+      SELECT COUNT(technician_id) FROM job_technicians WHERE job_id = ${jobId}
+    `;
+    const technicianCount = parseInt(technicianCountResult[0].count, 10);
+
+    if (technicianCount === 0) {
+      return NextResponse.json({ error: "No technicians assigned to this job" }, { status: 400 });
+    }
+
+    // Calculate earned amount based on job value divided by the number of technicians
+    const earnedAmount = jobValue / technicianCount;
+
     const result = await sql`
-      INSERT INTO accrued_values (user_id, job_id, job_value, share_percentage, earned_amount, rating, month, year)
-      VALUES (${userId}, ${jobId}, ${jobValue}, ${sharePercentage}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
+      INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, rating, month, year)
+      VALUES (${userId}, ${jobId}, ${jobValue}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
       RETURNING *
     `;
 

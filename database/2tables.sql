@@ -21,12 +21,12 @@ WHERE r.name = 'Super Admin'
 ON CONFLICT (email) DO NOTHING;
 
 
-INSERT INTO job_types (name, description, base_value, default_percentage, color) VALUES
-('Solar Installation', 'New solar panel installation', 500000.00, 60.00, '#10B981'),
-('Maintenance Check', 'Routine maintenance and inspection', 75000.00, 70.00, '#F59E0B'),
-('Repair Service', 'Equipment repair and troubleshooting', 150000.00, 65.00, '#EF4444'),
-('System Inspection', 'Comprehensive system evaluation', 100000.00, 55.00, '#3B82F6'),
-('Emergency Call', 'Urgent repair or service call', 200000.00, 70.00, '#DC2626')
+INSERT INTO job_types (name, description, base_value, color) VALUES
+('Solar Installation', 'New solar panel installation', 500000.00, '#10B981'),
+('Maintenance Check', 'Routine maintenance and inspection', 75000.00, '#F59E0B'),
+('Repair Service', 'Equipment repair and troubleshooting', 150000.00, '#EF4444'),
+('System Inspection', 'Comprehensive system evaluation', 100000.00, '#3B82F6'),
+('Emergency Call', 'Urgent repair or service call', 200000.00, '#DC2626')
 ON CONFLICT (name) DO NOTHING;
 
 
