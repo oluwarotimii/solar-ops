@@ -37,7 +37,7 @@ interface Job {
   priority: "low" | "medium" | "high" | "urgent"
   locationAddress: string
   scheduledDate?: string | Date | null
-  jobValue: number
+  
   estimatedDuration: number
   technicians?: Array<{ technicianId: string; role: "lead" | "assistant" | "specialist"; firstName: string; lastName: string; }>
 }
@@ -256,7 +256,7 @@ export default function JobsPage() {
                   <TableHead>Priority</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Scheduled</TableHead>
-                  <TableHead>Value</TableHead>
+                  
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -344,9 +344,7 @@ export default function JobsPage() {
                           <span className="text-muted-foreground">Not scheduled</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <span className="font-medium">{formatNaira(job.jobValue)}</span>
-                      </TableCell>
+                      
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           

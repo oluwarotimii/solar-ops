@@ -116,8 +116,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const {
       title, description, jobTypeId, priority, locationAddress,
       locationLat, locationLng, scheduledDate, scheduledTime, estimatedDuration,
-      jobValue, instructions, status, assignedTechnicians
+      instructions, status, assignedTechnicians
     } = jobData;
+
+    // Fetch current job status to determine if completed_at needs to be set
+    const currentJob = await sql`
+      SELECT status FROM jobs WHERE id = ${id}
+    `;
+
+    let completedAtUpdate = sql``;
+    if (status === 'completed' && currentJob[0].status !== 'completed') {
+      completedAtUpdate = sql`completed_at = NOW(),`;
+    } else if (status !== 'completed' && currentJob[0].status === 'completed') {
+      completedAtUpdate = sql`completed_at = NULL,`;
+    }
 
     const result = await sql`
       UPDATE jobs
@@ -132,9 +144,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         scheduled_date = ${scheduledDate || null},
         scheduled_time = ${scheduledTime || null},
         estimated_duration = ${estimatedDuration || null},
-        job_value = ${jobValue || 0},
+        job_value = ${jobValue},
         instructions = ${instructions || null},
         status = ${status || "assigned"},
+        ${completedAtUpdate}
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING id;

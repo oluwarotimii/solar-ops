@@ -56,6 +56,16 @@ export async function GET(request: NextRequest) {
     const currentMonth = new Date().getMonth() + 1
     const currentYear = new Date().getFullYear()
 
+    console.log(`[API] Current Month: ${currentMonth}, Current Year: ${currentYear}`)
+
+    // Debugging query for completed_at values
+    const debugCompletedJobs = await sql`
+      SELECT id, completed_at, EXTRACT(MONTH FROM completed_at) as extracted_month, EXTRACT(YEAR FROM completed_at) as extracted_year
+      FROM jobs
+      WHERE status = 'completed'
+    `;
+    console.log('[API] Debug Completed Jobs Data:', debugCompletedJobs);
+
     const revenueResult = await sql`
       SELECT COALESCE(SUM(job_value), 0) as total
       FROM jobs 
@@ -63,6 +73,7 @@ export async function GET(request: NextRequest) {
       AND EXTRACT(MONTH FROM completed_at) = ${currentMonth}
       AND EXTRACT(YEAR FROM completed_at) = ${currentYear}
     `
+    console.log('[API] Revenue Query Result:', revenueResult)
     const totalRevenue = Number(revenueResult[0].total)
 
     return NextResponse.json({

@@ -37,10 +37,10 @@ export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps)
     scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().split('T')[0] : "",
     scheduledTime: job.scheduledTime || "",
     estimatedDuration: job.estimatedDuration || "",
-    jobValue: job.jobValue || "",
+    
     instructions: job.instructions || "",
-    status: job.status || "assigned", // Add status to form data
-    completedAt: job.completedAt || null, // Add completedAt to form data
+    status: job.status || "assigned", 
+    completedAt: job.completedAt || null, 
   });
 
   const [assignedTechnicians, setAssignedTechnicians] = useState<JobTechnician[]>(
@@ -300,18 +300,7 @@ export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps)
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="jobValue">Job Value (₦) *</Label>
-              <Input
-                id="jobValue"
-                type="number"
-                value={formData.jobValue}
-                onChange={(e) => setFormData((prev) => ({ ...prev, jobValue: e.target.value }))}
-                placeholder="500000"
-                required
-              />
-              {formData.jobValue && <p className="text-sm text-muted-foreground">{formatNaira(formData.jobValue)}</p>}
-            </div>
+            
 
             <div className="space-y-2">
               <Label htmlFor="locationAddress">Location Address *</Label>

@@ -47,7 +47,7 @@ export async function GET(request: Request) {
           type: value.jobTypeName,
         },
         
-        jobValue: value.jobValue,
+        
         earnedAmount: value.earnedAmount,
         rating: value.rating,
         month: value.month,
@@ -74,26 +74,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const { userId, jobId, jobValue, rating, month, year } = await req.json();
+    const { userId, jobId, rating, month, year } = await req.json();
 
-    if (!userId || !jobId || !jobValue || !month || !year) {
+    if (!userId || !jobId || !month || !year) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const sql = getDbSql();
 
-    // Get the number of technicians assigned to the job
-    const technicianCountResult = await sql`
-      SELECT COUNT(technician_id) FROM job_technicians WHERE job_id = ${jobId}
+    // Fetch job_value from the jobs table
+    const jobResult = await sql`
+      SELECT job_value FROM jobs WHERE id = ${jobId}
     `;
-    const technicianCount = parseInt(technicianCountResult[0].count, 10);
 
-    if (technicianCount === 0) {
-      return NextResponse.json({ error: "No technicians assigned to this job" }, { status: 400 });
+    if (jobResult.length === 0) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    // Calculate earned amount based on job value divided by the number of technicians
-    const earnedAmount = jobValue / technicianCount;
+    const jobValue = jobResult[0].job_value;
+
+    // Count assigned technicians for the job
+    const techniciansCountResult = await sql`
+      SELECT COUNT(*) FROM job_technicians WHERE job_id = ${jobId}
+    `;
+    const numberOfTechnicians = parseInt(techniciansCountResult[0].count, 10);
+
+    let earnedAmount = 0;
+    if (numberOfTechnicians > 0) {
+      earnedAmount = jobValue / numberOfTechnicians;
+    }
 
     const result = await sql`
       INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, rating, month, year)

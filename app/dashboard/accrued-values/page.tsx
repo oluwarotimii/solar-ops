@@ -25,8 +25,7 @@ interface AccruedValue {
     title: string
     type: string
   }
-  sharePercentage: number
-  jobValue: number
+  
   earnedAmount: number
   rating: number
   month: number
@@ -299,8 +298,7 @@ export default function AccruedValuesPage() {
                 <TableRow>
                   <TableHead>Technician</TableHead>
                   <TableHead>Job</TableHead>
-                  <TableHead>Share</TableHead>
-                  <TableHead>Job Value</TableHead>
+                  
                   <TableHead>Earned</TableHead>
                   <TableHead>Rating</TableHead>
                   <TableHead>Date</TableHead>
@@ -329,12 +327,7 @@ export default function AccruedValuesPage() {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{value.sharePercentage}%</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{formatNaira(value.jobValue)}</span>
-                    </TableCell>
+                    
                     <TableCell>
                       <span className="font-bold text-green-600">{formatNaira(value.earnedAmount)}</span>
                     </TableCell>

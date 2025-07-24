@@ -103,17 +103,7 @@ export default function ReportsPage() {
         <TabsContent value="overview" className="space-y-6">
           {/* Key Metrics */}
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <div>
-                    <p className="text-sm font-medium">Revenue</p>
-                    <p className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.totalRevenue || 0)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            
 
             <Card>
               <CardContent className="p-4">
@@ -139,17 +129,7 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-purple-600" />
-                  <div>
-                    <p className="text-sm font-medium">Avg Value</p>
-                    <p className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.avgJobValue || 0)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            
 
             <Card>
               <CardContent className="p-4">
@@ -235,7 +215,6 @@ export default function ReportsPage() {
                         <h3 className="font-medium">{jobType.type}</h3>
                         <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                           <span>{jobType.count} jobs</span>
-                          <span>{formatNaira(jobType.revenue)} revenue</span>
                           <span>{jobType.avgDuration} min avg</span>
                         </div>
                       </div>
@@ -269,7 +248,6 @@ export default function ReportsPage() {
                         <h3 className="font-medium">{tech.name}</h3>
                         <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                           <span>{tech.jobs} jobs completed</span>
-                          <span>{formatNaira(tech.revenue)} earned</span>
                           <span>{tech.rating}★ rating</span>
                         </div>
                       </div>
@@ -310,8 +288,7 @@ export default function ReportsPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{formatNaira(month.revenue)}</div>
-                        <div className="text-sm text-muted-foreground">revenue</div>
+                        <div className="text-sm text-muted-foreground"></div>
                       </div>
                     </div>
                   ))

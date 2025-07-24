@@ -18,7 +18,6 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
   const [formData, setFormData] = useState({
     technicianId: "",
     jobId: "",
-    sharePercentage: "",
     rating: "5",
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
@@ -94,9 +93,7 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
         return
       }
 
-      const sharePercentage = Number(formData.sharePercentage)
-      const jobValue = selectedJob.jobValue // Use jobValue from fetched job
-      const earnedAmount = (jobValue * sharePercentage) / 100
+      const earnedAmount = 0
 
       const token = localStorage.getItem("token");
       const response = await fetch("/api/accrued-values", {
@@ -108,8 +105,6 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
         body: JSON.stringify({
           userId: formData.technicianId,
           jobId: formData.jobId,
-          jobValue: jobValue,
-          sharePercentage: sharePercentage,
           earnedAmount: earnedAmount,
           rating: Number(formData.rating),
           month: formData.month,
@@ -132,8 +127,7 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
   }
 
   const selectedJob = jobs.find((j) => j.id === formData.jobId)
-  const calculatedEarning =
-    selectedJob && formData.sharePercentage ? (selectedJob.jobValue * Number(formData.sharePercentage)) / 100 : 0
+  const calculatedEarning = 0
 
   return (
     <>
@@ -190,32 +184,13 @@ export default function AddAccruedValueDialog({ onValueAdded }: AddAccruedValueD
 
         {selectedJob && (
           <div className="p-3 bg-muted rounded-lg">
-            <p className="text-sm font-medium">Job Value: {formatNaira(selectedJob.value)}</p>
+            
             <p className="text-sm text-muted-foreground">{selectedJob.type}</p>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="sharePercentage">Share Percentage *</Label>
-            <Input
-              id="sharePercentage"
-              type="number"
-              min="0"
-              max="100"
-              value={formData.sharePercentage}
-              onChange={(e) => setFormData((prev) => ({ ...prev, sharePercentage: e.target.value }))}
-              placeholder="60"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Calculated Earning</Label>
-            <div className="p-2 bg-green-50 rounded border">
-              <span className="font-bold text-green-700">{formatNaira(calculatedEarning)}</span>
-            </div>
-          </div>
+          
         </div>
 
         <div className="space-y-2">

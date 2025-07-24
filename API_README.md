@@ -170,7 +170,6 @@ This document outlines the API endpoints available for the Solar Field Operation
             "priority": "high",
             "locationAddress": "15 Ahmadu Bello Way, Lagos",
             "scheduledDate": "2025-07-15T00:00:00.000Z",
-            "jobValue": 750000,
             "estimatedDuration": 480
         }
     ]
@@ -190,7 +189,6 @@ This document outlines the API endpoints available for the Solar Field Operation
         "priority": "medium",
         "scheduledDate": "2025-08-01",
         "estimatedDuration": 240,
-        "jobValue": 150000,
         "instructions": "Special instructions",
         "assignedTechnicians": [
             {

@@ -49,8 +49,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         title: value.jobTitle,
         type: value.jobTypeName,
       },
-      jobValue: value.jobValue,
-      earnedAmount: value.earnedAmount,
+      
+      
       rating: value.rating,
       month: value.month,
       year: value.year,
@@ -76,10 +76,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const { id } = params;
-    const { userId, jobId, jobValue, earnedAmount, rating, month, year } = await request.json();
+    const { userId, jobId, earnedAmount, rating, month, year } = await request.json();
     const sql = getDbSql();
 
-    if (!userId || !jobId || !jobValue || !earnedAmount || !month || !year) {
+    if (!userId || !jobId || !earnedAmount || !month || !year) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       SET
         user_id = ${userId},
         job_id = ${jobId},
-        job_value = ${jobValue},
+        job_value = 0,
         earned_amount = ${earnedAmount},
         rating = ${rating || null},
         month = ${month},

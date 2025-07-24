@@ -9,7 +9,11 @@ import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, Al
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
+  const [activity, setActivity] = useState<any[]>([])
+  const [completionRate, setCompletionRate] = useState<any>(null)
   const [loadingStats, setLoadingStats] = useState(true)
+  const [loadingActivity, setLoadingActivity] = useState(true)
+  const [loadingCompletionRate, setLoadingCompletionRate] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -39,10 +43,54 @@ export default function DashboardPage() {
       }
     }
 
+    // Fetch recent activity
+    const fetchActivity = async () => {
+      setLoadingActivity(true)
+      try {
+        const response = await fetch("/api/dashboard/activity")
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to fetch recent activity.")
+        }
+
+        const data = await response.json()
+        setActivity(data)
+      } catch (err: any) {
+        console.error("Error fetching activity:", err)
+        // setError(err.message || "An unexpected error occurred while fetching activity.")
+      } finally {
+        setLoadingActivity(false)
+      }
+    }
+
+    // Fetch job completion rate
+    const fetchCompletionRate = async () => {
+      setLoadingCompletionRate(true)
+      try {
+        const response = await fetch("/api/dashboard/completion-rate")
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to fetch completion rate.")
+        }
+
+        const data = await response.json()
+        setCompletionRate(data)
+      } catch (err: any) {
+        console.error("Error fetching completion rate:", err)
+        // setError(err.message || "An unexpected error occurred while fetching completion rate.")
+      } finally {
+        setLoadingCompletionRate(false)
+      }
+    }
+
     fetchStats()
+    fetchActivity()
+    fetchCompletionRate()
   }, [])
 
-  if (loadingStats) {
+  if (loadingStats || loadingActivity || loadingCompletionRate) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -138,11 +186,36 @@ export default function DashboardPage() {
             <CardDescription>Latest job updates and technician check-ins</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Placeholder for Recent Activity - Data will be fetched from API */}
-            <div className="text-center text-muted-foreground py-8">
-              <p>No recent activity to display.</p>
-              <p className="text-sm">Data will load here from API.</p>
-            </div>
+            {loadingActivity ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                <p className="ml-2">Loading activity...</p>
+              </div>
+            ) : activity.length > 0 ? (
+              activity.map((item, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  {item.type === 'job_update' ? (
+                    <FileText className="h-5 w-5 text-blue-500" />
+                  ) : (
+                    <MapPin className="h-5 w-5 text-green-500" />
+                  )}
+                  <div>
+                    <p className="font-medium">
+                      {item.type === 'job_update' ? 
+                        `Job "${item.title}" updated to ${item.status} by ${item.firstName || ''} ${item.lastName || ''}` : 
+                        `Technician ${item.firstName || ''} ${item.lastName || ''} ${item.type} at ${item.jobId}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <p>No recent activity to display.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -152,11 +225,22 @@ export default function DashboardPage() {
             <CardDescription>This month's performance metrics</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Placeholder for Job Completion Rate - Data will be fetched from API */}
-            <div className="text-center text-muted-foreground py-8">
-              <p>No completion rate data available.</p>
-              <p className="text-sm">Data will load here from API.</p>
-            </div>
+            {loadingCompletionRate ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                <p className="ml-2">Loading completion rate...</p>
+              </div>
+            ) : completionRate ? (
+              <div className="text-center py-4">
+                <p className="text-4xl font-bold text-primary">{completionRate.completionRate}%</p>
+                <p className="text-muted-foreground">{completionRate.completedJobsThisMonth} of {completionRate.totalJobsThisMonth} jobs completed this month</p>
+                <Progress value={parseFloat(completionRate.completionRate)} className="mt-4" />
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <p>No completion rate data available.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

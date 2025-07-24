@@ -45,7 +45,7 @@ export interface Job {
   locationLng?: number
   scheduledDate?: string
   estimatedDuration?: number
-  jobValue: number
+  
   
   instructions?: string
   completedAt?: string
@@ -122,7 +122,7 @@ export interface AccruedValue {
   id: string
   userId: string
   jobId: string
-  jobValue: number
+  
   earnedAmount: number
   rating?: number
   month: number
