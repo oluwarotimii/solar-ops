@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import type { User, Role } from "@/types";
 interface EditUserDialogProps {
   user: User;
   roles: Role[];
-  onUserUpdated: () => void;
+  onUserUpdated: (updatedUser: User) => void;
 }
 
 export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserDialogProps) {
@@ -21,6 +22,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     email: user.email,
     phone: user.phone || "",
     roleId: user.roleId,
+    status: user.status, // Add status to form data
   });
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
       email: user.email,
       phone: user.phone || "",
       roleId: user.roleId,
+      status: user.status, // Update status on user change
     });
     setNewPassword("");
   }, [user]);
@@ -88,9 +91,8 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
         email: formData.email,
         phone: formData.phone || null,
         roleId: formData.roleId,
+        status: formData.status, // Include status in the payload
       };
-
-      
 
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
@@ -114,6 +116,40 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
       toast({
         title: "Error",
         description: error.message || "An error occurred while updating the user.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: 'active' | 'inactive') => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${newStatus} user.`);
+      }
+
+      toast({
+        title: "User Status Updated",
+        description: `User ${user.firstName} ${user.lastName} has been ${newStatus}.`,
+      });
+      setFormData((prev) => ({ ...prev, status: newStatus })); // Update local state immediately
+      // Pass the updated user object to the parent callback
+      onUserUpdated({ ...user, status: newStatus });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred while updating user status.",
         variant: "destructive",
       });
     } finally {
@@ -179,11 +215,56 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
           </div>
         </div>
       </div>
-      <div className="flex justify-end">
+      <DialogFooter>
+        {user.status === 'active' || user.status === 'pending' ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" disabled={loading}>
+                Deactivate User
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will deactivate the user &apos;{user.firstName} {user.lastName}&apos;. They will no longer be able to log in.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleStatusChange('inactive')} disabled={loading} asChild>
+                  <DialogClose>{loading ? "Deactivating..." : "Deactivate"}</DialogClose>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="default" disabled={loading}>
+                Activate User
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to activate this user?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will activate the user &apos;{user.firstName} {user.lastName}&apos;. They will be able to log in again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleStatusChange('active')} disabled={loading} asChild>
+                  <DialogClose>{loading ? "Activating..." : "Activate"}</DialogClose>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
         <Button type="submit" disabled={loading}>
           {loading ? "Saving..." : "Save Changes"}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

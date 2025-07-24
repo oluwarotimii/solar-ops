@@ -74,6 +74,33 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { email, firstName, lastName, phone, roleId, status, password } = await request.json();
     const db = getDbSql();
 
+    // Fetch current user data to retain existing values if not provided in the request
+    const currentUser = await db`
+      SELECT email, first_name, last_name, status FROM users WHERE id = ${params.id}
+    `;
+
+    if (currentUser.length === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const currentEmail = currentUser[0].email;
+    const newEmail = email || currentEmail; // Use new email if provided, otherwise retain current
+
+    const currentFirstName = currentUser[0].first_name;
+    const newFirstName = firstName || currentFirstName; // Use new first name if provided, otherwise retain current
+
+    const currentLastName = currentUser[0].last_name;
+    const newLastName = lastName || currentLastName; // Use new last name if provided, otherwise retain current
+
+    const currentStatus = currentUser[0].status;
+    const newStatus = status || currentStatus; // Use new status if provided, otherwise retain current
+
+    // Validate status
+    const allowedStatuses = ['active', 'inactive', 'pending'];
+    if (newStatus && !allowedStatuses.includes(newStatus)) {
+      return NextResponse.json({ error: "Invalid user status provided" }, { status: 400 });
+    }
+
     let passwordHash = undefined;
     if (password) {
       passwordHash = await hashPassword(password);
@@ -82,12 +109,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const result = await db`
       UPDATE users
       SET
-        email = ${email},
-        first_name = ${firstName},
-        last_name = ${lastName},
+        email = ${newEmail},
+        first_name = ${newFirstName},
+        last_name = ${newLastName},
         phone = ${phone || null},
         role_id = ${roleId},
-        status = ${status},
+        status = ${newStatus},
         ${passwordHash ? sql`password_hash = ${passwordHash},` : sql``}
         updated_at = NOW()
       WHERE id = ${params.id}

@@ -74,49 +74,10 @@ export default function UsersPage() {
     }
   }
 
-  const updateUserStatus = async (userId: string, status: string) => {
-    try {
-      const response = await fetch(`/api/users/${userId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      })
-
-      if (response.ok) {
-        console.log('[Frontend] User status updated successfully. Refreshing users...');
-        fetchUsers() // Refresh the list
-      } else {
-        const errorData = await response.json();
-        console.error('[Frontend] Failed to update user status:', errorData);
-      }
-    } catch (error) {
-      console.error("Failed to update user status:", error)
-    }
-  }
-
-  const updateUserRole = async (userId: string, roleId: string) => {
-    try {
-      const response = await fetch(`/api/users/${userId}/role`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ roleId }),
-      });
-
-      if (response.ok) {
-        fetchUsers(); // Refresh the list
-      } else {
-        console.error("Failed to update user role");
-      }
-    } catch (error) {
-      console.error("Failed to update user role:", error);
-    }
-  };
+  
 
   const filteredUsers = users.filter((user) => {
+    if (!user) return false; // Ensure user is not undefined or null
     const matchesSearch =
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -127,7 +88,7 @@ export default function UsersPage() {
     return matchesSearch && matchesStatus && matchesRole
   })
 
-  const pendingUsers = users.filter((user) => user.status === "pending")
+  const pendingUsers = users.filter((user) => user && user.status === "pending")
   console.log('[Frontend] Current users array:', users);
   console.log('[Frontend] Filtered pending users:', pendingUsers);
 
@@ -161,8 +122,13 @@ export default function UsersPage() {
             <EditUserDialog
               user={selectedUser}
               roles={roles}
-              onUserUpdated={() => {
-                fetchUsers();
+              onUserUpdated={(updatedUser) => {
+                setSelectedUser(updatedUser); // Update selectedUser with the latest data
+                // Immediately update the users array to reflect the change
+                setUsers((prevUsers) =>
+                  prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user))
+                );
+                fetchUsers(); // Refresh the list in the background for full consistency
                 setShowEditDialog(false);
               }}
             />
@@ -191,32 +157,16 @@ export default function UsersPage() {
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => updateUserStatus(user.id, "active")}>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setShowEditDialog(true);
+                      }}
+                    >
                       <UserCheck className="h-4 w-4 mr-1" />
-                      Approve
+                      Review & Approve
                     </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="sm" variant="outline">
-                          <UserX className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Reject User Registration?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete the user registration for {user.firstName} {user.lastName}.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => updateUserStatus(user.id, "deactivated")}>
-                            Reject
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
                   </div>
                 </div>
               ))}
@@ -331,7 +281,10 @@ export default function UsersPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Shield className="h-4 w-4 text-muted-foreground" />
-                        <Select value={user.roleId} onValueChange={(value) => updateUserRole(user.id, value)}>
+                        <Select value={user.roleId} onValueChange={(value) => {
+                          setSelectedUser({ ...user, roleId: value });
+                          setShowEditDialog(true);
+                        }}>
                           <SelectTrigger className="w-[130px]">
                             <SelectValue />
                           </SelectTrigger>
@@ -354,40 +307,16 @@ export default function UsersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {user.status === "active" && (
-                          <Button variant="outline" size="sm" onClick={() => updateUserStatus(user.id, "suspended")}>
-                            Suspend
-                          </Button>
-                        )}
-                        {user.status === "suspended" && (
-                          <Button variant="outline" size="sm" onClick={() => updateUserStatus(user.id, "active")}>
-                            Activate
-                          </Button>
-                        )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Deactivate
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Deactivate User Account?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will deactivate the account for {user.firstName} {user.lastName}. They will no
-                                longer be able to access the system.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => updateUserStatus(user.id, "deactivated")}>
-                                Deactivate
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowEditDialog(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
