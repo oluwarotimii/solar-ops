@@ -144,6 +144,12 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     setLoading(true)
     setError("")
 
+    if (new Date(formData.scheduledDate) < new Date(new Date().setHours(0, 0, 0, 0))) {
+      setError("Scheduled date cannot be in the past.")
+      setLoading(false)
+      return
+    }
+
     // Validation
     if (assignedTechnicians.length === 0) {
       setError("Please assign at least one technician")
@@ -303,6 +309,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                   id="scheduledDate"
                   type="date"
                   value={formData.scheduledDate}
+                  min={new Date().toISOString().split("T")[0]}
                   onChange={(e) => setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))}
                 />
               </div>

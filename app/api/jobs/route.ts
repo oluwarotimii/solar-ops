@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     `
     const jobs = result.map((row: any) => {
       const job = toCamelCase(row)
+      console.log("Job object after toCamelCase:", job);
 
       // Build nested objects
       if (job.jobTypeName) {
@@ -68,7 +69,11 @@ export async function GET(request: NextRequest) {
 
       return job
     })
-    return NextResponse.json(jobs)
+    const jobsWithDate = jobs.map((job: any) => ({
+      ...job,
+      scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+    }));
+    return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:team')) {
       // Supervisors can see all jobs assigned to their team
       const result = await sql`
@@ -87,6 +92,7 @@ export async function GET(request: NextRequest) {
       `
       const jobs = result.map((row: any) => {
       const job = toCamelCase(row)
+      console.log("Job object after toCamelCase:", job);
 
       // Build nested objects
       if (job.jobTypeName) {
@@ -122,7 +128,11 @@ export async function GET(request: NextRequest) {
 
       return job
     })
-    return NextResponse.json(jobs)
+    const jobsWithDate = jobs.map((job: any) => ({
+      ...job,
+      scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+    }));
+    return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:assigned')) {
       // Technicians only see jobs assigned to them
       const result = await sql`
@@ -141,6 +151,7 @@ export async function GET(request: NextRequest) {
       `
       const jobs = result.map((row: any) => {
       const job = toCamelCase(row)
+      console.log("Job object after toCamelCase:", job);
 
       // Build nested objects
       if (job.jobTypeName) {
@@ -176,7 +187,11 @@ export async function GET(request: NextRequest) {
 
       return job
     })
-    return NextResponse.json(jobs)
+    const jobsWithDate = jobs.map((job: any) => ({
+      ...job,
+      scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+    }));
+    return NextResponse.json(jobsWithDate)
     } else {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Plus, Search, DollarSign, Users, Calendar, Star, Eye, Edit } from "lucide-react"
-import AddAccruedValueDialog from "@/components/add-accrued-value-dialog"
+import { formatDate } from "@/lib/date-utils";
+import AddAccruedValueDialog from "@/components/add-accrued-value-dialog";
 
 interface AccruedValue {
   id: string
@@ -344,7 +345,7 @@ export default function AccruedValuesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span>{new Date(value.createdAt).toLocaleDateString()}</span>
+                      <span>{formatDate(value.createdAt)}</span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

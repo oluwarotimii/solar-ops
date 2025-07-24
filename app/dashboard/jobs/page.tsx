@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Search, MapPin, Calendar, User, Eye, Edit, Trash2, Loader2, AlertCircle } from "lucide-react"
-import CreateJobDialog from "@/components/create-job-dialog"
+import { formatDate } from "@/lib/date-utils";
+import CreateJobDialog from "@/components/create-job-dialog";
 
 const statusColors = {
   assigned: "bg-blue-100 text-blue-800",
@@ -34,7 +35,7 @@ interface Job {
   status: "assigned" | "in_progress" | "completed" | "cancelled"
   priority: "low" | "medium" | "high" | "urgent"
   locationAddress: string
-  scheduledDate?: string
+  scheduledDate?: string | Date | null
   jobValue: number
   estimatedDuration: number
 }
@@ -302,10 +303,11 @@ export default function JobsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        {console.log("Scheduled Date:", job.scheduledDate)}
                         {job.scheduledDate ? (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
+                            <span>{formatDate(job.scheduledDate)}</span>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">Not scheduled</span>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Bell, Search, Plus, Eye, Trash2, Send, AlertTriangle, CheckCircle, Info, User } from "lucide-react"
+import { formatDateTime } from "@/lib/date-utils";
 import CreateNotificationDialog from "@/components/create-notification-dialog"
 
 interface Notification {
@@ -324,8 +325,8 @@ export default function NotificationsPage() {
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>To: {notification.recipient.name}</span>
                         {notification.sender && <span>From: {notification.sender.name}</span>}
-                        <span>{new Date(notification.createdAt).toLocaleString()}</span>
-                        {notification.readAt && <span>Read: {new Date(notification.readAt).toLocaleString()}</span>}
+                        <span>{formatDateTime(notification.createdAt)}</span>
+                        {notification.readAt && <span>Read: {formatDateTime(notification.readAt)}</span>}
                       </div>
 
                       {notification.relatedJob && (

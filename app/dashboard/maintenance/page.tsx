@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import { Plus, Search, MapPin, CalendarIcon, User, Clock, RefreshCw, AlertTriangle } from "lucide-react"
 import type { MaintenanceTask, User as UserType } from "@/types"
-import CreateMaintenanceDialog from "@/components/create-maintenance-dialog"
+import { formatDate } from "@/lib/date-utils";
+import CreateMaintenanceDialog from "@/components/create-maintenance-dialog";
 
 const statusColors = {
   scheduled: "bg-blue-100 text-blue-800",
@@ -166,7 +167,7 @@ export default function MaintenancePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className={statusColors.overdue}>Overdue</Badge>
-                      <span className="text-sm text-red-600">{new Date(task.scheduledDate).toLocaleDateString()}</span>
+                      <span className="text-sm text-red-600">{formatDate(task.scheduledDate)}</span>
                     </div>
                   </div>
                 ))}
@@ -290,7 +291,7 @@ export default function MaintenancePage() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                            <span>{new Date(task.scheduledDate).toLocaleDateString()}</span>
+                            <span>{formatDate(task.scheduledDate)}</span>
                           </div>
                         </TableCell>
                         <TableCell>
