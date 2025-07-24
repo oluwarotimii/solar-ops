@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Search, MapPin, Calendar, User, Eye, Edit, Trash2, Loader2, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/date-utils";
 import CreateJobDialog from "@/components/create-job-dialog";
+import EditJobDialog from "@/components/edit-job-dialog";
 
 const statusColors = {
   assigned: "bg-blue-100 text-blue-800",
@@ -38,6 +39,7 @@ interface Job {
   scheduledDate?: string | Date | null
   jobValue: number
   estimatedDuration: number
+  technicians?: Array<{ technicianId: string; role: "lead" | "assistant" | "specialist"; firstName: string; lastName: string; }>
 }
 
 interface JobType {
@@ -55,6 +57,8 @@ export default function JobsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
 
   const fetchJobs = async () => {
     setLoading(true)
@@ -68,6 +72,7 @@ export default function JobsPage() {
       }
 
       const data = await response.json()
+      console.log("Fetched jobs data:", data);
       setJobs(data)
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred while fetching jobs.")
@@ -110,6 +115,12 @@ export default function JobsPage() {
   const handleJobCreated = async () => {
     fetchJobs() // Refresh the list after creation
     setShowCreateDialog(false)
+  }
+
+  const handleJobUpdated = async () => {
+    fetchJobs(); // Refresh the list after update
+    setShowEditDialog(false);
+    setSelectedJob(null);
   }
 
   const handleJobDelete = async (jobId: string) => {
@@ -157,7 +168,8 @@ export default function JobsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Jobs</h1>
@@ -237,6 +249,7 @@ export default function JobsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Job</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Technician</TableHead>
                   <TableHead>Status</TableHead>
@@ -256,14 +269,32 @@ export default function JobsPage() {
                   </TableRow>
                 ) : (
                   filteredJobs.map((job) => (
-                    <TableRow key={job.id}>
+                    <TableRow key={job.id} onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const response = await fetch(`/api/jobs/${job.id}`);
+                        if (!response.ok) {
+                          throw new Error('Failed to fetch job details');
+                        }
+                        const fullJobDetails = await response.json();
+                        setSelectedJob(fullJobDetails);
+                        setShowEditDialog(true); // Open dialog after fetching
+                      } catch (err) {
+                        console.error(err);
+                        setError("Failed to load job details for editing.");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }} className="cursor-pointer">
                       <TableCell>
                         <div>
                           <p className="font-medium">{job.title}</p>
-                          {job.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{job.description}</p>
-                          )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {job.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-1">{job.description}</p>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -298,7 +329,7 @@ export default function JobsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 max-w-[200px]">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <MapPin className="h-4 w-4" />
                           <span className="truncate">{job.locationAddress}</span>
                         </div>
                       </TableCell>
@@ -306,7 +337,7 @@ export default function JobsPage() {
                         {console.log("Scheduled Date:", job.scheduledDate)}
                         {job.scheduledDate ? (
                           <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <Calendar className="h-4 w-4" />
                             <span>{formatDate(job.scheduledDate)}</span>
                           </div>
                         ) : (
@@ -318,13 +349,11 @@ export default function JobsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleJobDelete(job.id)}>
+                          
+                          <Button variant="ghost" size="sm" onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click from firing
+                            handleJobDelete(job.id);
+                          }}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -344,5 +373,18 @@ export default function JobsPage() {
         </CardContent>
       </Card>
     </div>
+    {selectedJob && (
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open);
+        if (!open) {
+          setSelectedJob(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <EditJobDialog job={selectedJob} onJobUpdated={handleJobUpdated} />
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   )
 }

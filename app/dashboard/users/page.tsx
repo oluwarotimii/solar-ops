@@ -18,8 +18,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Users, Search, UserCheck, UserX, Shield, Mail, Phone, Clock } from "lucide-react"
 import type { User, Role } from "@/types"
+import EditUserDialog from "@/components/edit-user-dialog"
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -35,6 +37,8 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [roleFilter, setRoleFilter] = useState("all")
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -150,6 +154,21 @@ export default function UsersPage() {
           <p className="text-muted-foreground">Manage user accounts, roles, and permissions</p>
         </div>
       </div>
+
+      {selectedUser && (
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <EditUserDialog
+              user={selectedUser}
+              roles={roles}
+              onUserUpdated={() => {
+                fetchUsers();
+                setShowEditDialog(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Pending Approvals */}
       {pendingUsers.length > 0 && (
@@ -277,7 +296,14 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow
+                    key={user.id}
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setShowEditDialog(true);
+                    }}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />

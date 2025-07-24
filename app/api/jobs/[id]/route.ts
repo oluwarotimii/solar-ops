@@ -19,9 +19,29 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const result = await sql`
       SELECT
-        j.*,
-        jt.name as job_type_name, jt.color as job_type_color,
-        cu.first_name as created_first_name, cu.last_name as created_last_name
+        j.id,
+        j.title,
+        j.description,
+        j.job_type_id as "jobTypeId",
+        j.priority,
+        j.location_address as "locationAddress",
+        j.location_lat as "locationLat",
+        j.location_lng as "locationLng",
+        j.scheduled_date as "scheduledDate",
+        j.scheduled_time as "scheduledTime",
+        j.estimated_duration as "estimatedDuration",
+        j.job_value as "jobValue",
+        j.instructions,
+        j.status,
+        j.completed_at as "completedAt",
+        j.created_at as "createdAt",
+        j.updated_at as "updatedAt",
+        j.created_by as "createdBy",
+        jt.id as job_type_id_alias, -- Alias to avoid conflict with j.job_type_id
+        jt.name as job_type_name_alias,
+        jt.color as job_type_color_alias,
+        cu.first_name as "createdUser.firstName",
+        cu.last_name as "createdUser.lastName"
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
       LEFT JOIN users cu ON j.created_by = cu.id
@@ -33,6 +53,24 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const job = result[0];
+
+    // Reconstruct jobType object
+    job.jobType = {
+      id: job.job_type_id_alias,
+      name: job.job_type_name_alias,
+      color: job.job_type_color_alias,
+    };
+    delete job.job_type_id_alias;
+    delete job.job_type_name_alias;
+    delete job.job_type_color_alias;
+
+    // Reconstruct createdUser object
+    job.createdUser = {
+      firstName: job["createdUser.firstName"],
+      lastName: job["createdUser.lastName"],
+    };
+    delete job["createdUser.firstName"];
+    delete job["createdUser.lastName"];
 
     // Fetch assigned technicians
     const techniciansResult = await sql`
@@ -77,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const {
       title, description, jobTypeId, priority, locationAddress,
-      locationLat, locationLng, scheduledDate, estimatedDuration,
+      locationLat, locationLng, scheduledDate, scheduledTime, estimatedDuration,
       jobValue, instructions, status, assignedTechnicians
     } = jobData;
 
@@ -92,6 +130,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         location_lat = ${locationLat || null},
         location_lng = ${locationLng || null},
         scheduled_date = ${scheduledDate || null},
+        scheduled_time = ${scheduledTime || null},
         estimated_duration = ${estimatedDuration || null},
         job_value = ${jobValue || 0},
         instructions = ${instructions || null},

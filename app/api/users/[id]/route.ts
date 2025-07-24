@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getDbSql, toCamelCase } from "@/lib/db";
+import { getDbSql, toCamelCase, sql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission, hashPassword } from "@/lib/auth";
 
