@@ -33,7 +33,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     locationLng: "",
     scheduledDate: "",
     estimatedDuration: "",
-    
+    jobValue: "",
     instructions: "",
   })
 
@@ -310,6 +310,18 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                   value={formData.estimatedDuration}
                   onChange={(e) => setFormData((prev) => ({ ...prev, estimatedDuration: e.target.value }))}
                   placeholder="240"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="jobValue">Job Value (NGN) *</Label>
+                <Input
+                  id="jobValue"
+                  type="number"
+                  value={formData.jobValue}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, jobValue: e.target.value }))}
+                  required
+                  min="0"
                 />
               </div>
             </div>

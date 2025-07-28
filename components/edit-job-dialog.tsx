@@ -37,7 +37,7 @@ export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps)
     scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().split('T')[0] : "",
     scheduledTime: job.scheduledTime || "",
     estimatedDuration: job.estimatedDuration || "",
-    
+    jobValue: job.jobValue || "",
     instructions: job.instructions || "",
     status: job.status || "assigned", 
     completedAt: job.completedAt || null, 
@@ -344,6 +344,16 @@ export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps)
                 value={formData.estimatedDuration}
                 onChange={(e) => setFormData((prev) => ({ ...prev, estimatedDuration: e.target.value }))}
                 placeholder="240"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="jobValue">Job Value (NGN)</Label>
+              <Input
+                id="jobValue"
+                value={formatNaira(formData.jobValue)}
+                readOnly
+                className="font-medium text-lg"
               />
             </div>
           </CardContent>
