@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import "@/lib/logger"; // Import the logger to disable console logs in production
 
 const inter = Inter({ subsets: ["latin"] })
 
