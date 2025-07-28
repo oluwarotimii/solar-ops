@@ -144,7 +144,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         scheduled_date = ${scheduledDate || null},
         scheduled_time = ${scheduledTime || null},
         estimated_duration = ${estimatedDuration || null},
-        job_value = ${jobValue},
         instructions = ${instructions || null},
         status = ${status || "assigned"},
         ${completedAtUpdate}
@@ -168,6 +167,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           INSERT INTO job_technicians (job_id, technician_id, role)
           VALUES (${id}, ${assignedTech.technicianId}, ${assignedTech.role});
         `;
+      }
+    }
+
+    // If job is marked as completed, create accrued values
+    if (status === 'completed' && currentJob[0].status !== 'completed') {
+      const technicians = await sql`
+        SELECT technician_id FROM job_technicians WHERE job_id = ${id}
+      `;
+
+      if (technicians.length > 0) {
+        const jobValueResult = await sql`
+          SELECT job_value FROM jobs WHERE id = ${id}
+        `;
+        const jobValue = jobValueResult[0].job_value;
+        const earnedAmount = jobValue / technicians.length;
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+
+        for (const tech of technicians) {
+          await sql`
+            INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, month, year)
+            VALUES (${tech.technician_id}, ${id}, ${jobValue}, ${earnedAmount}, ${month}, ${year})
+          `;
+        }
       }
     }
 

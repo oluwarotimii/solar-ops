@@ -40,54 +40,7 @@ export default function AccruedValuesPage() {
   const [technicianFilter, setTechnicianFilter] = useState("all")
   const [monthFilter, setMonthFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("2024")
-  const [showAddDialog, setShowAddDialog] = useState(false)
-
-  useEffect(() => {
-    const fetchAccruedValues = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch('/api/accrued-values', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setAccruedValues(data);
-        } else {
-          console.error("Fetched data is not an array:", data);
-          setAccruedValues([]); // Ensure it's always an array
-        }
-      } catch (error) {
-        console.error('Error fetching accrued values:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAccruedValues()
-  }, [])
-
-  const handleAddAccruedValue = async (newValue: any) => {
-    try {
-      const response = await fetch("/api/accrued-values", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newValue),
-      });
-
-      if (response.ok) {
-        setShowAddDialog(false);
-        fetchAccruedValues();
-      } else {
-        console.error("Failed to create accrued value");
-      }
-    } catch (error) {
-      console.error("Error creating accrued value:", error);
-    }
-  };
+  
 
   const filteredValues = accruedValues.filter((value) => {
     const matchesSearch =
@@ -152,17 +105,7 @@ export default function AccruedValuesPage() {
           <h1 className="text-3xl font-bold">Accrued Values</h1>
           <p className="text-muted-foreground">Track technician earnings and performance in Nigerian Naira</p>
         </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Accrued Value
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <AddAccruedValueDialog onValueAdded={handleAddAccruedValue} />
-          </DialogContent>
-        </Dialog>
+        
       </div>
 
       {/* Summary Cards */}
@@ -344,9 +287,6 @@ export default function AccruedValuesPage() {
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
