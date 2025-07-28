@@ -185,44 +185,50 @@ export default function AccruedValuesPage() {
           <CardDescription>Total earnings per technician</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Technician</TableHead>
-                  <TableHead>Total Earned</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredValues.map((value) => (
-                  <TableRow key={value.technician.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">{getInitials(value.technician.name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{value.technician.name}</p>
-                          <p className="text-sm text-muted-foreground">{value.technician.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        
-                      </div>
-                    </TableCell>
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Loading accrued values...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Technician</TableHead>
+                    <TableHead>Total Earned</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredValues.map((value) => (
+                    <TableRow key={value.technician.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs">{getInitials(value.technician.name)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{value.technician.name}</p>
+                            <p className="text-sm text-muted-foreground">{value.technician.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
-          {filteredValues.length === 0 && (
+          {!loading && filteredValues.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No accrued values found matching your criteria.</p>
             </div>
