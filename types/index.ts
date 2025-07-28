@@ -119,17 +119,12 @@ export interface MaintenanceTask {
 }
 
 export interface AccruedValue {
-  id: string
-  userId: string
-  jobId: string
-  
-  earnedAmount: number
-  rating?: number
-  month: number
-  year: number
-  user?: User
-  job?: Job
-  createdAt: string
+  technician: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  totalEarnedAmount: number;
 }
 
 export interface Notification {

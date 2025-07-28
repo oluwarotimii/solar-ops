@@ -35,6 +35,22 @@ export async function POST(request: NextRequest) {
     const token = generateToken(user.id)
     console.log(`[Auth Debug] Token generated for user ID: ${user.id}`);
 
+    try {
+      const accruedValuesResponse = await fetch(`${request.nextUrl.origin}/api/accrued-values`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (accruedValuesResponse.ok) {
+        const accruedValues = await accruedValuesResponse.json();
+        console.log("[Auth Debug] Accrued Values after login:", JSON.stringify(accruedValues, null, 2));
+      } else {
+        console.error("[Auth Debug] Failed to fetch accrued values:", accruedValuesResponse.status, accruedValuesResponse.statusText);
+      }
+    } catch (fetchError) {
+      console.error("[Auth Debug] Error fetching accrued values:", fetchError);
+    }
+
     // Remove sensitive data
     const { passwordHash, ...safeUser } = user
 

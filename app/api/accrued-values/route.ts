@@ -19,44 +19,36 @@ export async function GET(request: Request) {
     const sql = getDbSql();
     const result = await sql`
       SELECT
-        av.*,
+        u.id as user_id,
         u.first_name as technician_first_name,
         u.last_name as technician_last_name,
         u.email as technician_email,
-        j.title as job_title,
-        jt.name as job_type_name
+        SUM(av.earned_amount) as total_earned_amount
       FROM accrued_values av
       JOIN users u ON av.user_id = u.id
-      JOIN jobs j ON av.job_id = j.id
-      JOIN job_types jt ON j.job_type_id = jt.id
-      ORDER BY av.created_at DESC
+      GROUP BY u.id, u.first_name, u.last_name, u.email
+      ORDER BY total_earned_amount DESC
     `;
 
     const accruedValues = result.map((row: any) => {
       const value = toCamelCase(row);
       return {
-        id: value.id,
         technician: {
           id: value.userId,
           name: `${value.technicianFirstName} ${value.technicianLastName}`,
           email: value.technicianEmail,
         },
-        job: {
-          id: value.jobId,
-          title: value.jobTitle,
-          type: value.jobTypeName,
-        },
-        
-        
-        earnedAmount: value.earnedAmount,
-        rating: value.rating,
-        month: value.month,
-        year: value.year,
-        createdAt: value.createdAt,
+        totalEarnedAmount: value.totalEarnedAmount,
       };
     });
 
-    return NextResponse.json(accruedValues);
+    const yearRangeResult = await sql`
+      SELECT MIN(year) as min_year, MAX(year) as max_year FROM accrued_values
+    `;
+    const minYear = yearRangeResult[0]?.min_year || new Date().getFullYear();
+    const maxYear = yearRangeResult[0]?.max_year || new Date().getFullYear();
+
+    return NextResponse.json({ accruedValues, minYear, maxYear });
   } catch (error) {
     console.error('[ACCRUED_VALUES_GET]', error);
     return new NextResponse('Internal Error', { status: 500 });

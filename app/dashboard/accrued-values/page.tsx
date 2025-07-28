@@ -9,28 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Plus, Search, DollarSign, Users, Calendar, Star, Eye, Edit } from "lucide-react"
-import { formatDate } from "@/lib/date-utils";
-import AddAccruedValueDialog from "@/components/add-accrued-value-dialog";
+import { Plus, Search, DollarSign, Users, Calendar, Star } from "lucide-react"
 
 interface AccruedValue {
-  id: string
   technician: {
     id: string
     name: string
     email: string
   }
-  job: {
-    id: string
-    title: string
-    type: string
-  }
-  
-  earnedAmount: number
-  rating: number
-  month: number
-  year: number
-  createdAt: string
+  totalEarnedAmount: number
 }
 
 export default function AccruedValuesPage() {
@@ -38,24 +25,44 @@ export default function AccruedValuesPage() {
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [technicianFilter, setTechnicianFilter] = useState("all")
-  const [monthFilter, setMonthFilter] = useState("all")
-  const [yearFilter, setYearFilter] = useState("2024")
-  
+
+  useEffect(() => {
+    const fetchAccruedValues = async () => {
+      setLoading(true)
+      try {
+        const response = await fetch('/api/accrued-values', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const { accruedValues } = await response.json();
+        if (Array.isArray(accruedValues)) {
+          setAccruedValues(accruedValues);
+        } else {
+          console.error("Fetched data is not an array:", accruedValues);
+          setAccruedValues([]); // Ensure it's always an array
+        }
+      } catch (error) {
+        console.error('Error fetching accrued values:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAccruedValues()
+  }
+  , [])
 
   const filteredValues = accruedValues.filter((value) => {
     const matchesSearch =
-      value.technician.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      value.job.title.toLowerCase().includes(searchTerm.toLowerCase())
+      value.technician.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesTechnician = technicianFilter === "all" || value.technician.id === technicianFilter
-    const matchesMonth = monthFilter === "all" || value.month.toString() === monthFilter
-    const matchesYear = value.year.toString() === yearFilter
 
-    return matchesSearch && matchesTechnician && matchesMonth && matchesYear
+    return matchesSearch && matchesTechnician
   })
 
   // Calculate summary stats
-  const totalEarned = filteredValues.reduce((sum, value) => sum + value.earnedAmount, 0)
-  const avgRating = filteredValues.reduce((sum, value) => sum + value.rating, 0) / filteredValues.length || 0
+  const totalEarned = filteredValues.reduce((sum, value) => sum + parseFloat(value.totalEarnedAmount.toString()), 0)
   const uniqueTechnicians = new Set(filteredValues.map((v) => v.technician.id)).size
 
   const formatNaira = (amount: number) => {
@@ -74,23 +81,6 @@ export default function AccruedValuesPage() {
       .toUpperCase()
   }
 
-  
-
-  const months = [
-    { value: "1", label: "January" },
-    { value: "2", label: "February" },
-    { value: "3", label: "March" },
-    { value: "4", label: "April" },
-    { value: "5", label: "May" },
-    { value: "6", label: "June" },
-    { value: "7", label: "July" },
-    { value: "8", label: "August" },
-    { value: "9", label: "September" },
-    { value: "10", label: "October" },
-    { value: "11", label: "November" },
-    { value: "12", label: "December" },
-  ]
-
   const uniqueTechniciansList = Array.from(new Set(accruedValues.map((v) => v.technician.id)))
     .map((id) => {
       const tech = accruedValues.find((v) => v.technician.id === id)?.technician
@@ -105,11 +95,10 @@ export default function AccruedValuesPage() {
           <h1 className="text-3xl font-bold">Accrued Values</h1>
           <p className="text-muted-foreground">Track technician earnings and performance in Nigerian Naira</p>
         </div>
-        
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -117,7 +106,7 @@ export default function AccruedValuesPage() {
                 <DollarSign className="h-4 w-4 text-green-600" />
               </div>
               <div>
-                <p className="text-sm font-medium">Total Earned</p>
+                <p className="text-sm font-medium">Total Earned Across All Technicians</p>
                 <p className="text-2xl font-bold">{formatNaira(totalEarned)}</p>
               </div>
             </div>
@@ -131,7 +120,7 @@ export default function AccruedValuesPage() {
                 <Users className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-medium">Active Technicians</p>
+                <p className="text-sm font-medium">Unique Technicians with Earnings</p>
                 <p className="text-2xl font-bold">{uniqueTechnicians}</p>
               </div>
             </div>
@@ -145,22 +134,8 @@ export default function AccruedValuesPage() {
                 <Calendar className="h-4 w-4 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm font-medium">Total Records</p>
+                <p className="text-sm font-medium">Total Records (Technicians)</p>
                 <p className="text-2xl font-bold">{filteredValues.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-orange-100 rounded-full">
-                <Star className="h-4 w-4 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Avg Rating</p>
-                <p className="text-2xl font-bold">{avgRating.toFixed(1)}</p>
               </div>
             </div>
           </CardContent>
@@ -178,7 +153,7 @@ export default function AccruedValuesPage() {
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search technicians or jobs..."
+                  placeholder="Search technicians..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -199,31 +174,6 @@ export default function AccruedValuesPage() {
                 ))}
               </SelectContent>
             </Select>
-
-            <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Months</SelectItem>
-                {months.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2023">2023</SelectItem>
-                <SelectItem value="2022">2022</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
@@ -232,7 +182,7 @@ export default function AccruedValuesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Accrued Values ({filteredValues.length})</CardTitle>
-          <CardDescription>Detailed breakdown of technician earnings and performance</CardDescription>
+          <CardDescription>Total earnings per technician</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -240,17 +190,13 @@ export default function AccruedValuesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Technician</TableHead>
-                  <TableHead>Job</TableHead>
-                  
-                  <TableHead>Earned</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Total Earned</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredValues.map((value) => (
-                  <TableRow key={value.id}>
+                  <TableRow key={value.technician.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -263,31 +209,11 @@ export default function AccruedValuesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{value.job.title}</p>
-                        <Badge variant="outline" className="text-xs">
-                          {value.job.type}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <span className="font-bold text-green-600">{formatNaira(value.earnedAmount)}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span>{value.rating}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span>{formatDate(value.createdAt)}</span>
+                      <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        
                       </div>
                     </TableCell>
                   </TableRow>
