@@ -11,6 +11,8 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
+  			'navy-blue': '#001F3F',
+  			'golden-yellow': '#FFD700',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
