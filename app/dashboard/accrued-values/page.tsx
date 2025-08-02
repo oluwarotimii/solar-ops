@@ -43,6 +43,11 @@ interface AccruedValueDetailed {
 export default function AccruedValuesPage() {
   const { toast } = useToast();
   const [accruedValues, setAccruedValues] = useState<AccruedValueDisplay[]>([])
+  const [allTechnicians, setAllTechnicians] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  }[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [technicianFilter, setTechnicianFilter] = useState("all")
@@ -83,7 +88,26 @@ export default function AccruedValuesPage() {
       }
     }
 
+    const fetchAllTechnicians = async () => {
+      try {
+        const response = await fetch("/api/users/technicians", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAllTechnicians(data.map((tech: any) => ({ id: tech.id, name: `${tech.firstName} ${tech.lastName}`, email: tech.email })));
+        } else {
+          console.error("Failed to fetch technicians");
+        }
+      } catch (error) {
+        console.error("Error fetching technicians:", error);
+      }
+    };
+
     fetchAccruedValues()
+    fetchAllTechnicians()
   }
   , [monthFilter, yearFilter])
 
@@ -296,7 +320,7 @@ export default function AccruedValuesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Technicians</SelectItem>
-                {uniqueTechniciansList.map((tech) => (
+                {allTechnicians.map((tech) => (
                   <SelectItem key={tech?.id} value={tech?.id || ""}>
                     {tech?.name}
                   </SelectItem>
