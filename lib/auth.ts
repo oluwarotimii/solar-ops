@@ -50,7 +50,7 @@ export async function getUserById(id: string): Promise<User | null> {
         name: user.roleName,
         description: user.roleDescription,
         isAdmin: user.roleIsAdmin,
-        permissions: user.rolePermissions,
+        permissions: typeof user.rolePermissions === 'string' ? JSON.parse(user.rolePermissions) : user.rolePermissions,
       }
     }
 

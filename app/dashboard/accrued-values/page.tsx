@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Plus, Search, DollarSign, Users, Calendar, Star } from "lucide-react"
+import { Plus, Search, DollarSign, Users, Calendar, Star, FileText } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
-interface AccruedValue {
+interface AccruedValueDisplay {
   technician: {
     id: string
     name: string
@@ -20,28 +21,61 @@ interface AccruedValue {
   totalEarnedAmount: number
 }
 
+interface AccruedValueDetailed {
+  id: string
+  technician: {
+    id: string
+    name: string
+    email: string
+  }
+  job: {
+    id: string
+    title: string
+    type: string
+  }
+  earnedAmount: number
+  rating: number
+  month: number
+  year: number
+  createdAt: string
+}
+
 export default function AccruedValuesPage() {
-  const [accruedValues, setAccruedValues] = useState<AccruedValue[]>([])
+  const { toast } = useToast();
+  const [accruedValues, setAccruedValues] = useState<AccruedValueDisplay[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [technicianFilter, setTechnicianFilter] = useState("all")
+  const [monthFilter, setMonthFilter] = useState("all")
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString())
+  const [minAccruedYear, setMinAccruedYear] = useState(new Date().getFullYear());
+  const [maxAccruedYear, setMaxAccruedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     const fetchAccruedValues = async () => {
       setLoading(true)
       try {
-        const response = await fetch('/api/accrued-values', {
+        const queryParams = new URLSearchParams();
+        if (monthFilter !== "all") queryParams.append("month", monthFilter);
+        if (yearFilter !== "all") queryParams.append("year", yearFilter);
+
+        const response = await fetch(`/api/accrued-values?${queryParams.toString()}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        const { accruedValues } = await response.json();
+        const { accruedValues, minYear, maxYear } = await response.json();
         if (Array.isArray(accruedValues)) {
           setAccruedValues(accruedValues);
+          if (maxYear) {
+            setYearFilter(maxYear.toString());
+          }
         } else {
           console.error("Fetched data is not an array:", accruedValues);
           setAccruedValues([]); // Ensure it's always an array
         }
+        setMinAccruedYear(minYear || new Date().getFullYear());
+        setMaxAccruedYear(maxYear || new Date().getFullYear());
       } catch (error) {
         console.error('Error fetching accrued values:', error)
       } finally {
@@ -51,7 +85,7 @@ export default function AccruedValuesPage() {
 
     fetchAccruedValues()
   }
-  , [])
+  , [monthFilter, yearFilter])
 
   const filteredValues = accruedValues.filter((value) => {
     const matchesSearch =
@@ -81,12 +115,103 @@ export default function AccruedValuesPage() {
       .toUpperCase()
   }
 
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/accrued-values?mode=detailed', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const { accruedValues: detailedAccruedValues } = await response.json();
+
+      // Process data for export
+      const technicianData: { [key: string]: { name: string; email: string; totalEarned: number; jobsPerMonth: { [month: string]: number }; totalJobs: number } } = {};
+
+      detailedAccruedValues.forEach((value: AccruedValueDetailed) => {
+        const technicianId = value.technician.id;
+        const monthYear = `${value.month}-${value.year}`;
+
+        if (!technicianData[technicianId]) {
+          technicianData[technicianId] = {
+            name: value.technician.name,
+            email: value.technician.email,
+            totalEarned: 0,
+            jobsPerMonth: {},
+            totalJobs: 0,
+          };
+        }
+
+        technicianData[technicianId].totalEarned += parseFloat(value.earnedAmount.toString());
+        technicianData[technicianId].totalJobs += 1;
+        technicianData[technicianId].jobsPerMonth[monthYear] = (technicianData[technicianId].jobsPerMonth[monthYear] || 0) + 1;
+      });
+
+      let csvContent = "Technician Name,Technician Email,Total Earned,Total Jobs";
+      const allMonthsYears = Array.from(new Set(detailedAccruedValues.map((v: AccruedValueDetailed) => `${v.month}-${v.year}`))).sort();
+
+      allMonthsYears.forEach(my => {
+        csvContent += `,Jobs in ${my}`;
+      });
+      csvContent += "\n";
+
+      for (const techId in technicianData) {
+        const data = technicianData[techId];
+        let row = `"${data.name}","${data.email}",${data.totalEarned},${data.totalJobs}`;
+        allMonthsYears.forEach(my => {
+          row += `,${data.jobsPerMonth[my] || 0}`;
+        });
+        csvContent += row + "\n";
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      if (link.download !== undefined) { // feature detection
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "accrued_values_report.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      toast({
+        title: "Export Successful",
+        description: "Accrued values data exported to CSV.",
+      });
+    } catch (error) {
+      console.error('Error exporting accrued values:', error);
+      toast({
+        title: "Export Failed",
+        description: "An error occurred during data export.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const uniqueTechniciansList = Array.from(new Set(accruedValues.map((v) => v.technician.id)))
     .map((id) => {
       const tech = accruedValues.find((v) => v.technician.id === id)?.technician
       return tech
     })
     .filter(Boolean)
+
+  const months = [
+    { value: "1", label: "January" },
+    { value: "2", label: "February" },
+    { value: "3", label: "March" },
+    { value: "4", label: "April" },
+    { value: "5", label: "May" },
+    { value: "6", label: "June" },
+    { value: "7", label: "July" },
+    { value: "8", label: "August" },
+    { value: "9", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+  ]
 
   return (
     <div className="space-y-6">
@@ -95,6 +220,10 @@ export default function AccruedValuesPage() {
           <h1 className="text-3xl font-bold">Accrued Values</h1>
           <p className="text-muted-foreground">Track technician earnings and performance in Nigerian Naira</p>
         </div>
+        <Button onClick={handleExport} disabled={loading || accruedValues.length === 0}>
+          <FileText className="h-4 w-4 mr-2" />
+          Export Data
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -170,6 +299,33 @@ export default function AccruedValuesPage() {
                 {uniqueTechniciansList.map((tech) => (
                   <SelectItem key={tech?.id} value={tech?.id || ""}>
                     {tech?.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Filter by month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Months</SelectItem>
+                {months.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: maxAccruedYear - minAccruedYear + 1 }, (_, i) => minAccruedYear + i).map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
                   </SelectItem>
                 ))}
               </SelectContent>

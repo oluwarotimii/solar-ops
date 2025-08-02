@@ -27,7 +27,7 @@ export default function DashboardPage() {
     const fetchStats = async () => {
       setLoadingStats(true)
       try {
-        const response = await fetch("/api/dashboard/reports")
+        const response = await fetch("/api/dashboard/stats")
 
         if (!response.ok) {
           const errorData = await response.json()
@@ -129,7 +129,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Stats Cards */}
+      Stats Cards
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -172,11 +172,35 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{(stats?.totalRevenue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Monthly Job Summary
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Jobs This Month</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completionRate.totalJobsThisMonth}</div>
+            <p className="text-xs text-muted-foreground">Total jobs so far this month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completionRate.completedJobsThisMonth}</div>
+            <p className="text-xs text-muted-foreground">Jobs completed this month</p>
+          </CardContent>
+        </Card>
+      </div> */}
 
       {/* Recent Activity & Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2">

@@ -1,91 +1,113 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getDbSql } from "@/lib/db"
-import { authenticateApiRequest } from "@/lib/api-auth"
-import { hasPermission } from "@/lib/auth"
+import { type NextRequest, NextResponse } from "next/server";
+import { getDbSql, toCamelCase } from "@/lib/db";
+import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
-  const { user, response } = await authenticateApiRequest(request)
+  const { user, response } = await authenticateApiRequest(request);
   if (response) {
-    return response
+    return response;
   }
 
   if (!user || !hasPermission(user, 'reports:read')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
     const sql = getDbSql();
+    const { searchParams } = request.nextUrl;
+    const reportType = searchParams.get('type') || 'overview';
+    const dateRange = searchParams.get('range') || '30';
 
-    // Get total jobs
-    const totalJobsResult = await sql`SELECT COUNT(*) as count FROM jobs`
-    const totalJobs = Number(totalJobsResult[0].count)
+    const getStartDate = (range: string): Date => {
+      const now = new Date();
+      const days = parseInt(range, 10);
+      if (isNaN(days)) return new Date(0); // Default to a very old date if range is invalid
+      now.setDate(now.getDate() - days);
+      return now;
+    };
 
-    // Get active jobs
-    const activeJobsResult = await sql`
-      SELECT COUNT(*) as count FROM jobs 
-      WHERE status IN ('assigned', 'in_progress')
-    `
-    const activeJobs = Number(activeJobsResult[0].count)
+    const startDate = getStartDate(dateRange);
 
-    // Get completed jobs
-    const completedJobsResult = await sql`
-      SELECT COUNT(*) as count FROM jobs WHERE status = 'completed'
-    `
-    const completedJobs = Number(completedJobsResult[0].count)
+    let data = {};
 
-    // Get active technicians (users with technician role who have active jobs)
-    const activeTechniciansResult = await sql`
-      SELECT COUNT(DISTINCT jt.technician_id) as count
-      FROM job_technicians jt
-      JOIN jobs j ON jt.job_id = j.id
-      JOIN users u ON jt.technician_id = u.id
-      JOIN roles r ON u.role_id = r.id
-      WHERE j.status IN ('assigned', 'in_progress')
-      AND r.name = 'Technician'
-    `
-    const activeTechnicians = Number(activeTechniciansResult[0].count)
+    if (reportType === 'overview') {
+      const overviewStats = await sql`
+        SELECT
+          (SELECT COUNT(*) FROM jobs WHERE created_at >= ${startDate}) as total_jobs,
+          (SELECT COUNT(*) FROM jobs WHERE status = 'completed' AND completed_at >= ${startDate}) as completed_jobs,
+          (SELECT COALESCE(AVG(rating), 0) FROM accrued_values WHERE created_at >= ${startDate}) as customer_satisfaction,
+          (SELECT COUNT(DISTINCT id) FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'Technician')) as total_technicians
+      `;
 
-    // Get pending maintenance tasks
-    const pendingMaintenanceResult = await sql`
-      SELECT COUNT(*) as count FROM maintenance_tasks 
-      WHERE status IN ('scheduled', 'overdue')
-    `
-    const pendingMaintenance = Number(pendingMaintenanceResult[0].count)
+      const technicianUtilizationResult = await sql`
+          SELECT COUNT(DISTINCT technician_id) as active_technicians
+          FROM job_technicians jt
+          JOIN jobs j ON jt.job_id = j.id
+          WHERE j.created_at >= ${startDate}
+      `;
 
-    // Get total revenue for current month
-    const currentMonth = new Date().getMonth() + 1
-    const currentYear = new Date().getFullYear()
+      const { total_jobs, completed_jobs, customer_satisfaction, total_technicians } = overviewStats[0];
+      const active_technicians = technicianUtilizationResult[0].active_technicians;
+      const technicianUtilization = total_technicians > 0 ? (active_technicians / total_technicians) * 100 : 0;
 
-    console.log(`[API] Current Month: ${currentMonth}, Current Year: ${currentYear}`)
+      data = {
+        overviewStats: {
+          totalJobs: Number(total_jobs),
+          completedJobs: Number(completed_jobs),
+          customerSatisfaction: parseFloat(customer_satisfaction).toFixed(1),
+          technicianUtilization: parseFloat(technicianUtilization.toString()).toFixed(1),
+        }
+      };
+    } else if (reportType === 'jobs') {
+      const jobsByType = await sql`
+        SELECT jt.name, COUNT(j.id) as count
+        FROM jobs j
+        JOIN job_types jt ON j.job_type_id = jt.id
+        WHERE j.created_at >= ${startDate}
+        GROUP BY jt.name
+        ORDER BY count DESC
+      `;
 
-    // Debugging query for completed_at values
-    const debugCompletedJobs = await sql`
-      SELECT id, completed_at, EXTRACT(MONTH FROM completed_at) as extracted_month, EXTRACT(YEAR FROM completed_at) as extracted_year
-      FROM jobs
-      WHERE status = 'completed'
-    `;
-    console.log('[API] Debug Completed Jobs Data:', debugCompletedJobs);
+      const jobsByStatus = await sql`
+        SELECT status, COUNT(id) as count
+        FROM jobs
+        WHERE created_at >= ${startDate}
+        GROUP BY status
+        ORDER BY status
+      `;
 
-    const revenueResult = await sql`
-      SELECT COALESCE(SUM(job_value), 0) as total
-      FROM jobs 
-      WHERE status = 'completed'
-      AND EXTRACT(MONTH FROM completed_at) = ${currentMonth}
-      AND EXTRACT(YEAR FROM completed_at) = ${currentYear}
-    `
-    console.log('[API] Revenue Query Result:', revenueResult)
-    const totalRevenue = Number(revenueResult[0].total)
+      data = {
+        jobsByType: jobsByType.map(toCamelCase),
+        jobsByStatus: jobsByStatus.map(toCamelCase),
+      };
+    } else if (reportType === 'technicians') {
+      const technicianPerformance = await sql`
+        SELECT
+          u.id,
+          u.first_name || ' ' || u.last_name as name,
+          u.email,
+          COUNT(j.id) as completed_jobs,
+          COALESCE(SUM(av.earned_amount), 0) as total_earned,
+          COALESCE(AVG(av.rating), 0) as average_rating
+        FROM users u
+        LEFT JOIN jobs j ON j.status = 'completed' AND j.completed_at >= ${startDate} AND EXISTS (
+          SELECT 1 FROM job_technicians jt WHERE jt.job_id = j.id AND jt.technician_id = u.id
+        )
+        LEFT JOIN accrued_values av ON av.user_id = u.id AND av.created_at >= ${startDate}
+        WHERE u.role_id = (SELECT id FROM roles WHERE name = 'Technician')
+        GROUP BY u.id, u.first_name, u.last_name, u.email
+        ORDER BY total_earned DESC
+      `;
+      data = {
+        technicianPerformance: technicianPerformance.map(toCamelCase),
+      };
+    }
 
-    return NextResponse.json({
-      totalJobs,
-      activeJobs,
-      completedJobs,
-      activeTechnicians,
-      pendingMaintenance,
-      totalRevenue,
-    })
+    return NextResponse.json(data);
+
   } catch (error) {
-    console.error("Dashboard stats error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Dashboard reports error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

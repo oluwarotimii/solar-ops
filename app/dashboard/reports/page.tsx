@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { BarChart3, TrendingUp, Download, Calendar, DollarSign, Users, Target, Loader2, AlertCircle } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState("30")
@@ -15,6 +16,8 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reportData, setReportData] = useState<any>(null)
+  const [completionRate, setCompletionRate] = useState(0)
+  const { toast } = useToast()
 
   const fetchReportData = async () => {
     setLoading(true)
@@ -40,6 +43,27 @@ export default function ReportsPage() {
     fetchReportData()
   }, [reportType, dateRange])
 
+  useEffect(() => {
+    if (reportData?.overviewStats) {
+      console.log('Received overviewStats:', reportData.overviewStats);
+      
+      const numCompletedJobs = Number(reportData.overviewStats.completedJobs || 0);
+      const numTotalJobs = Number(reportData.overviewStats.totalJobs || 0);
+
+      console.log('Parsed Jobs -> Completed:', numCompletedJobs, 'Total:', numTotalJobs);
+
+      if (isNaN(numCompletedJobs) || isNaN(numTotalJobs)) {
+        console.error('Calculation aborted: Invalid number detected.');
+        setCompletionRate(0);
+        return;
+      }
+
+      const rate = numTotalJobs > 0 ? (numCompletedJobs / numTotalJobs) * 100 : 0;
+      console.log('Calculated Rate:', rate);
+      setCompletionRate(rate);
+    }
+  }, [reportData])
+
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
@@ -48,21 +72,233 @@ export default function ReportsPage() {
     }).format(amount)
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <p className="ml-2 text-lg">Loading report...</p>
-      </div>
-    )
+  const handleExport = () => {
+    if (!reportData) {
+      toast({
+        title: "Export Failed",
+        description: "No data available to export.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+    let headers: string[] = []
+    let rows: string[][] = []
+    let filename = `report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`
+
+    if (reportType === 'jobs' && reportData.jobsByType) {
+      headers = ["Job Type", "Count"]
+      rows = reportData.jobsByType.map((d: any) => [d.name, d.count])
+      csvContent += headers.join(",") + "\n"
+      rows.forEach(row => { csvContent += row.join(",") + "\n" })
+
+    } else if (reportType === 'technicians' && reportData.technicianPerformance) {
+      headers = ["Name", "Email", "Completed Jobs", "Total Earned (NGN)", "Average Rating"]
+      rows = reportData.technicianPerformance.map((d: any) => [
+        d.name,
+        d.email,
+        d.completedJobs,
+        d.totalEarned,
+        parseFloat(d.averageRating).toFixed(2)
+      ])
+      csvContent += headers.join(",") + "\n"
+      rows.forEach(row => { csvContent += `"${row.join('","')}"\n` })
+
+    } else {
+      toast({ title: "Export not available for this view." })
+      return
+    }
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({ title: "Export Successful", description: `Downloaded ${filename}` })
   }
 
-  if (error) {
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <p className="ml-2 text-lg">Loading report...</p>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="flex justify-center items-center h-64 text-red-600">
+          <AlertCircle className="h-8 w-8 mr-2" />
+          <p className="text-lg">Error: {error}</p>
+        </div>
+      )
+    }
+
     return (
-      <div className="flex justify-center items-center h-64 text-red-600">
-        <AlertCircle className="h-8 w-8 mr-2" />
-        <p className="text-lg">Error: {error}</p>
-      </div>
+      <Tabs value={reportType} onValueChange={setReportType}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="jobs">Job Analysis</TabsTrigger>
+          <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Key Metrics */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData?.overviewStats?.totalJobs || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed Jobs</CardTitle>
+                <Target className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData?.overviewStats?.completedJobs || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tech Utilization</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData?.overviewStats?.technicianUtilization || 0}%</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Satisfaction</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData?.overviewStats?.customerSatisfaction || 0} ★</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Completion Rate */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Job Completion Rate</CardTitle>
+              <CardDescription>Percentage of jobs completed successfully in the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span>Completed Jobs</span>
+                  <span>
+                    {reportData?.overviewStats?.completedJobs || 0} / {reportData?.overviewStats?.totalJobs || 0}
+                  </span>
+                </div>
+                <Progress value={completionRate} className="h-3" />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="jobs" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Job Analysis</CardTitle>
+              <CardDescription>Breakdown of jobs by type and status for the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="font-semibold mb-4">Jobs by Type</h3>
+                <div className="space-y-3">
+                  {reportData?.jobsByType?.map((job: any, index: number) => (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between text-sm font-medium">
+                        <span>{job.name}</span>
+                        <span>{job.count}</span>
+                      </div>
+                                            <Progress value={
+                        (reportData?.overviewStats?.totalJobs ?? 0) > 0
+                          ? (job.count / reportData.overviewStats.totalJobs) * 100
+                          : 0
+                      } className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-4">Jobs by Status</h3>
+                <div className="space-y-2">
+                  {reportData?.jobsByStatus?.map((job: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                      <span className="capitalize text-sm font-medium">{job.status.replace('_', ' ')}</span>
+                      <Badge variant="secondary">{job.count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="technicians" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Technician Performance</CardTitle>
+              <CardDescription>Performance metrics for each technician for the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                    <tr>
+                      <th scope="col" className="px-6 py-3">Name</th>
+                      <th scope="col" className="px-6 py-3 text-right">Completed Jobs</th>
+                      <th scope="col" className="px-6 py-3 text-right">Total Earned</th>
+                      <th scope="col" className="px-6 py-3 text-right">Avg. Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData?.technicianPerformance?.map((tech: any) => (
+                      <tr key={tech.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {tech.name}
+                          <p className="text-xs text-muted-foreground">{tech.email}</p>
+                        </th>
+                        <td className="px-6 py-4 text-right">{tech.completedJobs}</td>
+                        <td className="px-6 py-4 text-right">{formatNaira(tech.totalEarned)}</td>
+                        <td className="px-6 py-4 text-right">{parseFloat(tech.averageRating).toFixed(1)} ★</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trends">
+          <div className="flex justify-center items-center h-64 border-2 border-dashed rounded-lg">
+            <div className="text-center">
+              <TrendingUp className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Trend analysis coming soon</h3>
+              <p className="mt-1 text-sm text-gray-500">Historical data charts will be available here in a future update.</p>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     )
   }
 
@@ -85,219 +321,14 @@ export default function ReportsPage() {
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
         </div>
       </div>
 
-      <Tabs value={reportType} onValueChange={setReportType}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="jobs">Job Analysis</TabsTrigger>
-          <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-            
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-medium">Total Jobs</p>
-                    <p className="text-2xl font-bold">{reportData?.overviewStats?.totalJobs || 0}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-green-600" />
-                  <div>
-                    <p className="text-sm font-medium">Completed</p>
-                    <p className="text-2xl font-bold">{reportData?.overviewStats?.completedJobs || 0}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-orange-600" />
-                  <div>
-                    <p className="text-sm font-medium">Utilization</p>
-                    <p className="text-2xl font-bold">{reportData?.overviewStats?.technicianUtilization || 0}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-yellow-600" />
-                  <div>
-                    <p className="text-sm font-medium">Satisfaction</p>
-                    <p className="text-2xl font-bold">{reportData?.overviewStats?.customerSatisfaction || 0}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Completion Rate */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Completion Rate</CardTitle>
-              <CardDescription>Percentage of jobs completed successfully</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span>Completed Jobs</span>
-                  <span>
-                    {reportData?.overviewStats?.completedJobs || 0}/{(reportData?.overviewStats?.totalJobs || 0)}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    (reportData?.overviewStats?.totalJobs || 0) > 0
-                      ? (reportData?.overviewStats?.completedJobs || 0) /
-                        (reportData?.overviewStats?.totalJobs || 0) *
-                        100
-                      : 0
-                  }
-                  className="h-3"
-                />
-                <p className="text-sm text-muted-foreground">
-                  {
-                    ((reportData?.overviewStats?.totalJobs || 0) > 0
-                      ? (reportData?.overviewStats?.completedJobs || 0) /
-                        (reportData?.overviewStats?.totalJobs || 0) *
-                        100
-                      : 0
-                    ).toFixed(1)
-                  }%
-                  completion rate
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="jobs" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Type Analysis</CardTitle>
-              <CardDescription>Performance breakdown by job type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {reportData?.jobTypeStats?.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No job type data available for this period.</p>
-                  </div>
-                ) : (
-                  reportData?.jobTypeStats?.map((jobType: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h3 className="font-medium">{jobType.type}</h3>
-                        <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                          <span>{jobType.count} jobs</span>
-                          <span>{jobType.avgDuration} min avg</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline">{jobType.count} jobs</Badge>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="technicians" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Technician Performance</CardTitle>
-              <CardDescription>Individual technician metrics and ratings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {reportData?.technicianPerformance?.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No technician performance data available for this period.</p>
-                  </div>
-                ) : (
-                  reportData?.technicianPerformance?.map((tech: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h3 className="font-medium">{tech.name}</h3>
-                        <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                          <span>{tech.jobs} jobs completed</span>
-                          <span>{tech.rating}★ rating</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{tech.efficiency}% efficiency</div>
-                        <Progress value={tech.efficiency} className="w-20 h-2 mt-1" />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="trends" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Trends</CardTitle>
-              <CardDescription>Job volume and revenue trends over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {reportData?.monthlyTrends?.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No monthly trend data available for this period.</p>
-                  </div>
-                ) : (
-                  reportData?.monthlyTrends?.map((month: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-blue-100 rounded-full">
-                          <Calendar className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{month.month} 2024</h3>
-                          <p className="text-sm text-muted-foreground">{month.jobs} jobs completed</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground"></div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="mt-6">{renderContent()}</div>
     </div>
   )
 }

@@ -1,11 +1,13 @@
-
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { getDbSql, toCamelCase } from '@/lib/db';
 import { verifyToken, getUserById } from '@/lib/auth';
 
 import { authenticateApiRequest } from '@/lib/api-auth';
 
-export async function GET(request: Request) {
+console.log('[ACCRUED_VALUES_GET] Loading route module');
+
+export async function GET(request: NextRequest) {
+  console.log('[ACCRUED_VALUES_GET] Received request');
   try {
     const { user, response } = await authenticateApiRequest(request);
     if (response) {
@@ -17,30 +19,92 @@ export async function GET(request: Request) {
     }
 
     const sql = getDbSql();
-    const result = await sql`
-      SELECT
-        u.id as user_id,
-        u.first_name as technician_first_name,
-        u.last_name as technician_last_name,
-        u.email as technician_email,
-        SUM(av.earned_amount) as total_earned_amount
-      FROM accrued_values av
-      JOIN users u ON av.user_id = u.id
-      GROUP BY u.id, u.first_name, u.last_name, u.email
-      ORDER BY total_earned_amount DESC
-    `;
+    const { searchParams } = request.nextUrl;
+    const month = searchParams.get('month');
+    const year = searchParams.get('year');
+    const mode = searchParams.get('mode'); // 'detailed' or null
 
-    const accruedValues = result.map((row: any) => {
-      const value = toCamelCase(row);
-      return {
-        technician: {
-          id: value.userId,
-          name: `${value.technicianFirstName} ${value.technicianLastName}`,
-          email: value.technicianEmail,
-        },
-        totalEarnedAmount: value.totalEarnedAmount,
-      };
-    });
+    const conditions = [];
+    if (month && month !== 'all') {
+      conditions.push(sql`av.month = ${parseInt(month, 10)}`);
+    }
+    if (year && year !== 'all') {
+      conditions.push(sql`av.year = ${parseInt(year, 10)}`);
+    }
+
+    let whereClause = sql``;
+    if (conditions.length > 0) {
+      whereClause = sql`WHERE ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
+    }
+
+    let accruedValues;
+    if (mode === 'detailed') {
+      // Return detailed, non-aggregated data for export
+      const result = await sql`
+        SELECT
+          av.*,
+          u.first_name as technician_first_name,
+          u.last_name as technician_last_name,
+          u.email as technician_email,
+          j.title as job_title,
+          jt.name as job_type_name
+        FROM accrued_values av
+        JOIN users u ON av.user_id = u.id
+        JOIN jobs j ON av.job_id = j.id
+        JOIN job_types jt ON j.job_type_id = jt.id
+        ${whereClause}
+        ORDER BY av.created_at DESC
+      `;
+
+      accruedValues = result.map((row: any) => {
+        const value = toCamelCase(row);
+        return {
+          id: value.id,
+          technician: {
+            id: value.userId,
+            name: `${value.technicianFirstName} ${value.technicianLastName}`,
+            email: value.technicianEmail,
+          },
+          job: {
+            id: value.jobId,
+            title: value.jobTitle,
+            type: value.jobTypeName,
+          },
+          earnedAmount: value.earnedAmount,
+          rating: value.rating,
+          month: value.month,
+          year: value.year,
+          createdAt: value.createdAt,
+        };
+      });
+    } else {
+      // Return aggregated data for display in the UI
+      const result = await sql`
+        SELECT
+          u.id as user_id,
+          u.first_name as technician_first_name,
+          u.last_name as technician_last_name,
+          u.email as technician_email,
+          SUM(av.earned_amount) as total_earned_amount
+        FROM accrued_values av
+        JOIN users u ON av.user_id = u.id
+        ${whereClause}
+        GROUP BY u.id, u.first_name, u.last_name, u.email
+        ORDER BY total_earned_amount DESC
+      `;
+
+      accruedValues = result.map((row: any) => {
+        const value = toCamelCase(row);
+        return {
+          technician: {
+            id: value.userId,
+            name: `${value.technicianFirstName} ${value.technicianLastName}`,
+            email: value.technicianEmail,
+          },
+          totalEarnedAmount: value.totalEarnedAmount,
+        };
+      });
+    }
 
     const yearRangeResult = await sql`
       SELECT MIN(year) as min_year, MAX(year) as max_year FROM accrued_values
@@ -55,7 +119,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { user, response } = await authenticateApiRequest(req);
     if (response) {

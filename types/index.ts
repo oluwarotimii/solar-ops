@@ -17,7 +17,7 @@ export interface Role {
   name: string
   description?: string
   isAdmin: boolean
-  permissions: Record<string, any>
+  permissions: Record<string, boolean | Record<string, boolean>>
   createdAt: string
 }
 
