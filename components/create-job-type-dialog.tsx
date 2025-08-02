@@ -18,45 +18,18 @@ export default function CreateJobTypeDialog({ onJobTypeCreated }: CreateJobTypeD
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    baseValue: "",
-    defaultPercentage: "60",
     color: "#10B981",
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-
-  const formatNaira = (amount: string) => {
-    const num = Number.parseFloat(amount.replace(/[^\d.]/g, ""))
-    if (isNaN(num)) return ""
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(num)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
-    if (!formData.name || !formData.baseValue || !formData.defaultPercentage) {
+    if (!formData.name) {
       setError("Please fill in all required fields")
-      setLoading(false)
-      return
-    }
-
-    const baseValue = Number.parseFloat(formData.baseValue.replace(/[^\d.]/g, ""))
-    const defaultPercentage = Number.parseFloat(formData.defaultPercentage)
-
-    if (isNaN(baseValue) || baseValue <= 0) {
-      setError("Please enter a valid base value")
-      setLoading(false)
-      return
-    }
-
-    if (isNaN(defaultPercentage) || defaultPercentage < 0 || defaultPercentage > 100) {
-      setError("Please enter a valid percentage (0-100)")
       setLoading(false)
       return
     }
@@ -65,8 +38,6 @@ export default function CreateJobTypeDialog({ onJobTypeCreated }: CreateJobTypeD
       const newJobType = {
         name: formData.name,
         description: formData.description,
-        baseValue: baseValue,
-        defaultPercentage: defaultPercentage,
         color: formData.color,
         createdAt: new Date().toISOString(),
       }
@@ -114,37 +85,6 @@ export default function CreateJobTypeDialog({ onJobTypeCreated }: CreateJobTypeD
             rows={3}
             placeholder="Brief description of this job type"
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="baseValue">Base Value (₦) *</Label>
-            <Input
-              id="baseValue"
-              value={formData.baseValue}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^\d.]/g, "")
-                setFormData((prev) => ({ ...prev, baseValue: value }))
-              }}
-              required
-              placeholder="250000"
-            />
-            {formData.baseValue && <p className="text-xs text-muted-foreground">{formatNaira(formData.baseValue)}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="defaultPercentage">Default Technician Share (%) *</Label>
-            <Input
-              id="defaultPercentage"
-              type="number"
-              min="0"
-              max="100"
-              value={formData.defaultPercentage}
-              onChange={(e) => setFormData((prev) => ({ ...prev, defaultPercentage: e.target.value }))}
-              required
-              placeholder="60"
-            />
-          </div>
         </div>
 
         <div className="space-y-2">
