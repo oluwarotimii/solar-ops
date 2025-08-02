@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
-import { Loader2, Sun } from "lucide-react"
-import { zxcvbn } from 'zxcvbn'
+import { Loader2, Sun, EyeIcon, EyeOffIcon } from "lucide-react"
+import zxcvbn from 'zxcvbn'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -26,6 +26,8 @@ export default function RegisterPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,14 +176,30 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={handlePasswordChange}
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handlePasswordChange}
+                  required
+                  minLength={6}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <EyeIcon className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  <span className="sr-only">Toggle password visibility</span>
+                </Button>
+              </div>
               {formData.password && (
                 <Progress value={passwordStrength} className="w-full" />
               )}
@@ -189,14 +207,30 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                  minLength={6}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOffIcon className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <EyeIcon className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  <span className="sr-only">Toggle confirm password visibility</span>
+                </Button>
+              </div>
               {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
                 <p className="text-sm text-red-500">Passwords do not match</p>
               )}
