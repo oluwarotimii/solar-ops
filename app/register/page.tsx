@@ -169,9 +169,17 @@ export default function RegisterPage() {
               <Input
                 id="phone"
                 type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                value={formData.phone.startsWith("+234") ? formData.phone : "+234" + formData.phone}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  if (!newValue.startsWith("+234")) {
+                    setFormData((prev) => ({ ...prev, phone: "+234" + newValue.replace(/^\+234/, '') }));
+                  } else {
+                    setFormData((prev) => ({ ...prev, phone: newValue }));
+                  }
+                }}
                 required
+                placeholder="+2348012345678"
               />
             </div>
 
