@@ -17,7 +17,7 @@ export interface Role {
   name: string
   description?: string
   isAdmin: boolean
-  permissions: Record<string, any>
+  permissions: Record<string, boolean | Record<string, boolean>>
   createdAt: string
 }
 
@@ -45,7 +45,7 @@ export interface Job {
   locationLng?: number
   scheduledDate?: string
   estimatedDuration?: number
-  jobValue: number
+  
   
   instructions?: string
   completedAt?: string
@@ -119,17 +119,12 @@ export interface MaintenanceTask {
 }
 
 export interface AccruedValue {
-  id: string
-  userId: string
-  jobId: string
-  jobValue: number
-  earnedAmount: number
-  rating?: number
-  month: number
-  year: number
-  user?: User
-  job?: Job
-  createdAt: string
+  technician: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  totalEarnedAmount: number;
 }
 
 export interface Notification {

@@ -116,8 +116,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const {
       title, description, jobTypeId, priority, locationAddress,
       locationLat, locationLng, scheduledDate, scheduledTime, estimatedDuration,
-      jobValue, instructions, status, assignedTechnicians
+      instructions, status, assignedTechnicians
     } = jobData;
+
+    // Fetch current job status to determine if completed_at needs to be set
+    const currentJob = await sql`
+      SELECT status FROM jobs WHERE id = ${id}
+    `;
+
+    let completedAtUpdate = sql``;
+    if (status === 'completed' && currentJob[0].status !== 'completed') {
+      completedAtUpdate = sql`completed_at = NOW(),`;
+    } else if (status !== 'completed' && currentJob[0].status === 'completed') {
+      completedAtUpdate = sql`completed_at = NULL,`;
+    }
 
     const result = await sql`
       UPDATE jobs
@@ -132,9 +144,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         scheduled_date = ${scheduledDate || null},
         scheduled_time = ${scheduledTime || null},
         estimated_duration = ${estimatedDuration || null},
-        job_value = ${jobValue || 0},
         instructions = ${instructions || null},
         status = ${status || "assigned"},
+        ${completedAtUpdate}
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING id;
@@ -155,6 +167,38 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           INSERT INTO job_technicians (job_id, technician_id, role)
           VALUES (${id}, ${assignedTech.technicianId}, ${assignedTech.role});
         `;
+      }
+    }
+
+    // If job is marked as completed, create accrued values
+    if (status === 'completed' && currentJob[0].status !== 'completed') {
+      console.log(`Job ${id} status changed to completed. Attempting to create accrued values.`);
+      const technicians = await sql`
+        SELECT technician_id FROM job_technicians WHERE job_id = ${id}
+      `;
+      console.log(`Found ${technicians.length} technicians for job ${id}:`, technicians);
+
+      if (technicians.length > 0) {
+        const jobValueResult = await sql`
+          SELECT job_value FROM jobs WHERE id = ${id}
+        `;
+        const jobValue = jobValueResult[0].job_value;
+        const earnedAmount = jobValue / technicians.length;
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+
+        console.log(`Job Value: ${jobValue}, Number of Technicians: ${technicians.length}, Earned Amount per technician: ${earnedAmount}`);
+
+        for (const tech of technicians) {
+          await sql`
+            INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, month, year)
+            VALUES (${tech.technician_id}, ${id}, ${jobValue}, ${earnedAmount}, ${month}, ${year})
+          `;
+          console.log(`Inserted accrued value for technician ${tech.technician_id} for job ${id}`);
+        }
+      } else {
+        console.log(`No technicians assigned to job ${id}. No accrued values created.`);
       }
     }
 

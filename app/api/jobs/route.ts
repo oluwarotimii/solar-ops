@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
         ${jobData.locationLng || null},
         ${jobData.scheduledDate || null},
         ${jobData.estimatedDuration || null},
-        ${jobData.jobValue || 0},
+        0,
         ${jobData.instructions || null},
         'assigned'
       ) RETURNING id

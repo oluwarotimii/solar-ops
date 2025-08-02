@@ -176,7 +176,6 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         body: JSON.stringify({
           ...formData,
           assignedTechnicians: assignedTechnicians,
-          jobValue: Number.parseFloat(formData.jobValue) || 0,
           estimatedDuration: Number.parseInt(formData.estimatedDuration) || 0,
         }),
       });
@@ -277,18 +276,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="jobValue">Job Value (₦) *</Label>
-                <Input
-                  id="jobValue"
-                  type="number"
-                  value={formData.jobValue}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, jobValue: e.target.value }))}
-                  placeholder="500000"
-                  required
-                />
-                {formData.jobValue && <p className="text-sm text-muted-foreground">{formatNaira(formData.jobValue)}</p>}
-              </div>
+              
             </div>
 
             <div className="space-y-2">
@@ -322,6 +310,18 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                   value={formData.estimatedDuration}
                   onChange={(e) => setFormData((prev) => ({ ...prev, estimatedDuration: e.target.value }))}
                   placeholder="240"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="jobValue">Job Value (NGN) *</Label>
+                <Input
+                  id="jobValue"
+                  type="number"
+                  value={formData.jobValue}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, jobValue: e.target.value }))}
+                  required
+                  min="0"
                 />
               </div>
             </div>

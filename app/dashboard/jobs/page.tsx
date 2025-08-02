@@ -249,14 +249,14 @@ export default function JobsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Job</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>Value</TableHead>
                   <TableHead>Technician</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Scheduled</TableHead>
-                  <TableHead>Value</TableHead>
+                  
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -292,11 +292,6 @@ export default function JobsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {job.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">{job.description}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <Badge
                           variant="outline"
                           style={{
@@ -306,6 +301,9 @@ export default function JobsPage() {
                         >
                           {job.jobType.name}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-green-600">{formatNaira(job.jobValue)}</span>
                       </TableCell>
                       <TableCell>
                         {job.assignedUser ? (
@@ -344,9 +342,7 @@ export default function JobsPage() {
                           <span className="text-muted-foreground">Not scheduled</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <span className="font-medium">{formatNaira(job.jobValue)}</span>
-                      </TableCell>
+                      
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           

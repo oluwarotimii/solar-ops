@@ -15,7 +15,7 @@ interface Job {
   priority: "low" | "medium" | "high" | "urgent";
   locationAddress: string;
   scheduledDate?: string | Date | null;
-  jobValue: number;
+  
   estimatedDuration?: number;
   instructions?: string;
   completedAt?: string | Date | null;

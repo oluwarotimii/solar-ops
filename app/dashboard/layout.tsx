@@ -1,4 +1,5 @@
-import type React from "react"
+import { Suspense } from "react"
+import { DashboardProvider } from "@/lib/dashboard-context"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 import { verifyToken, getUserById } from "@/lib/auth"
@@ -46,7 +47,11 @@ export default async function DashboardLayout({
             <h1 className="font-semibold">Solar Field Operations</h1>
           </div>
         </header>
-        <div className="flex-1 overflow-auto p-4">{children}</div>
+        <Suspense fallback={<div className="flex-1 overflow-auto p-4">Loading dashboard data...</div>}>
+          <DashboardProvider>
+            <div className="flex-1 overflow-auto p-4">{children}</div>
+          </DashboardProvider>
+        </Suspense>
       </SidebarInset>
     </SidebarProvider>
   )

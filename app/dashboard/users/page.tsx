@@ -123,11 +123,17 @@ export default function UsersPage() {
               user={selectedUser}
               roles={roles}
               onUserUpdated={(updatedUser) => {
+                console.log("[Frontend] onUserUpdated received:", updatedUser);
                 setSelectedUser(updatedUser); // Update selectedUser with the latest data
                 // Immediately update the users array to reflect the change
-                setUsers((prevUsers) =>
-                  prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user))
-                );
+                setUsers((prevUsers) => {
+                  console.log("[Frontend] prevUsers before update:", prevUsers);
+                  const newUsers = prevUsers.map((user) =>
+                    user.id === updatedUser.id ? updatedUser : user
+                  );
+                  console.log("[Frontend] newUsers after update:", newUsers);
+                  return newUsers;
+                });
                 fetchUsers(); // Refresh the list in the background for full consistency
                 setShowEditDialog(false);
               }}

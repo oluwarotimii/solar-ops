@@ -111,7 +111,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
         title: "User Updated",
         description: `User ${formData.firstName} ${formData.lastName} has been updated.`,
       });
-      onUserUpdated();
+      onUserUpdated({ ...user, ...payload });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -216,7 +216,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
         </div>
       </div>
       <DialogFooter>
-        {user.status === 'active' || user.status === 'pending' ? (
+        {user.status === 'active' ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" variant="destructive" disabled={loading}>
@@ -232,7 +232,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleStatusChange('inactive')} disabled={loading} asChild>
+                <AlertDialogAction onClick={() => handleStatusChange('deactivated')} disabled={loading} asChild>
                   <DialogClose>{loading ? "Deactivating..." : "Deactivate"}</DialogClose>
                 </AlertDialogAction>
               </AlertDialogFooter>

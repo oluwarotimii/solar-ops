@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useDashboardData } from "@/lib/dashboard-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -8,9 +9,7 @@ import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, Al
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
-  const [stats, setStats] = useState<any>(null)
-  const [loadingStats, setLoadingStats] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { stats, activity, completionRate, loading, error } = useDashboardData()
 
   useEffect(() => {
     // Fetch actual user from localStorage
@@ -18,31 +17,9 @@ export default function DashboardPage() {
     if (storedUser) {
       setUser(JSON.parse(storedUser))
     }
-
-    // Fetch dashboard stats
-    const fetchStats = async () => {
-      setLoadingStats(true)
-      try {
-        const response = await fetch("/api/dashboard/reports")
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to fetch dashboard stats.")
-        }
-
-        const data = await response.json()
-        setStats(data)
-      } catch (err: any) {
-        setError(err.message || "An unexpected error occurred while fetching stats.")
-      } finally {
-        setLoadingStats(false)
-      }
-    }
-
-    fetchStats()
   }, [])
 
-  if (loadingStats) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -61,7 +38,8 @@ export default function DashboardPage() {
   }
 
   // Render null or a message if stats are not available after loading
-  if (!stats) {
+  // Render null or a message if stats are not available after loading
+  if (!stats && !loading && !error) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-lg text-muted-foreground">No dashboard data available.</p>
@@ -89,9 +67,9 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalJobs}</div>
+            <div className="text-2xl font-bold">{stats?.totalJobs}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeJobs} active, {stats.completedJobs} completed
+              {stats?.activeJobs} active, {stats?.completedJobs} completed
             </p>
           </CardContent>
         </Card>
@@ -102,7 +80,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeTechnicians}</div>
+            <div className="text-2xl font-bold">{stats?.activeTechnicians}</div>
             <p className="text-xs text-muted-foreground">Currently in field</p>
           </CardContent>
         </Card>
@@ -113,7 +91,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingMaintenance}</div>
+            <div className="text-2xl font-bold">{stats?.pendingMaintenance}</div>
             <p className="text-xs text-muted-foreground">Tasks scheduled</p>
           </CardContent>
         </Card>
@@ -124,8 +102,32 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{(stats?.totalRevenue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Job Summary */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Jobs This Month</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completionRate?.totalJobsThisMonth}</div>
+            <p className="text-xs text-muted-foreground">Total jobs so far this month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completionRate?.completedJobsThisMonth}</div>
+            <p className="text-xs text-muted-foreground">Jobs completed this month</p>
           </CardContent>
         </Card>
       </div>
@@ -138,11 +140,36 @@ export default function DashboardPage() {
             <CardDescription>Latest job updates and technician check-ins</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Placeholder for Recent Activity - Data will be fetched from API */}
-            <div className="text-center text-muted-foreground py-8">
-              <p>No recent activity to display.</p>
-              <p className="text-sm">Data will load here from API.</p>
-            </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                <p className="ml-2">Loading activity...</p>
+              </div>
+            ) : activity.length > 0 ? (
+              activity.map((item, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  {item.type === 'job_update' ? (
+                    <FileText className="h-5 w-5 text-blue-500" />
+                  ) : (
+                    <MapPin className="h-5 w-5 text-green-500" />
+                  )}
+                  <div>
+                    <p className="font-medium">
+                      {item.type === 'job_update' ? 
+                        `Job "${item.title}" updated to ${item.status} by ${item.firstName || ''} ${item.lastName || ''}` : 
+                        `Technician ${item.firstName || ''} ${item.lastName || ''} ${item.type} at ${item.jobId}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <p>No recent activity to display.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -152,11 +179,22 @@ export default function DashboardPage() {
             <CardDescription>This month's performance metrics</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Placeholder for Job Completion Rate - Data will be fetched from API */}
-            <div className="text-center text-muted-foreground py-8">
-              <p>No completion rate data available.</p>
-              <p className="text-sm">Data will load here from API.</p>
-            </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                <p className="ml-2">Loading completion rate...</p>
+              </div>
+            ) : completionRate ? (
+              <div className="text-center py-4">
+                <p className="text-4xl font-bold text-primary">{completionRate.completionRate}%</p>
+                <p className="text-muted-foreground">{completionRate.completedJobsThisMonth} of {completionRate.totalJobsThisMonth} jobs completed this month</p>
+                <Progress value={parseFloat(completionRate.completionRate)} className="mt-4" />
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <p>No completion rate data available.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
