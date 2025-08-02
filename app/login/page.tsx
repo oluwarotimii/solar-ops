@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle, Info, Sun, Eye, EyeOff } from "lucide-react"
+import { Loader2, AlertCircle, Info, Sun, Eye, EyeOff, ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -60,6 +60,11 @@ export default function LoginPage() {
         {/* Left Panel: Login Form */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
           <div className="max-w-md mx-auto w-full">
+            <div className="absolute top-4 left-4">
+              <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">Welcome Back!</h2>
             <p className="text-gray-600 mb-8 text-center">Please sign in to your Solar Field Ops account</p>
 

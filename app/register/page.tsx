@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
-import { Loader2, Sun, EyeIcon, EyeOffIcon } from "lucide-react"
+import { Loader2, Sun, EyeIcon, EyeOffIcon, ArrowLeft } from "lucide-react"
 import zxcvbn from 'zxcvbn'
 
 export default function RegisterPage() {
@@ -117,7 +117,12 @@ export default function RegisterPage() {
       <div className="relative flex w-full max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
         {/* Left Panel: Register Form */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-          <div className="max-w-md mx-auto w-full">
+          <div className="max-w-md mx-auto w-full relative">
+            <div className="absolute top-0 left-0">
+              <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">Join Us!</h2>
             <p className="text-gray-600 mb-8 text-center">Create your Solar Field Ops account</p>
 
