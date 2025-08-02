@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
 import { Loader2, Sun } from "lucide-react"
+import { zxcvbn } from 'zxcvbn'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -23,7 +25,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState(0)
   const router = useRouter()
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value
+    setFormData((prev) => ({ ...prev, password: newPassword }))
+    const result = zxcvbn(newPassword)
+    setPasswordStrength(result.score * 25) // Score is 0-4, convert to 0-100
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +42,12 @@ export default function RegisterPage() {
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match")
+      setLoading(false)
+      return
+    }
+
+    if (passwordStrength < 50) { // Require at least a 'fair' password strength
+      setError("Password is too weak. Please use a stronger password.")
       setLoading(false)
       return
     }
@@ -162,10 +178,13 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                onChange={handlePasswordChange}
                 required
                 minLength={6}
               />
+              {formData.password && (
+                <Progress value={passwordStrength} className="w-full" />
+              )}
             </div>
 
             <div className="space-y-2">
@@ -178,6 +197,9 @@ export default function RegisterPage() {
                 required
                 minLength={6}
               />
+              {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-sm text-red-500">Passwords do not match</p>
+              )}
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
@@ -196,3 +218,4 @@ export default function RegisterPage() {
     </div>
   )
 }
+
