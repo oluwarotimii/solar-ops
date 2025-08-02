@@ -149,6 +149,10 @@ export default function JobsPage() {
     }).format(amount)
   }
 
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -315,11 +319,11 @@ export default function JobsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColors[job.status]}>{job.status.replace("_", " ")}</Badge>
+                        <Badge className={statusColors[job.status]}>{capitalizeFirstLetter(job.status.replace("_", " "))}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={priorityColors[job.priority]} variant="outline">
-                          {job.priority}
+                          {capitalizeFirstLetter(job.priority)}
                         </Badge>
                       </TableCell>
                       <TableCell>
