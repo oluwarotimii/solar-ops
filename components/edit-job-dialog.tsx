@@ -16,6 +16,7 @@ import { Loader2, Plus, Trash2, User } from "lucide-react"
 interface EditJobDialogProps {
   job: any; // The job data to edit
   onJobUpdated: (job: any) => void;
+  currentUser: any; // Add currentUser prop
 }
 
 interface JobTechnician {
@@ -23,7 +24,7 @@ interface JobTechnician {
   role: "lead" | "assistant" | "specialist";
 }
 
-export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps) {
+export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJobDialogProps) {
   console.log("Job prop in EditJobDialog:", job);
   console.log("Job technicians in EditJobDialog:", job.technicians);
   const [formData, setFormData] = useState({
@@ -352,7 +353,8 @@ export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps)
               <Input
                 id="jobValue"
                 value={formatNaira(formData.jobValue)}
-                readOnly
+                onChange={(e) => setFormData((prev) => ({ ...prev, jobValue: e.target.value }))}
+                readOnly={!currentUser?.role?.isAdmin}
                 className="font-medium text-lg"
               />
             </div>

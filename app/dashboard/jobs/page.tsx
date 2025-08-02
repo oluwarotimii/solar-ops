@@ -59,6 +59,7 @@ export default function JobsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const fetchJobs = async () => {
     setLoading(true)
@@ -98,6 +99,10 @@ export default function JobsPage() {
   }
 
   useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser))
+    }
     fetchJobs()
     fetchJobTypes()
   }, [])
@@ -378,7 +383,7 @@ export default function JobsPage() {
         }
       }}>
         <DialogContent className="max-w-2xl">
-          <EditJobDialog job={selectedJob} onJobUpdated={handleJobUpdated} />
+          <EditJobDialog job={selectedJob} onJobUpdated={handleJobUpdated} currentUser={currentUser} />
         </DialogContent>
       </Dialog>
     )}
