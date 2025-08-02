@@ -22,18 +22,32 @@ export async function GET(request: NextRequest) {
         SELECT 
           j.*,
         jt.name as job_type_name, jt.color as job_type_color,
-        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
         cu.first_name as created_first_name, cu.last_name as created_last_name
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
-      LEFT JOIN users au ON jtech.technician_id = au.id
       LEFT JOIN users cu ON j.created_by = cu.id
       ORDER BY j.created_at DESC
     `
-    const jobs = result.map((row: any) => {
+    const jobs = await Promise.all(result.map(async (row: any) => {
       const job = toCamelCase(row)
-      console.log("Job object after toCamelCase:", job);
+
+      // Fetch assigned technicians for each job
+      const techniciansResult = await sql`
+        SELECT
+          jt.technician_id,
+          jt.role,
+          u.first_name,
+          u.last_name
+        FROM job_technicians jt
+        JOIN users u ON jt.technician_id = u.id
+        WHERE jt.job_id = ${job.id}
+      `;
+      job.technicians = techniciansResult.map((tech: any) => ({
+        technicianId: tech.technician_id,
+        role: tech.role,
+        firstName: tech.first_name,
+        lastName: tech.last_name,
+      }));
 
       // Build nested objects
       if (job.jobTypeName) {
@@ -41,13 +55,6 @@ export async function GET(request: NextRequest) {
           id: job.jobTypeId,
           name: job.jobTypeName,
           color: job.jobTypeColor,
-        }
-      }
-
-      if (job.assignedFirstName) {
-        job.assignedUser = {
-          firstName: job.assignedFirstName,
-          lastName: job.assignedLastName,
         }
       }
 
@@ -68,7 +75,7 @@ export async function GET(request: NextRequest) {
       delete job.createdLastName
 
       return job
-    })
+    }))
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
       scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
@@ -81,19 +88,33 @@ export async function GET(request: NextRequest) {
         SELECT 
           j.*,
         jt.name as job_type_name, jt.color as job_type_color,
-        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
         cu.first_name as created_first_name, cu.last_name as created_last_name
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
-      LEFT JOIN users au ON jtech.technician_id = au.id
       LEFT JOIN users cu ON j.created_by = cu.id
       WHERE jtech.technician_id IN (SELECT technician_id FROM supervisor_technicians WHERE supervisor_id = ${user.id})
       ORDER BY j.created_at DESC
       `
-      const jobs = result.map((row: any) => {
+      const jobs = await Promise.all(result.map(async (row: any) => {
       const job = toCamelCase(row)
-      console.log("Job object after toCamelCase:", job);
+
+      // Fetch assigned technicians for each job
+      const techniciansResult = await sql`
+        SELECT
+          jt.technician_id,
+          jt.role,
+          u.first_name,
+          u.last_name
+        FROM job_technicians jt
+        JOIN users u ON jt.technician_id = u.id
+        WHERE jt.job_id = ${job.id}
+      `;
+      job.technicians = techniciansResult.map((tech: any) => ({
+        technicianId: tech.technician_id,
+        role: tech.role,
+        firstName: tech.first_name,
+        lastName: tech.last_name,
+      }));
 
       // Build nested objects
       if (job.jobTypeName) {
@@ -101,13 +122,6 @@ export async function GET(request: NextRequest) {
           id: job.jobTypeId,
           name: job.jobTypeName,
           color: job.jobTypeColor,
-        }
-      }
-
-      if (job.assignedFirstName) {
-        job.assignedUser = {
-          firstName: job.assignedFirstName,
-          lastName: job.assignedLastName,
         }
       }
 
@@ -128,7 +142,7 @@ export async function GET(request: NextRequest) {
       delete job.createdLastName
 
       return job
-    })
+    }))
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
       scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
@@ -141,19 +155,33 @@ export async function GET(request: NextRequest) {
         SELECT 
           j.*,
         jt.name as job_type_name, jt.color as job_type_color,
-        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
         cu.first_name as created_first_name, cu.last_name as created_last_name
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      LEFT JOIN job_technicians jtech ON j.id = jtech.job_id
-      LEFT JOIN users au ON jtech.technician_id = au.id
       LEFT JOIN users cu ON j.created_by = cu.id
         WHERE jtech.technician_id = ${user.id}
         ORDER BY j.created_at DESC
       `
-      const jobs = result.map((row: any) => {
+      const jobs = await Promise.all(result.map(async (row: any) => {
       const job = toCamelCase(row)
-      console.log("Job object after toCamelCase:", job);
+
+      // Fetch assigned technicians for each job
+      const techniciansResult = await sql`
+        SELECT
+          jt.technician_id,
+          jt.role,
+          u.first_name,
+          u.last_name
+        FROM job_technicians jt
+        JOIN users u ON jt.technician_id = u.id
+        WHERE jt.job_id = ${job.id}
+      `;
+      job.technicians = techniciansResult.map((tech: any) => ({
+        technicianId: tech.technician_id,
+        role: tech.role,
+        firstName: tech.first_name,
+        lastName: tech.last_name,
+      }));
 
       // Build nested objects
       if (job.jobTypeName) {
@@ -161,13 +189,6 @@ export async function GET(request: NextRequest) {
           id: job.jobTypeId,
           name: job.jobTypeName,
           color: job.jobTypeColor,
-        }
-      }
-
-      if (job.assignedFirstName) {
-        job.assignedUser = {
-          firstName: job.assignedFirstName,
-          lastName: job.assignedLastName,
         }
       }
 
@@ -188,7 +209,7 @@ export async function GET(request: NextRequest) {
       delete job.createdLastName
 
       return job
-    })
+    }))
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
       scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,

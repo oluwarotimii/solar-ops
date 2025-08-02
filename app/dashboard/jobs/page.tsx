@@ -300,11 +300,15 @@ export default function JobsPage() {
                       </TableCell>
                       <TableCell>
                         {job.technicians && job.technicians.length > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>
-                              {job.technicians[0].firstName} {job.technicians[0].lastName}
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            {job.technicians.map((tech, techIndex) => (
+                              <div key={techIndex} className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <span>
+                                  {tech.firstName} {tech.lastName} ({tech.role})
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">Unassigned</span>
