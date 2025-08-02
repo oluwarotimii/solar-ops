@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useDashboardData } from "@/lib/dashboard-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -8,13 +9,7 @@ import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, Al
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
-  const [stats, setStats] = useState<any>(null)
-  const [activity, setActivity] = useState<any[]>([])
-  const [completionRate, setCompletionRate] = useState<any>(null)
-  const [loadingStats, setLoadingStats] = useState(true)
-  const [loadingActivity, setLoadingActivity] = useState(true)
-  const [loadingCompletionRate, setLoadingCompletionRate] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { stats, activity, completionRate, loading, error } = useDashboardData()
 
   useEffect(() => {
     // Fetch actual user from localStorage
@@ -22,75 +17,9 @@ export default function DashboardPage() {
     if (storedUser) {
       setUser(JSON.parse(storedUser))
     }
-
-    // Fetch dashboard stats
-    const fetchStats = async () => {
-      setLoadingStats(true)
-      try {
-        const response = await fetch("/api/dashboard/stats")
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to fetch dashboard stats.")
-        }
-
-        const data = await response.json()
-        setStats(data)
-      } catch (err: any) {
-        setError(err.message || "An unexpected error occurred while fetching stats.")
-      } finally {
-        setLoadingStats(false)
-      }
-    }
-
-    // Fetch recent activity
-    const fetchActivity = async () => {
-      setLoadingActivity(true)
-      try {
-        const response = await fetch("/api/dashboard/activity")
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to fetch recent activity.")
-        }
-
-        const data = await response.json()
-        setActivity(data)
-      } catch (err: any) {
-        console.error("Error fetching activity:", err)
-        // setError(err.message || "An unexpected error occurred while fetching activity.")
-      } finally {
-        setLoadingActivity(false)
-      }
-    }
-
-    // Fetch job completion rate
-    const fetchCompletionRate = async () => {
-      setLoadingCompletionRate(true)
-      try {
-        const response = await fetch("/api/dashboard/completion-rate")
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to fetch completion rate.")
-        }
-
-        const data = await response.json()
-        setCompletionRate(data)
-      } catch (err: any) {
-        console.error("Error fetching completion rate:", err)
-        // setError(err.message || "An unexpected error occurred while fetching completion rate.")
-      } finally {
-        setLoadingCompletionRate(false)
-      }
-    }
-
-    fetchStats()
-    fetchActivity()
-    fetchCompletionRate()
   }, [])
 
-  if (loadingStats || loadingActivity || loadingCompletionRate) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -109,7 +38,8 @@ export default function DashboardPage() {
   }
 
   // Render null or a message if stats are not available after loading
-  if (!stats) {
+  // Render null or a message if stats are not available after loading
+  if (!stats && !loading && !error) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-lg text-muted-foreground">No dashboard data available.</p>
@@ -129,7 +59,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      Stats Cards
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -137,9 +67,9 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalJobs}</div>
+            <div className="text-2xl font-bold">{stats?.totalJobs}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeJobs} active, {stats.completedJobs} completed
+              {stats?.activeJobs} active, {stats?.completedJobs} completed
             </p>
           </CardContent>
         </Card>
@@ -150,7 +80,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeTechnicians}</div>
+            <div className="text-2xl font-bold">{stats?.activeTechnicians}</div>
             <p className="text-xs text-muted-foreground">Currently in field</p>
           </CardContent>
         </Card>
@@ -161,7 +91,7 @@ export default function DashboardPage() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingMaintenance}</div>
+            <div className="text-2xl font-bold">{stats?.pendingMaintenance}</div>
             <p className="text-xs text-muted-foreground">Tasks scheduled</p>
           </CardContent>
         </Card>
@@ -178,7 +108,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Monthly Job Summary
+      {/* Monthly Job Summary */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -186,7 +116,7 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completionRate.totalJobsThisMonth}</div>
+            <div className="text-2xl font-bold">{completionRate?.totalJobsThisMonth}</div>
             <p className="text-xs text-muted-foreground">Total jobs so far this month</p>
           </CardContent>
         </Card>
@@ -196,11 +126,11 @@ export default function DashboardPage() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completionRate.completedJobsThisMonth}</div>
+            <div className="text-2xl font-bold">{completionRate?.completedJobsThisMonth}</div>
             <p className="text-xs text-muted-foreground">Jobs completed this month</p>
           </CardContent>
         </Card>
-      </div> */}
+      </div>
 
       {/* Recent Activity & Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -210,7 +140,7 @@ export default function DashboardPage() {
             <CardDescription>Latest job updates and technician check-ins</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loadingActivity ? (
+            {loading ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                 <p className="ml-2">Loading activity...</p>
@@ -249,7 +179,7 @@ export default function DashboardPage() {
             <CardDescription>This month's performance metrics</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loadingCompletionRate ? (
+            {loading ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                 <p className="ml-2">Loading completion rate...</p>

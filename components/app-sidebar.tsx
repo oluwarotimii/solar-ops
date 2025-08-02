@@ -1,6 +1,7 @@
 "use client"
 
 import type * as React from "react"
+import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import {
   Sidebar,
@@ -165,10 +166,10 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
                 {section.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <a href={item.url}>
+                      <Link href={item.url}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                      </a>
+                    </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

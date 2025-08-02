@@ -9,7 +9,6 @@ export function getDbSql() {
     console.error("[DB Debug] DATABASE_URL environment variable is not set!");
     throw new Error("DATABASE_URL environment variable is required");
   }
-  console.log("[DB Debug] DATABASE_URL is set. Attempting to connect.");
   return sql;
 }
 
