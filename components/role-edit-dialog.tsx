@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Role } from "@/types";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const allPermissions = {
   jobs: ["create", "read:all", "read:team", "read:assigned", "update", "delete"],
@@ -74,7 +75,7 @@ export function RoleEditDialog({ role, isOpen, onClose, onSave }: RoleEditDialog
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] md:max-w-[600px] lg:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>{role ? "Edit Role" : "Create Role"}</DialogTitle>
           <DialogDescription>
@@ -96,30 +97,33 @@ export function RoleEditDialog({ role, isOpen, onClose, onSave }: RoleEditDialog
           </div>
           <div>
             <h3 className="text-lg font-medium">Permissions</h3>
-            <div className="space-y-4">
-              {Object.entries(allPermissions).map(([group, perms]) => (
-                <div key={group}>
-                  <h4 className="font-medium capitalize">{group}</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {perms.map((perm) => (
-                      <div key={perm} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${group}-${perm}`}
-                          checked={permissions[group]?.[perm] || false}
-                          onCheckedChange={() => handlePermissionChange(group, perm)}
-                        />
-                        <label
-                          htmlFor={`${group}-${perm}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {perm}
-                        </label>
-                      </div>
-                    ))}
+            <ScrollArea className="h-[400px] rounded-md border p-4">
+              <div className="space-y-4">
+                {Object.entries(allPermissions).map(([group, perms]) => (
+                  <div key={group}>
+                    <h4 className="font-medium capitalize">{group}</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {perms.map((perm) => (
+                        <div key={perm} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${group}-${perm}`}
+                            checked={permissions[group]?.[perm] || false}
+                            onCheckedChange={() => handlePermissionChange(group, perm)}
+                          />
+                          <label
+                            htmlFor={`${group}-${perm}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {perm}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <ScrollBar />
+            </ScrollArea>
           </div>
         </div>
         <DialogFooter>

@@ -32,8 +32,9 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     locationLat: "",
     locationLng: "",
     scheduledDate: "",
+    scheduledTime: "",
     estimatedDuration: "",
-    jobValue: "",
+    jobValue: 0,
     instructions: "",
   })
 
@@ -299,6 +300,16 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                   value={formData.scheduledDate}
                   min={new Date().toISOString().split("T")[0]}
                   onChange={(e) => setFormData((prev) => ({ ...prev, scheduledDate: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="scheduledTime">Scheduled Time</Label>
+                <Input
+                  id="scheduledTime"
+                  type="time"
+                  value={formData.scheduledTime}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, scheduledTime: e.target.value }))}
                 />
               </div>
 

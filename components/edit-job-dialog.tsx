@@ -35,7 +35,7 @@ export default function EditJobDialog({ job, onJobUpdated }: EditJobDialogProps)
     locationLat: job.locationLat || "",
     locationLng: job.locationLng || "",
     scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().split('T')[0] : "",
-    scheduledTime: job.scheduledTime || "",
+    scheduledTime: job.scheduledTime ? String(job.scheduledTime) : "",
     estimatedDuration: job.estimatedDuration || "",
     jobValue: job.jobValue || "",
     instructions: job.instructions || "",

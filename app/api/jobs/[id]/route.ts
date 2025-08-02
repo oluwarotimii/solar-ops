@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         j.location_lat as "locationLat",
         j.location_lng as "locationLng",
         j.scheduled_date as "scheduledDate",
-        j.scheduled_time as "scheduledTime",
+        TO_CHAR(j.scheduled_time, 'HH24:MI') as "scheduledTime",
         j.estimated_duration as "estimatedDuration",
         j.job_value as "jobValue",
         j.instructions,

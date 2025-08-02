@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
       scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+      scheduledTime: job.scheduledTime || null,
     }));
     return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:team')) {
@@ -131,6 +132,7 @@ export async function GET(request: NextRequest) {
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
       scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+      scheduledTime: job.scheduledTime || null,
     }));
     return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:assigned')) {
@@ -190,6 +192,7 @@ export async function GET(request: NextRequest) {
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
       scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+      scheduledTime: job.scheduledTime || null,
     }));
     return NextResponse.json(jobsWithDate)
     } else {
@@ -225,7 +228,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO jobs (
         title, description, job_type_id, created_by,
         priority, location_address, location_lat, location_lng,
-        scheduled_date, estimated_duration, job_value,
+        scheduled_date, scheduled_time, estimated_duration, job_value,
         instructions, status
       ) VALUES (
         ${jobData.title},
@@ -237,8 +240,9 @@ export async function POST(request: NextRequest) {
         ${jobData.locationLat || null},
         ${jobData.locationLng || null},
         ${jobData.scheduledDate || null},
+        ${jobData.scheduledTime || null},
         ${jobData.estimatedDuration || null},
-        0,
+        ${jobData.jobValue || 0},
         ${jobData.instructions || null},
         'assigned'
       ) RETURNING id

@@ -44,6 +44,7 @@ export interface Job {
   locationLat?: number
   locationLng?: number
   scheduledDate?: string
+  scheduledTime?: string
   estimatedDuration?: number
   
   
