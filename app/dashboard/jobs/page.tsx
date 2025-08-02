@@ -149,24 +149,6 @@ export default function JobsPage() {
     }).format(amount)
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <p className="ml-2 text-lg">Loading jobs...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64 text-red-600">
-        <AlertCircle className="h-8 w-8 mr-2" />
-        <p className="text-lg">Error: {error}</p>
-      </div>
-    )
-  }
-
   return (
     <>
       <div className="space-y-6">
@@ -261,7 +243,21 @@ export default function JobsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredJobs.length === 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
+                      <p className="text-muted-foreground mt-2">Loading jobs...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-red-600">
+                      <AlertCircle className="h-6 w-6 mx-auto" />
+                      <p className="mt-2">Error: {error}</p>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredJobs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No jobs found matching your criteria.
@@ -270,7 +266,6 @@ export default function JobsPage() {
                 ) : (
                   filteredJobs.map((job) => (
                     <TableRow key={job.id} onClick={async () => {
-                      setLoading(true);
                       try {
                         const response = await fetch(`/api/jobs/${job.id}`);
                         if (!response.ok) {
@@ -282,8 +277,6 @@ export default function JobsPage() {
                       } catch (err) {
                         console.error(err);
                         setError("Failed to load job details for editing.");
-                      } finally {
-                        setLoading(false);
                       }
                     }} className="cursor-pointer">
                       <TableCell>
@@ -306,11 +299,11 @@ export default function JobsPage() {
                         <span className="font-bold text-green-600">{formatNaira(job.jobValue)}</span>
                       </TableCell>
                       <TableCell>
-                        {job.assignedUser ? (
+                        {job.technicians && job.technicians.length > 0 ? (
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
                             <span>
-                              {job.assignedUser.firstName} {job.assignedUser.lastName}
+                              {job.technicians[0].firstName} {job.technicians[0].lastName}
                             </span>
                           </div>
                         ) : (
