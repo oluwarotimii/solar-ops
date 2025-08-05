@@ -192,7 +192,7 @@ export default function TechniciansPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-purple-100 rounded-full">
@@ -200,11 +200,11 @@ export default function TechniciansPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Avg Completion</p>
-                <p className="text-2xl font-bold">{avgCompletionRate.toFixed(1)}%</p>
+                <p className="text-2xl font-bold">{Number.isFinite(avgCompletionRate)}%</p>
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardContent className="p-4">
@@ -335,12 +335,12 @@ export default function TechniciansPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         <div className="flex items-center gap-1 text-sm">
                           <Clock className="h-3 w-3 text-muted-foreground" />
                           <span>{formatLastSeen(tech.lastSeen)}</span>
                         </div>
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm">
