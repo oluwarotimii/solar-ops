@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:team')) {
       // Supervisors can see all jobs assigned to their team
+      console.log(`[Jobs API] Fetching team jobs for user: ${user.id}`);
       const result = await sql`
         SELECT 
           j.*,
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
       LEFT JOIN users cu ON j.created_by = cu.id
+      JOIN job_technicians jtech ON j.id = jtech.job_id
       WHERE jtech.technician_id IN (SELECT technician_id FROM supervisor_technicians WHERE supervisor_id = ${user.id})
       ORDER BY j.created_at DESC
       `
@@ -151,6 +153,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:assigned')) {
       // Technicians only see jobs assigned to them
+      console.log(`[Jobs API] Fetching assigned jobs for user: ${user.id}`);
       const result = await sql`
         SELECT 
           j.*,
@@ -163,6 +166,7 @@ export async function GET(request: NextRequest) {
         WHERE jtech.technician_id = ${user.id}
         ORDER BY j.created_at DESC
       `
+      console.log(`[Jobs API] Found ${result.length} assigned jobs.`);
       const jobs = await Promise.all(result.map(async (row: any) => {
       const job = toCamelCase(row)
 

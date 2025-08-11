@@ -34,6 +34,7 @@ import {
   DollarSign,
   Shield
 } from "lucide-react"
+import type { User as UserType } from "@/types"
 
 // Navigation items
 const data = {
@@ -60,6 +61,7 @@ const data = {
           title: "Technicians",
           url: "/dashboard/technicians",
           icon: Users,
+          adminOnly: true,
         },
         {
           title: "Live Tracking",
@@ -80,11 +82,13 @@ const data = {
           title: "Accrued Values",
           url: "/dashboard/accrued-values",
           icon: DollarSign,
+          adminOnly: true,
         },
         {
           title: "Reports",
           url: "/dashboard/reports",
           icon: FileText,
+          adminOnly: true,
         },
       ],
     },
@@ -95,28 +99,32 @@ const data = {
           title: "Users",
           url: "/dashboard/users",
           icon: User,
+          adminOnly: true,
         },
         {
           title: "Roles",
           url: "/dashboard/roles",
           icon: Shield,
+          adminOnly: true,
         },
         {
           title: "Notifications",
           url: "/dashboard/notifications",
           icon: Bell,
+          adminOnly: true,
         },
         {
           title: "Settings",
           url: "/dashboard/settings",
           icon: Settings,
+          adminOnly: true,
         },
       ],
     },
   ],
 }
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: { email: string } }) {
+export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: UserType }) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -163,7 +171,9 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => (
+                {section.items
+                  .filter((item) => !item.adminOnly || (item.adminOnly && user.role?.isAdmin))
+                  .map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={pathname === item.url}>
                       <Link href={item.url}>
