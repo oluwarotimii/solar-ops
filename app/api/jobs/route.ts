@@ -159,6 +159,7 @@ export async function GET(request: NextRequest) {
       FROM jobs j
       LEFT JOIN job_types jt ON j.job_type_id = jt.id
       LEFT JOIN users cu ON j.created_by = cu.id
+      JOIN job_technicians jtech ON j.id = jtech.job_id
         WHERE jtech.technician_id = ${user.id}
         ORDER BY j.created_at DESC
       `

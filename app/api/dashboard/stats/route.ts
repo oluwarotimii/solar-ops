@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  if (!user || !hasPermission(user, 'dashboard:read')) {
+  if (!user || !hasPermission(user, 'dashboard:stats:read')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
