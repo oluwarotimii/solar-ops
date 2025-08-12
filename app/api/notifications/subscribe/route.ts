@@ -20,15 +20,15 @@ export async function POST(request: NextRequest) {
     }
 
     // In production, store subscription in database
-    // await sql`
-    //   INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key, created_at)
-    //   VALUES (${user.id}, ${subscription.endpoint}, ${subscription.keys.p256dh}, ${subscription.keys.auth}, NOW())
-    //   ON CONFLICT (user_id, endpoint)
-    //   DO UPDATE SET
-    //     p256dh_key = ${subscription.keys.p256dh},
-    //     auth_key = ${subscription.keys.auth},
-    //     updated_at = NOW()
-    // `
+    await sql`
+      INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key)
+      VALUES (${user.id}, ${subscription.endpoint}, ${subscription.keys.p256dh}, ${subscription.keys.auth})
+      ON CONFLICT (user_id, endpoint)
+      DO UPDATE SET
+        p256dh_key = ${subscription.keys.p256dh},
+        auth_key = ${subscription.keys.auth},
+        updated_at = NOW()
+    `
 
     return NextResponse.json({
       success: true,

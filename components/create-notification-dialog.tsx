@@ -24,23 +24,23 @@ export default function CreateNotificationDialog({ onNotificationCreated }: Crea
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [technicians, setTechnicians] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
 
   useEffect(() => {
-    const fetchTechnicians = async () => {
+    const fetchUsers = async () => {
       try {
-        const response = await fetch("/api/users/technicians");
+        const response = await fetch("/api/users");
         if (response.ok) {
           const data = await response.json();
-          setTechnicians(data);
+          setUsers(data);
         } else {
-          console.error("Failed to fetch technicians");
+          console.error("Failed to fetch users");
         }
       } catch (error) {
-        console.error("Error fetching technicians:", error);
+        console.error("Error fetching users:", error);
       }
     };
-    fetchTechnicians();
+    fetchUsers();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,9 +144,9 @@ export default function CreateNotificationDialog({ onNotificationCreated }: Crea
                 <SelectValue placeholder="Select recipient" />
               </SelectTrigger>
               <SelectContent>
-                {technicians.map((technician) => (
-                  <SelectItem key={technician.id} value={technician.id}>
-                    {technician.firstName} {technician.lastName}
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>

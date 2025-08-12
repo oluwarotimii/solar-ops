@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { User } from "@/types";
 
 interface DashboardStats {
   totalJobs: number;
@@ -33,11 +34,12 @@ interface DashboardContextType {
   completionRate: CompletionRate | null;
   loading: boolean;
   error: string | null;
+  user: User | null;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
+export function DashboardProvider({ children, user }: { children: ReactNode; user: User | null }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<DashboardActivity[]>([]);
   const [completionRate, setCompletionRate] = useState<CompletionRate | null>(null);
@@ -78,7 +80,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <DashboardContext.Provider value={{ stats, activity, completionRate, loading, error }}>
+    <DashboardContext.Provider value={{ stats, activity, completionRate, loading, error, user }}>
       {children}
     </DashboardContext.Provider>
   );

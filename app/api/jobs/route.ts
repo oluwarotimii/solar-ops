@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
+import { sendPushNotification } from "@/lib/push"
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,7 +85,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:team')) {
       // Supervisors can see all jobs assigned to their team
-      console.log(`[Jobs API] Fetching team jobs for user: ${user.id}`);
       const result = await sql`
         SELECT 
           j.*,
@@ -153,7 +153,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(jobsWithDate)
     } else if (hasPermission(user, 'jobs:read:assigned')) {
       // Technicians only see jobs assigned to them
-      console.log(`[Jobs API] Fetching assigned jobs for user: ${user.id}`);
       const result = await sql`
         SELECT 
           j.*,
@@ -296,6 +295,24 @@ export async function POST(request: NextRequest) {
             ${jobId}
           )
         `;
+
+        // Send push notification
+        const subscriptionsResult = await sql`
+          SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = ${assignedTech.technicianId}
+        `;
+
+        const payload = { title: 'New Job Assignment', body: `You have been assigned a new job: ${jobData.title}` };
+
+        for (const row of subscriptionsResult) {
+          const subscription = {
+            endpoint: row.endpoint,
+            keys: {
+              p256dh: row.p256dh_key,
+              auth: row.auth_key,
+            },
+          };
+          await sendPushNotification(subscription, payload);
+        }
       }
     }
 

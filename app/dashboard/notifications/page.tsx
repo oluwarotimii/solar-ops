@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Bell, Search, Plus, Eye, Trash2, Send, AlertTriangle, CheckCircle, Info, User } from "lucide-react"
 import { formatDateTime } from "@/lib/date-utils";
 import CreateNotificationDialog from "@/components/create-notification-dialog"
+import { useDashboardData } from "@/lib/dashboard-context";
 
 interface Notification {
   id: string
@@ -42,6 +43,8 @@ export default function NotificationsPage() {
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  const { user } = useDashboardData();
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -171,12 +174,14 @@ export default function NotificationsPage() {
           <p className="text-muted-foreground">Manage system notifications and messages</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Send Notification
-            </Button>
-          </DialogTrigger>
+          {user?.role?.isAdmin && (
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Send Notification
+              </Button>
+            </DialogTrigger>
+          )}
           <DialogContent className="max-w-2xl">
             <CreateNotificationDialog onNotificationCreated={handleNotificationCreated} />
           </DialogContent>
@@ -227,19 +232,21 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-purple-100 rounded-full">
-                <Send className="h-4 w-4 text-purple-600" />
+        {user?.role?.isAdmin && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-100 rounded-full">
+                  <Send className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Sent</p>
+                  <p className="text-2xl font-bold">{notifications.filter((n) => n.sender).length}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">Sent</p>
-                <p className="text-2xl font-bold">{notifications.filter((n) => n.sender).length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Filters */}

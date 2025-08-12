@@ -17,9 +17,44 @@ export async function GET(request: NextRequest) {
   try {
     const sql = getDbSql();
     const notifications = await sql`
-      SELECT * FROM notifications WHERE recipient_id = ${user.id} ORDER BY created_at DESC
+      SELECT 
+        n.*,
+        r.first_name as recipient_first_name,
+        r.last_name as recipient_last_name,
+        r.email as recipient_email,
+        s.first_name as sender_first_name,
+        s.last_name as sender_last_name
+      FROM notifications n
+      JOIN users r ON n.recipient_id = r.id
+      LEFT JOIN users s ON n.sender_id = s.id
+      WHERE n.recipient_id = ${user.id} OR n.sender_id = ${user.id}
+      ORDER BY n.created_at DESC
     `;
-    return NextResponse.json(notifications.map(toCamelCase));
+
+    const formattedNotifications = notifications.map((row: any) => {
+      const notification = toCamelCase(row);
+      notification.recipient = {
+        id: notification.recipientId,
+        name: `${notification.recipientFirstName} ${notification.recipientLastName}`,
+        email: notification.recipientEmail,
+      };
+      delete notification.recipientFirstName;
+      delete notification.recipientLastName;
+      delete notification.recipientEmail;
+
+      if (notification.senderId) {
+        notification.sender = {
+          id: notification.senderId,
+          name: `${notification.senderFirstName} ${notification.senderLastName}`,
+        };
+        delete notification.senderFirstName;
+        delete notification.senderLastName;
+      }
+
+      return notification;
+    });
+
+    return NextResponse.json(formattedNotifications);
   } catch (error) {
     console.error('[NOTIFICATIONS_GET]', error);
     return new NextResponse('Internal Error', { status: 500 });

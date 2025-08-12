@@ -111,7 +111,6 @@ const data = {
           title: "Notifications",
           url: "/dashboard/notifications",
           icon: Bell,
-          adminOnly: true,
         },
         {
           title: "Settings",

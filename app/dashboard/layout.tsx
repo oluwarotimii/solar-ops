@@ -6,6 +6,7 @@ import { verifyToken, getUserById } from "@/lib/auth"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
+import { PushSubscriptionManager } from "@/components/PushSubscriptionManager"
 
 export default async function DashboardLayout({
   children,
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <PushSubscriptionManager />
       <AppSidebar user={user} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -48,7 +50,7 @@ export default async function DashboardLayout({
           </div>
         </header>
         <Suspense fallback={<div className="flex-1 overflow-auto p-4">Loading dashboard data...</div>}>
-          <DashboardProvider>
+          <DashboardProvider user={user}>
             <div className="flex-1 overflow-auto p-4">{children}</div>
           </DashboardProvider>
         </Suspense>
