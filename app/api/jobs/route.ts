@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { toCamelCase, getDbSql } from "@/lib/db"
-import { authenticateApiRequest } from "@/lib/api-auth"
-import { hasPermission } from "@/lib/auth"
-import { sendPushNotification } from "@/lib/push"
+import { toCamelCase, getDbSql } from "@/lib/db";
+import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
+import { sendPushNotification } from "@/lib/push";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
         SELECT
           jt.technician_id,
           jt.role,
+          jt.completed_at,
           u.first_name,
           u.last_name
         FROM job_technicians jt
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
       job.technicians = techniciansResult.map((tech: any) => ({
         technicianId: tech.technician_id,
         role: tech.role,
+        completedAt: tech.completed_at,
         firstName: tech.first_name,
         lastName: tech.last_name,
       }));
@@ -105,6 +108,7 @@ export async function GET(request: NextRequest) {
         SELECT
           jt.technician_id,
           jt.role,
+          jt.completed_at,
           u.first_name,
           u.last_name
         FROM job_technicians jt
@@ -114,6 +118,7 @@ export async function GET(request: NextRequest) {
       job.technicians = techniciansResult.map((tech: any) => ({
         technicianId: tech.technician_id,
         role: tech.role,
+        completedAt: tech.completed_at,
         firstName: tech.first_name,
         lastName: tech.last_name,
       }));
@@ -174,6 +179,7 @@ export async function GET(request: NextRequest) {
         SELECT
           jt.technician_id,
           jt.role,
+          jt.completed_at,
           u.first_name,
           u.last_name
         FROM job_technicians jt
@@ -183,6 +189,7 @@ export async function GET(request: NextRequest) {
       job.technicians = techniciansResult.map((tech: any) => ({
         technicianId: tech.technician_id,
         role: tech.role,
+        completedAt: tech.completed_at,
         firstName: tech.first_name,
         lastName: tech.last_name,
       }));
@@ -315,6 +322,18 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    await logAuditEvent({
+      userId: user.id,
+      action: "job_create",
+      targetType: "job",
+      targetId: jobId,
+      details: {
+        title: jobData.title,
+        assignedTechnicians: jobData.assignedTechnicians?.map((t: any) => t.technicianId),
+      },
+      request,
+    });
 
     return NextResponse.json({
       id: result[0].id,

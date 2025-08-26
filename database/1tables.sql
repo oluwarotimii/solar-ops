@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS job_technicians (
     role VARCHAR(20) DEFAULT 'assistant',
     rating DECIMAL(3,2),
     feedback TEXT,
+    completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -168,6 +169,19 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     UNIQUE(user_id, endpoint)
 );
 
+-- Create audit trail table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(255) NOT NULL,
+    target_type VARCHAR(100),
+    target_id UUID,
+    details JSONB,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
@@ -182,3 +196,5 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_scheduled_date ON maintenance_t
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id);
 CREATE INDEX IF NOT EXISTS idx_accrued_values_user_id ON accrued_values(user_id);
 CREATE INDEX IF NOT EXISTS idx_accrued_values_month_year ON accrued_values(month, year);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target_type, target_id);

@@ -32,7 +32,8 @@ import {
   ChevronUp,
   User,
   DollarSign,
-  Shield
+  Shield,
+  History
 } from "lucide-react"
 import type { User as UserType } from "@/types"
 
@@ -116,6 +117,12 @@ const data = {
           title: "Settings",
           url: "/dashboard/settings",
           icon: Settings,
+          adminOnly: true,
+        },
+        {
+          title: "Audit Trail",
+          url: "/dashboard/audit-trail",
+          icon: History,
           adminOnly: true,
         },
       ],
