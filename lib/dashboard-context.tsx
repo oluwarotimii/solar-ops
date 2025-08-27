@@ -48,16 +48,27 @@ export function DashboardProvider({ children, user }: { children: ReactNode; use
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
+
       try {
+        // Admins get global stats, non-admins get their own stats
+        const statsUrl = user.role?.isAdmin 
+          ? "/api/dashboard/stats" 
+          : `/api/users/${user.id}/stats`;
+
         const [statsRes, activityRes, completionRes] = await Promise.all([
-          fetch("/api/dashboard/stats", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
+          fetch(statsUrl, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
           fetch("/api/dashboard/activity", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
           fetch("/api/dashboard/completion-rate", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
         ]);
 
-        if (!statsRes.ok) throw new Error("Failed to fetch dashboard stats.");
+        if (!statsRes.ok) throw new Error(`Failed to fetch dashboard stats from ${statsUrl}.`);
         if (!activityRes.ok) throw new Error("Failed to fetch recent activity.");
         if (!completionRes.ok) throw new Error("Failed to fetch completion rate.");
 
@@ -77,7 +88,7 @@ export function DashboardProvider({ children, user }: { children: ReactNode; use
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   return (
     <DashboardContext.Provider value={{ stats, activity, completionRate, loading, error, user }}>
