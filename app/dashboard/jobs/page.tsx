@@ -34,7 +34,7 @@ interface Job {
   locationAddress: string
   scheduledDate?: string | Date | null
   jobValue: number
-  estimatedDuration: number
+  // estimatedDuration: number
   technicians?: Technician[]
 }
 

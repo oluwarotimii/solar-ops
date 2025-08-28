@@ -58,17 +58,17 @@ const data = {
           url: "/dashboard/jobs",
           icon: Briefcase,
         },
-        {
-          title: "Technicians",
-          url: "/dashboard/technicians",
-          icon: Users,
-          adminOnly: true,
-        },
-        {
-          title: "Live Tracking",
-          url: "/dashboard/tracking",
-          icon: MapPin,
-        },
+        // {
+        //   title: "Technicians",
+        //   url: "/dashboard/technicians",
+        //   icon: Users,
+        //   adminOnly: true,
+        // },
+        // {
+        //   title: "Live Tracking",
+        //   url: "/dashboard/tracking",
+        //   icon: MapPin,
+        // },
         {
           title: "Maintenance",
           url: "/dashboard/maintenance",

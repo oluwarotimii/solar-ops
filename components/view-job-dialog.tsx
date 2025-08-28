@@ -113,13 +113,13 @@ export default function ViewJobDialog({ job }: ViewJobDialogProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Estimated Duration</p>
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span>{job.estimatedDuration ? `${job.estimatedDuration} minutes` : "N/A"}</span>
               </div>
-            </div>
+            </div> */}
 
             <div className="space-y-2 col-span-full">
               <p className="text-sm text-muted-foreground">Assigned Technicians</p>

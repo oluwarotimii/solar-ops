@@ -153,44 +153,7 @@ export default function DashboardPage() {
 
           {/* Recent Activity & Quick Actions */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest job updates and technician check-ins</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {loading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                    <p className="ml-2">Loading activity...</p>
-                  </div>
-                ) : activity.length > 0 ? (
-                  activity.map((item, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      {item.type === 'job_update' ? (
-                        <FileText className="h-5 w-5 text-blue-500" />
-                      ) : (
-                        <MapPin className="h-5 w-5 text-green-500" />
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {item.type === 'job_update' ? 
-                            `Job "${item.title}" updated to ${item.status} by ${item.firstName || ''} ${item.lastName || ''}` : 
-                            `Technician ${item.firstName || ''} ${item.lastName || ''} ${item.type} at ${item.jobId}`}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(item.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    <p>No recent activity to display.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            
 
             <Card>
               <CardHeader>

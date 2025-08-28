@@ -192,10 +192,10 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
                 <Input id="scheduledTime" type="time" value={formData.scheduledTime} onChange={(e) => setFormData(prev => ({ ...prev, scheduledTime: e.target.value }))} />
               </div>
             </div>
-             <div className="space-y-2">
+             {/* <div className="space-y-2">
               <Label htmlFor="estimatedDuration">Duration (minutes)</Label>
               <Input id="estimatedDuration" type="number" value={formData.estimatedDuration} onChange={(e) => setFormData(prev => ({ ...prev, estimatedDuration: e.target.value }))} />
-            </div>
+            </div> */}
             <div className="space-y-2">
               <Label htmlFor="jobValue">Job Value (NGN)</Label>
               <Input id="jobValue" type="number" value={formData.jobValue} onChange={(e) => setFormData(prev => ({ ...prev, jobValue: e.target.value }))} readOnly={!currentUser?.role?.isAdmin} />

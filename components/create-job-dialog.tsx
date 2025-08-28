@@ -150,7 +150,61 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         <Card>
           <CardHeader><CardTitle className="text-lg">Job Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {/* Form fields remain the same */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g., Solar Panel Installation" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jobTypeId">Job Type *</Label>
+                <Select value={formData.jobTypeId} onValueChange={(value) => setFormData({ ...formData, jobTypeId: value })} required>
+                  <SelectTrigger><SelectValue placeholder="Select job type" /></SelectTrigger>
+                  <SelectContent>
+                    {jobTypes.map(jt => <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Briefly describe the job" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="locationAddress">Location / Address *</Label>
+                <Input id="locationAddress" value={formData.locationAddress} onChange={(e) => setFormData({ ...formData, locationAddress: e.target.value })} placeholder="e.g., 123 Main St, Anytown, USA" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduledDate">Scheduled Date *</Label>
+                <Input id="scheduledDate" type="date" value={formData.scheduledDate} onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduledTime">Scheduled Time</Label>
+                <Input id="scheduledTime" type="time" value={formData.scheduledTime} onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })} />
+              </div>
+              {/* <div className="space-y-2">
+                <Label htmlFor="estimatedDuration">Estimated Duration (hours)</Label>
+                <Input id="estimatedDuration" type="number" value={formData.estimatedDuration} onChange={(e) => setFormData({ ...formData, estimatedDuration: e.target.value })} placeholder="e.g., 4" />
+              </div> */}
+              <div className="space-y-2">
+                <Label htmlFor="jobValue">Job Value ($)</Label>
+                <Input id="jobValue" type="number" value={formData.jobValue} onChange={(e) => setFormData({ ...formData, jobValue: parseFloat(e.target.value) || 0 })} placeholder="e.g., 1500.00" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="instructions">Special Instructions</Label>
+                <Textarea id="instructions" value={formData.instructions} onChange={(e) => setFormData({ ...formData, instructions: e.target.value })} placeholder="e.g., Key is under the mat" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 

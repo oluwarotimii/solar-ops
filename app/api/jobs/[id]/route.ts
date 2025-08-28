@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         location_lng = ${mainJobData.locationLng || null},
         scheduled_date = ${mainJobData.scheduledDate || null},
         scheduled_time = ${mainJobData.scheduledTime || null},
-        estimated_duration = ${mainJobData.estimatedDuration || null},
+        // estimated_duration = ${mainJobData.estimatedDuration || null},
         instructions = ${mainJobData.instructions || null},
         updated_at = NOW()
       WHERE id = ${jobId};

@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     location_lng DECIMAL(11, 8),
     scheduled_date DATE,
     scheduled_time TIME,
-    estimated_duration INTEGER,
+    -- estimated_duration INTEGER,
     job_value DECIMAL(12,2) DEFAULT 0,
     instructions TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,

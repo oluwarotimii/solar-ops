@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO jobs (
         title, description, job_type_id, created_by,
         priority, location_address, location_lat, location_lng,
-        scheduled_date, scheduled_time, estimated_duration, job_value,
+        scheduled_date, scheduled_time, /* estimated_duration, */ job_value,
         instructions, status
       ) VALUES (
         ${jobData.title},
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
         ${jobData.locationLng || null},
         ${jobData.scheduledDate || null},
         ${jobData.scheduledTime || null},
-        ${jobData.estimatedDuration || null},
+        // ${jobData.estimatedDuration || null},
         ${jobData.jobValue || 0},
         ${jobData.instructions || null},
         'assigned'
