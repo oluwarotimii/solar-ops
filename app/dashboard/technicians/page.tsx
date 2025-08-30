@@ -198,7 +198,7 @@ export default function TechniciansPage() {
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -221,7 +221,7 @@ export default function TechniciansPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="hidden md:table-header-group">
                 <TableRow>
                   <TableHead>Technician</TableHead>
                   <TableHead>Status</TableHead>
@@ -239,8 +239,8 @@ export default function TechniciansPage() {
                   </TableRow>
                 ) : (
                   filteredTechnicians.map((tech) => (
-                    <TableRow key={tech.id}>
-                      <TableCell>
+                    <tr key={tech.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                      <td className="md:table-cell py-2 font-medium" data-label="Technician">
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarFallback>{getInitials(`${tech.firstName} ${tech.lastName}`)}</AvatarFallback>
@@ -250,11 +250,11 @@ export default function TechniciansPage() {
                             <p className="text-sm text-muted-foreground">{tech.email}</p>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Status">
                         <Badge className={getStatusColor(tech.status)}>{tech.status}</Badge>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Contact">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1 text-sm">
                             <Phone className="h-3 w-3" />
@@ -265,8 +265,8 @@ export default function TechniciansPage() {
                             <span className="truncate max-w-[150px]">{tech.email}</span>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Performance">
                         <div className="space-y-1">
                           <div className="text-sm">
                             <span className="font-medium">{tech.stats.completedJobs}</span>
@@ -277,15 +277,15 @@ export default function TechniciansPage() {
                             <span className="text-muted-foreground"> earned</span>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      </td>
+                      <td className="md:table-cell py-2 text-right">
+                        <div className="flex justify-end gap-2 mt-2 md:mt-0">
                           <Button variant="ghost" size="sm">
                             <Eye className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))
                 )}
               </TableBody>

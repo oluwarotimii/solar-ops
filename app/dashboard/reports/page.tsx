@@ -260,30 +260,37 @@ export default function ReportsPage() {
               <CardDescription>Performance metrics for each technician for the selected period.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto border rounded-lg">
-                <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                    <tr>
-                      <th scope="col" className="px-6 py-3">Name</th>
-                      <th scope="col" className="px-6 py-3 text-right">Completed Jobs</th>
-                      <th scope="col" className="px-6 py-3 text-right">Total Earned</th>
-                      <th scope="col" className="px-6 py-3 text-right">Avg. Rating</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="overflow-x-auto">
+                <div className="border rounded-lg">
+                  <div className="hidden md:grid md:grid-cols-4 font-semibold p-4 bg-gray-50 dark:bg-gray-700">
+                    <div>Name</div>
+                    <div className="text-right">Completed Jobs</div>
+                    <div className="text-right">Total Earned</div>
+                    <div className="text-right">Avg. Rating</div>
+                  </div>
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
                     {reportData?.technicianPerformance?.map((tech: any) => (
-                      <tr key={tech.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                        <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {tech.name}
+                      <div key={tech.id} className="grid grid-cols-2 md:grid-cols-4 p-4 gap-4 items-center">
+                        <div className="md:col-span-1 col-span-2">
+                          <p className="font-medium text-gray-900 dark:text-white">{tech.name}</p>
                           <p className="text-xs text-muted-foreground">{tech.email}</p>
-                        </th>
-                        <td className="px-6 py-4 text-right">{tech.completedJobs}</td>
-                        <td className="px-6 py-4 text-right">{formatNaira(tech.totalEarned)}</td>
-                        <td className="px-6 py-4 text-right">{parseFloat(tech.averageRating).toFixed(1)} ★</td>
-                      </tr>
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Completed Jobs: </span>
+                          {tech.completedJobs}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Total Earned: </span>
+                          {formatNaira(tech.totalEarned)}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Avg. Rating: </span>
+                          {parseFloat(tech.averageRating).toFixed(1)} ★
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

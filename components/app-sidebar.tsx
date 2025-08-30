@@ -130,9 +130,12 @@ const data = {
   ],
 }
 
+import { useSidebar } from "@/components/ui/sidebar"
+
 export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: UserType }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   // Get user info from localStorage (demo)
   const userEmail = user.email
@@ -182,7 +185,7 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
                   .map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <Link href={item.url}>
+                      <Link href={item.url} onClick={() => { if (isMobile) setOpenMobile(false); }}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                     </Link>

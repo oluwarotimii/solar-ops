@@ -93,8 +93,8 @@ export default function AuditTrailPage() {
                     const targetLink = getTargetLink(log);
                     const userName = log.first_name ? `${log.first_name} ${log.last_name}` : 'System';
                     return (
-                      <TableRow key={log.id}>
-                        <TableCell className="align-top">
+                      <tr key={log.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                        <td className="md:table-cell py-2 font-medium" data-label="Event">
                           <div className="flex items-start gap-4">
                             <Avatar className="h-10 w-10">
                               <AvatarFallback>{getInitials(log)}</AvatarFallback>
@@ -113,11 +113,11 @@ export default function AuditTrailPage() {
                               </p>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="align-top">
+                        </td>
+                        <td className="md:table-cell py-2 align-top" data-label="Details">
                           <AuditLogDetails log={log} />
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     )
                   })
                 )}

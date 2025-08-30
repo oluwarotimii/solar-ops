@@ -113,8 +113,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 md:p-0">
-      <div className="relative flex w-full max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="min-h-screen bg-gray-100">
+      <div className="relative flex w-full md:max-w-6xl mx-auto bg-white md:rounded-xl shadow-lg overflow-hidden">
         {/* Left Panel: Register Form */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
           <div className="max-w-md mx-auto w-full relative">

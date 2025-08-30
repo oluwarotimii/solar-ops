@@ -200,7 +200,7 @@ export default function JobsPage() {
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="hidden md:table-header-group">
                   <TableRow>
                     <TableHead>Job</TableHead>
                     <TableHead>Technicians</TableHead>
@@ -225,16 +225,12 @@ export default function JobsPage() {
                       const hasCompleted = !!technicianInfo?.completedAt;
 
                       return (
-                        <TableRow 
-                          key={job.id}
-                          onClick={() => { setSelectedJob(job); setShowViewDialog(true); }}
-                          className="cursor-pointer hover:bg-muted/50"
-                        >
-                          <TableCell>
+                        <tr key={job.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none" onClick={() => { setSelectedJob(job); setShowViewDialog(true); }}>
+                          <td className="md:table-cell py-2 font-medium" data-label="Job">
                             <div className="font-medium">{job.title}</div>
                             <div className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{job.locationAddress}</div>
-                          </TableCell>
-                          <TableCell>
+                          </td>
+                          <td className="md:table-cell py-2" data-label="Technicians">
                             {job.technicians?.map(tech => (
                               <div key={tech.technicianId} className="flex items-center gap-2 text-sm">
                                 <User className="h-4 w-4" />
@@ -242,12 +238,18 @@ export default function JobsPage() {
                                 {tech.completedAt && <Badge variant="outline" className="bg-green-100 text-green-800">Done</Badge>}
                               </div>
                             ))}
-                          </TableCell>
-                          <TableCell><Badge>{job.status}</Badge></TableCell>
-                          <TableCell><Badge variant="outline">{job.priority}</Badge></TableCell>
-                          <TableCell>{job.scheduledDate ? formatDate(job.scheduledDate) : "Not set"}</TableCell>
-                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-end gap-2">
+                          </td>
+                          <td className="md:table-cell py-2" data-label="Status">
+                            <Badge>{job.status}</Badge>
+                          </td>
+                          <td className="md:table-cell py-2" data-label="Priority">
+                            <Badge variant="outline">{job.priority}</Badge>
+                          </td>
+                          <td className="md:table-cell py-2" data-label="Scheduled">
+                            {job.scheduledDate ? formatDate(job.scheduledDate) : "Not set"}
+                          </td>
+                          <td className="md:table-cell py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end gap-2 mt-2 md:mt-0">
                               {isUserAdmin && job.status !== 'completed' && (
                                 <Button variant="outline" size="sm" onClick={() => { setSelectedJob(job); setShowEditDialog(true); }}>
                                   <Edit className="h-4 w-4 mr-2" /> Edit
@@ -275,8 +277,8 @@ export default function JobsPage() {
                                 </Button>
                               )}
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       )
                     })
                   )}

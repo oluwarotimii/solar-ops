@@ -153,7 +153,39 @@ export default function DashboardPage() {
 
           {/* Recent Activity & Quick Actions */}
           <div className="grid gap-4 md:grid-cols-2">
-            
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>What's been happening across the platform</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {activity && activity.length > 0 ? (
+                    activity.slice(0, 5).map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+                          {item.type === 'job_created' && <Briefcase className="h-4 w-4 text-secondary-foreground" />}
+                          {item.type === 'job_completed' && <CheckCircle className="h-4 w-4 text-secondary-foreground" />}
+                          {item.type === 'user_login' && <Users className="h-4 w-4 text-secondary-foreground" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {item.type === 'job_created' && `New Job: ${item.title}`}
+                            {item.type === 'job_completed' && `Job Completed: ${item.title}`}
+                            {item.type === 'user_login' && `User Login: ${item.firstName} ${item.lastName}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No recent activity.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>

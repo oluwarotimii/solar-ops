@@ -239,7 +239,7 @@ export default function UsersPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="hidden md:table-header-group">
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
@@ -252,67 +252,24 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setShowEditDialog(true);
-                    }}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {user.phone ? (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span>{user.phone}</span>
+                  <tr key={user.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                    <td className="md:table-cell py-2 font-medium" data-label="Name">
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p>{user.firstName} {user.lastName}</p>
+                          <p className="text-sm text-muted-foreground md:hidden">{user.email}</p>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-muted-foreground" />
-                        <Select value={user.roleId} onValueChange={(value) => {
-                          setSelectedUser({ ...user, roleId: value });
-                          setShowEditDialog(true);
-                        }}>
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roles.map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                                {role.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </td>
+                    <td className="md:table-cell py-2 hidden md:table-cell" data-label="Email">{user.email}</td>
+                    <td className="md:table-cell py-2" data-label="Phone">{user.phone || '-'}</td>
+                    <td className="md:table-cell py-2" data-label="Role">{user.role?.name || '-'}</td>
+                    <td className="md:table-cell py-2" data-label="Status">
                       <Badge className={statusColors[user.status]}>{user.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
+                    </td>
+                    <td className="md:table-cell py-2" data-label="Registered">{new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td className="md:table-cell py-2 text-right">
                       <Button
                         variant="outline"
                         size="sm"
@@ -323,8 +280,8 @@ export default function UsersPage() {
                       >
                         Edit
                       </Button>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))}
               </TableBody>
             </Table>
