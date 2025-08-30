@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { getDbSql } from "@/lib/db";
+import { sendPushNotification } from '@/lib/push';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,12 +16,29 @@ export async function POST(req: NextRequest) {
 
     const { title, message, type, recipientId } = await req.json();
 
-    // In a real app, this would save to database
     const sql = getDbSql();
     await sql`
       INSERT INTO notifications (recipient_id, sender_id, title, message, type)
       VALUES (${recipientId}, ${user.id}, ${title}, ${message}, ${type})
     `;
+
+    // Send push notification
+    const subscriptionsResult = await sql`
+      SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = ${recipientId}
+    `;
+
+    const payload = { title, body: message };
+
+    for (const row of subscriptionsResult) {
+      const subscription = {
+        endpoint: row.endpoint,
+        keys: {
+          p256dh: row.p256dh_key,
+          auth: row.auth_key,
+        },
+      };
+      await sendPushNotification(subscription, payload);
+    }
 
     return NextResponse.json({ message: 'Notification sent successfully' });
   } catch (error) {

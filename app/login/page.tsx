@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle, Info, Sun, Eye, EyeOff } from "lucide-react"
+import { Loader2, AlertCircle, Info, Sun, Eye, EyeOff, ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -37,7 +37,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        localStorage.setItem("userEmail", data.email); // Store user email
+        localStorage.setItem("user", JSON.stringify(data.user)); // Store the full user object
         router.push("/dashboard")
       } else {
         setError(data.error || "Login failed")
@@ -55,39 +55,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Sun className="h-12 w-12 text-yellow-500" />
+    <div className="min-h-screen bg-gray-100">
+      <div className="relative flex w-full md:max-w-6xl mx-auto bg-white md:rounded-xl shadow-lg overflow-hidden">
+        {/* Left Panel: Login Form */}
+        <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+          <div className="max-w-md mx-auto w-full">
+            <div className="absolute top-4 left-4">
+              <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
             </div>
-            <CardTitle className="text-2xl font-bold">Solar Field Operations</CardTitle>
-            <CardDescription>Sign in to your dashboard</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">Welcome Back!</h2>
+            <p className="text-gray-600 mb-8 text-center">Please sign in to your Solar Field Ops account</p>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-gray-700">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-2 relative">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-gray-700">Password</Label>
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
                 />
                 <button
                   type="button"
@@ -102,6 +105,19 @@ export default function LoginPage() {
                 </button>
               </div>
 
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Label htmlFor="remember-me" className="ml-2 text-gray-700">Remember me</Label>
+                </div>
+                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">Forgot Password?</a>
+              </div>
+
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -109,10 +125,14 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full bg-navy-blue text-white py-3 px-4 rounded-md hover:bg-navy-blue-dark transition-colors duration-200 flex items-center justify-center font-bold text-lg"
+                disabled={isLoading}
+              >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Signing in...
                   </>
                 ) : (
@@ -120,41 +140,29 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              <div className="text-center">
-                <Button type="button" variant="link" onClick={() => router.push("/register")}>
-                  Don't have an account? Register
+              <div className="text-center text-base text-gray-600 mt-6">
+                Don't have an account?{' '}
+                <Button type="button" variant="link" onClick={() => router.push("/register")} className="text-blue-600 hover:text-blue-500 p-0 h-auto text-base font-semibold">
+                  Register
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Default Admin Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Info className="mr-2 h-5 w-5" />
-              Default Admin Account
-            </CardTitle>
-            <CardDescription>Use this to access the system initially</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="bg-gray-50 p-3 rounded-lg text-sm">
-              <p>
-                <strong>Email:</strong> admin@solar.com
-              </p>
-              <p>
-                <strong>Password:</strong> admin123
-              </p>
-            </div>
-
-            <Button variant="outline" size="sm" onClick={useDefaultAdmin} className="w-full">
-              Use Default Admin Login
-            </Button>
-
-            <p className="text-xs text-gray-500 text-center">💡 Change this password after first login for security</p>
-          </CardContent>
-        </Card>
+        {/* Right Panel: Graphic */}
+        <div className="hidden md:flex md:w-1/2 bg-navy-blue relative items-center justify-center p-16">
+          <div className="text-center text-white z-10 space-y-4">
+            <h2 className="text-5xl font-bold mb-4">Welcome to Solar Field Ops!</h2>
+            <p className="text-xl mb-8">Manage your solar operations with ease and efficiency.</p>
+          </div>
+          <img
+            src="/loginimg.png" // Assuming loginimg.png is in the public folder
+            alt="Dashboard Graphic"
+            className="absolute inset-0 w-full h-full object-cover opacity-70 transform rotate-3 scale-110"
+            style={{ filter: 'none' }}
+          />
+        </div>
       </div>
     </div>
   )

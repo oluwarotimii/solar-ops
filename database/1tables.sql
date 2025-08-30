@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     location_lng DECIMAL(11, 8),
     scheduled_date DATE,
     scheduled_time TIME,
-    estimated_duration INTEGER,
+    -- estimated_duration INTEGER,
     job_value DECIMAL(12,2) DEFAULT 0,
     instructions TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,
@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS job_technicians (
     role VARCHAR(20) DEFAULT 'assistant',
     rating DECIMAL(3,2),
     feedback TEXT,
+    completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -156,6 +157,31 @@ CREATE TABLE IF NOT EXISTS system_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create push notification subscriptions table
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL,
+    p256dh_key TEXT NOT NULL,
+    auth_key TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, endpoint)
+);
+
+-- Create audit trail table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(255) NOT NULL,
+    target_type VARCHAR(100),
+    target_id UUID,
+    details JSONB,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
@@ -170,3 +196,5 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_scheduled_date ON maintenance_t
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id);
 CREATE INDEX IF NOT EXISTS idx_accrued_values_user_id ON accrued_values(user_id);
 CREATE INDEX IF NOT EXISTS idx_accrued_values_month_year ON accrued_values(month, year);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target_type, target_id);

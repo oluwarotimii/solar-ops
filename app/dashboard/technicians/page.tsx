@@ -17,18 +17,12 @@ interface Technician {
   email: string
   phone: string
   status: "active" | "idle" | "offline" | "pending" | "suspended" | "deactivated"
-  currentJob?: {
-    id: string
-    title: string
-    status: string
-  }
   stats: {
     totalJobs: number
     completedJobs: number
     avgRating: number
     totalEarned: number
   }
-  lastSeen: string
 }
 
 export default function TechniciansPage() {
@@ -99,32 +93,9 @@ export default function TechniciansPage() {
       .toUpperCase()
   }
 
-  const formatLastSeen = (timestamp: string) => {
-    if (!timestamp) return "N/A"
-    const now = new Date()
-    const lastSeen = new Date(timestamp)
-    const diffMs = now.getTime() - lastSeen.getTime()
-    const diffMins = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-    if (diffMins < 60) {
-      return `${diffMins} minutes ago`
-    } else if (diffHours < 24) {
-      return `${diffHours} hours ago`
-    } else {
-      return `${diffDays} days ago`
-    }
-  }
-
   // Calculate summary stats
   const totalTechnicians = technicians.length
   const activeTechnicians = technicians.filter((t) => t.status === "active").length
-  const avgCompletionRate =
-    technicians.length > 0
-      ? technicians.reduce((sum, tech) => sum + (tech.stats.completedJobs / tech.stats.totalJobs) * 100, 0) /
-        technicians.length
-      : 0
   const totalEarned = technicians.reduce((sum, tech) => sum + tech.stats.totalEarned, 0)
 
   const formatNaira = (amount: number) => {
@@ -195,20 +166,6 @@ export default function TechniciansPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-purple-100 rounded-full">
-                <TrendingUp className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Avg Completion</p>
-                <p className="text-2xl font-bold">{avgCompletionRate.toFixed(1)}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
               <div className="p-2 bg-orange-100 rounded-full">
                 <TrendingUp className="h-4 w-4 text-orange-600" />
               </div>
@@ -241,7 +198,7 @@ export default function TechniciansPage() {
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -264,28 +221,26 @@ export default function TechniciansPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="hidden md:table-header-group">
                 <TableRow>
                   <TableHead>Technician</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Current Job</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Performance</TableHead>
-                  <TableHead>Last Seen</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTechnicians.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No technicians found matching your criteria.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredTechnicians.map((tech) => (
-                    <TableRow key={tech.id}>
-                      <TableCell>
+                    <tr key={tech.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                      <td className="md:table-cell py-2 font-medium" data-label="Technician">
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarFallback>{getInitials(`${tech.firstName} ${tech.lastName}`)}</AvatarFallback>
@@ -295,23 +250,11 @@ export default function TechniciansPage() {
                             <p className="text-sm text-muted-foreground">{tech.email}</p>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Status">
                         <Badge className={getStatusColor(tech.status)}>{tech.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {tech.currentJob ? (
-                          <div>
-                            <p className="font-medium text-sm">{tech.currentJob.title}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {tech.currentJob.status.replace("_", " ")}
-                            </Badge>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">No active job</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Contact">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1 text-sm">
                             <Phone className="h-3 w-3" />
@@ -322,36 +265,27 @@ export default function TechniciansPage() {
                             <span className="truncate max-w-[150px]">{tech.email}</span>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Performance">
                         <div className="space-y-1">
                           <div className="text-sm">
                             <span className="font-medium">{tech.stats.completedJobs}</span>
                             <span className="text-muted-foreground">/{tech.stats.totalJobs} jobs</span>
                           </div>
                           <div className="text-sm">
-                            <span className="font-medium">${tech.stats.totalEarned.toLocaleString()}</span>
+                            <span className="font-medium">{formatNaira(tech.stats.totalEarned)}</span>
                             <span className="text-muted-foreground"> earned</span>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span>{formatLastSeen(tech.lastSeen)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      </td>
+                      <td className="md:table-cell py-2 text-right">
+                        <div className="flex justify-end gap-2 mt-2 md:mt-0">
                           <Button variant="ghost" size="sm">
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <MapPin className="h-4 w-4" />
-                          </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))
                 )}
               </TableBody>

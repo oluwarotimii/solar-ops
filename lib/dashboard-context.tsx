@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { User } from "@/types";
 
 interface DashboardStats {
   totalJobs: number;
@@ -33,11 +34,12 @@ interface DashboardContextType {
   completionRate: CompletionRate | null;
   loading: boolean;
   error: string | null;
+  user: User | null;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
+export function DashboardProvider({ children, user }: { children: ReactNode; user: User | null }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<DashboardActivity[]>([]);
   const [completionRate, setCompletionRate] = useState<CompletionRate | null>(null);
@@ -46,16 +48,27 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
+
       try {
+        // Admins get global stats, non-admins get their own stats
+        const statsUrl = user.role?.isAdmin 
+          ? "/api/dashboard/stats" 
+          : `/api/users/${user.id}/stats`;
+
         const [statsRes, activityRes, completionRes] = await Promise.all([
-          fetch("/api/dashboard/stats", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
+          fetch(statsUrl, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
           fetch("/api/dashboard/activity", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
           fetch("/api/dashboard/completion-rate", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
         ]);
 
-        if (!statsRes.ok) throw new Error("Failed to fetch dashboard stats.");
+        if (!statsRes.ok) throw new Error(`Failed to fetch dashboard stats from ${statsUrl}.`);
         if (!activityRes.ok) throw new Error("Failed to fetch recent activity.");
         if (!completionRes.ok) throw new Error("Failed to fetch completion rate.");
 
@@ -75,10 +88,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   return (
-    <DashboardContext.Provider value={{ stats, activity, completionRate, loading, error }}>
+    <DashboardContext.Provider value={{ stats, activity, completionRate, loading, error, user }}>
       {children}
     </DashboardContext.Provider>
   );

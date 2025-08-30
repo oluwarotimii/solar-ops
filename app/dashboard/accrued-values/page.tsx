@@ -343,7 +343,7 @@ export default function AccruedValuesPage() {
             </Select>
 
             <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px]">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
@@ -372,7 +372,7 @@ export default function AccruedValuesPage() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="hidden md:table-header-group">
                   <TableRow>
                     <TableHead>Technician</TableHead>
                     <TableHead>Total Earned</TableHead>
@@ -381,27 +381,25 @@ export default function AccruedValuesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredValues.map((value) => (
-                    <TableRow key={value.technician.id}>
-                      <TableCell>
+                    <tr key={value.technician.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                      <td className="md:table-cell py-2 font-medium" data-label="Technician">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback className="text-xs">{getInitials(value.technician.name)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{value.technician.name}</p>
+                            <p>{value.technician.name}</p>
                             <p className="text-sm text-muted-foreground">{value.technician.email}</p>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="md:table-cell py-2" data-label="Total Earned">
                         <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      <td className="md:table-cell py-2 text-right">
+                        {/* Actions can go here */}
+                      </td>
+                    </tr>
                   ))}
                 </TableBody>
               </Table>

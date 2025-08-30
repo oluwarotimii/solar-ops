@@ -10,7 +10,7 @@ interface Job {
   title: string;
   description?: string;
   jobType: { name: string; color: string };
-  assignedUser?: { firstName: string; lastName: string };
+  technicians?: Array<{ technicianId: string; firstName: string; lastName: string; role: string; }>;
   status: "assigned" | "in_progress" | "completed" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   locationAddress: string;
@@ -113,24 +113,30 @@ export default function ViewJobDialog({ job }: ViewJobDialogProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Estimated Duration</p>
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span>{job.estimatedDuration ? `${job.estimatedDuration} minutes` : "N/A"}</span>
               </div>
-            </div>
+            </div> */}
 
             <div className="space-y-2 col-span-full">
-              <p className="text-sm text-muted-foreground">Assigned Technician</p>
-              <div className="flex items-center gap-1">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {job.assignedUser
-                    ? `${job.assignedUser.firstName} ${job.assignedUser.lastName}`
-                    : "Unassigned"}
-                </span>
-              </div>
+              <p className="text-sm text-muted-foreground">Assigned Technicians</p>
+              {job.technicians && job.technicians.length > 0 ? (
+                job.technicians.map(tech => (
+                  <div key={tech.technicianId} className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{tech.firstName} {tech.lastName}</span>
+                    {tech.role === 'lead' && <Badge variant="secondary">Lead</Badge>}
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>Unassigned</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

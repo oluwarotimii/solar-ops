@@ -1,14 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDbSql } from "@/lib/db"
 import { hashPassword } from "@/lib/auth"
+import { z } from "zod"
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
+  firstName: z.string().min(2, "First name is required").max(100),
+  lastName: z.string().min(2, "Last name is required").max(100),
+  phone: z.string().regex(/^\+234\d{10}$/, "Phone number must be in +234 format followed by 10 digits (e.g., +2348012345678)"),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, firstName, lastName, phone } = await request.json()
+    const body = await request.json();
+    const validation = registerSchema.safeParse(body);
 
-    if (!email || !password || !firstName || !lastName) {
-      return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 });
     }
+
+    const { email, password, firstName, lastName, phone } = validation.data;
 
     const db = getDbSql();
     console.log(`[Register Debug] Attempting to register user: ${email}`);

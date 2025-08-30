@@ -239,7 +239,7 @@ export default function MaintenancePage() {
             <CardContent>
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="hidden md:table-header-group">
                     <TableRow>
                       <TableHead>Task</TableHead>
                       <TableHead>Technician</TableHead>
@@ -253,16 +253,16 @@ export default function MaintenancePage() {
                   </TableHeader>
                   <TableBody>
                     {filteredTasks.map((task) => (
-                      <TableRow key={task.id}>
-                        <TableCell>
+                      <tr key={task.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                        <td className="md:table-cell py-2 font-medium" data-label="Task">
                           <div>
                             <p className="font-medium">{task.title}</p>
                             {task.description && (
                               <p className="text-sm text-muted-foreground line-clamp-1">{task.description}</p>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="md:table-cell py-2" data-label="Technician">
                           {task.assignedUser ? (
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4" />
@@ -273,28 +273,28 @@ export default function MaintenancePage() {
                           ) : (
                             <span className="text-muted-foreground">Unassigned</span>
                           )}
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="md:table-cell py-2" data-label="Status">
                           <Badge className={statusColors[task.status]}>{task.status.replace("_", " ")}</Badge>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="md:table-cell py-2" data-label="Priority">
                           <Badge className={priorityColors[task.priority]} variant="outline">
                             {task.priority}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="md:table-cell py-2" data-label="Location">
                           <div className="flex items-center gap-1 max-w-[200px]">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">{task.siteLocation}</span>
                           </div>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="md:table-cell py-2" data-label="Scheduled Date">
                           <div className="flex items-center gap-1">
                             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                             <span>{formatDate(task.scheduledDate)}</span>
                           </div>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="md:table-cell py-2" data-label="Recurrence">
                           {task.recurrenceType ? (
                             <span>
                               Every {task.recurrenceInterval} {task.recurrenceType}
@@ -303,9 +303,9 @@ export default function MaintenancePage() {
                           ) : (
                             <span className="text-muted-foreground">One-time</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                        </td>
+                        <td className="md:table-cell py-2 text-right">
+                          <div className="flex justify-end gap-2 mt-2 md:mt-0">
                             {task.status === "scheduled" && (
                               <Button variant="outline" size="sm">
                                 Start
@@ -320,8 +320,8 @@ export default function MaintenancePage() {
                               Edit
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
                   </TableBody>
                 </Table>

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  if (!user || !hasPermission(user, 'dashboard:read')) {
+  if (!user || !hasPermission(user, 'dashboard:completionRate:read')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     const totalJobsResult = await sql`
       SELECT COUNT(*) as count
       FROM jobs
-      WHERE EXTRACT(MONTH FROM created_at) = ${currentMonth}
-      AND EXTRACT(YEAR FROM created_at) = ${currentYear}
+      WHERE EXTRACT(MONTH FROM scheduled_date) = ${currentMonth}
+      AND EXTRACT(YEAR FROM scheduled_date) = ${currentYear}
     `;
     const totalJobs = Number(totalJobsResult[0].count);
 
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
       SELECT COUNT(*) as count
       FROM jobs
       WHERE status = 'completed'
-      AND EXTRACT(MONTH FROM completed_at) = ${currentMonth}
-      AND EXTRACT(YEAR FROM completed_at) = ${currentYear}
+      AND EXTRACT(MONTH FROM scheduled_date) = ${currentMonth}
+      AND EXTRACT(YEAR FROM scheduled_date) = ${currentYear}
     `;
     const completedJobs = Number(completedJobsResult[0].count);
 

@@ -1,65 +1,50 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getUserByEmail, verifyPassword, generateToken } from "@/lib/auth"
+import { type NextRequest, NextResponse } from "next/server";
+import { getUserByEmail, verifyPassword, generateToken } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
-
-    console.log(`[Auth Debug] Login attempt for email: ${email}`);
-    console.log(`[Auth Debug] Received password length: ${password.length}`);
+    const { email, password } = await request.json();
 
     if (!email || !password) {
-      console.log(`[Auth Debug] Missing email or password.`);
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const user = await getUserByEmail(email)
-    console.log(`[Auth Debug] User found: ${user ? user.email : 'none'}`);
+    const user = await getUserByEmail(email);
     if (!user) {
-      console.log(`[Auth Debug] User not found in DB for email: ${email}`);
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     if (user.status !== "active") {
-      console.log(`[Auth Debug] Account not active for email: ${email}, status: ${user.status}`);
-      return NextResponse.json({ error: "Account pending approval or inactive" }, { status: 401 })
+      return NextResponse.json({ error: "Account pending approval or inactive" }, { status: 401 });
     }
 
-    const isValidPassword = await verifyPassword(password, user.passwordHash)
-    console.log(`[Auth Debug] Password verification result: ${isValidPassword}`);
+    const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
-      console.log(`[Auth Debug] Invalid password for email: ${email}`);
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
-    }
-
-    const token = generateToken(user.id)
-    console.log(`[Auth Debug] Token generated for user ID: ${user.id}`);
-
-    try {
-      const accruedValuesResponse = await fetch(`${request.nextUrl.origin}/api/accrued-values`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // Log failed login attempt
+      await logAuditEvent({
+        userId: user.id,
+        action: "user_login_fail",
+        request,
       });
-      if (accruedValuesResponse.ok) {
-        const accruedValues = await accruedValuesResponse.json();
-        console.log("[Auth Debug] Accrued Values after login:", JSON.stringify(accruedValues, null, 2));
-      } else {
-        console.error("[Auth Debug] Failed to fetch accrued values:", accruedValuesResponse.status, accruedValuesResponse.statusText);
-      }
-    } catch (fetchError) {
-      console.error("[Auth Debug] Error fetching accrued values:", fetchError);
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Remove sensitive data
-    const { passwordHash, ...safeUser } = user
+    const token = generateToken(user.id);
 
-    console.log(`[Auth Debug] Login successful for email: ${email}`);
+    // Log successful login event
+    await logAuditEvent({
+      userId: user.id,
+      action: "user_login_success",
+      request,
+    });
+
+    const { passwordHash, ...safeUser } = user;
 
     const response = NextResponse.json({
       user: safeUser,
       token,
-      email: user.email, // Include user's email in the response
+      email: user.email,
     });
 
     response.cookies.set('token', token, {
@@ -69,11 +54,9 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    console.log(`[Auth Debug] Response cookies set and sending response.`);
     return response;
-  }
-  catch (error) {
-    console.error("Login error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error) {
+    console.error("Login error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

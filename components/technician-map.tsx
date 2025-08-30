@@ -278,7 +278,7 @@ export default function TechnicianMap({ technicians, selectedTechnician, onTechn
 
         {/* Fullscreen Selected Technician Details */}
         {isFullscreen && selectedTech && (
-          <div className="absolute top-4 left-4 z-10 w-80">
+          <div className="absolute top-4 left-4 z-10 w-full max-w-sm p-4 md:w-80 md:p-0">
             <Card className="p-4 shadow-lg">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">

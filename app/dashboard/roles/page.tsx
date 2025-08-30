@@ -122,7 +122,7 @@ export default function RolesPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="hidden md:table-header-group">
                 <TableRow>
                   <TableHead>Role Name</TableHead>
                   <TableHead>Description</TableHead>
@@ -132,38 +132,40 @@ export default function RolesPage() {
               </TableHeader>
               <TableBody>
                 {roles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell>
+                  <tr key={role.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                    <td className="md:table-cell py-2 font-medium" data-label="Role Name">
                       <div className="flex items-center gap-2">
                         <Shield className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{role.name}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>{role.description}</TableCell>
-                    <TableCell>0</TableCell> {/* Placeholder */}
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => handleEditRole(role)}>Edit</Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="ml-2">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the role.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteRole(role.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                    <td className="md:table-cell py-2" data-label="Description">{role.description}</td>
+                    <td className="md:table-cell py-2" data-label="Users">0</td>
+                    <td className="md:table-cell py-2 text-right">
+                      <div className="flex justify-end gap-2 mt-2 md:mt-0">
+                        <Button variant="outline" size="sm" onClick={() => handleEditRole(role)}>Edit</Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="ml-2">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the role.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteRole(role.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
               </TableBody>
             </Table>

@@ -1,28 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useDashboardData } from "@/lib/dashboard-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2 } from "lucide-react"
+import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2, Briefcase } from "lucide-react"
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null)
-  const { stats, activity, completionRate, loading, error } = useDashboardData()
-
-  useEffect(() => {
-    // Fetch actual user from localStorage
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-    }
-  }, [])
+  const { stats, activity, completionRate, loading, error, user } = useDashboardData()
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-2 text-lg">Loading dashboard...</p>
       </div>
     )
@@ -37,9 +27,7 @@ export default function DashboardPage() {
     )
   }
 
-  // Render null or a message if stats are not available after loading
-  // Render null or a message if stats are not available after loading
-  if (!stats && !loading && !error) {
+  if (!stats && !loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-lg text-muted-foreground">No dashboard data available.</p>
@@ -47,11 +35,85 @@ export default function DashboardPage() {
     )
   }
 
+  const isAdmin = user?.role?.isAdmin;
+
+  const AdminDashboard = () => (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">₦{(stats?.totalRevenue || 0).toLocaleString()}</div>
+          <p className="text-xs text-muted-foreground">This month</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
+          <Briefcase className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.totalJobs}</div>
+          <p className="text-xs text-muted-foreground">
+            {stats?.activeJobs} active, {stats?.completedJobs} completed
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Active Technicians</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.activeTechnicians}</div>
+          <p className="text-xs text-muted-foreground">Currently in field</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Pending Maintenance</CardTitle>
+          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.pendingMaintenance}</div>
+          <p className="text-xs text-muted-foreground">Tasks scheduled</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const TechnicianDashboard = () => (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">My Assigned Jobs</CardTitle>
+          <Briefcase className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.totalAssignedJobs}</div>
+          <p className="text-xs text-muted-foreground">Total jobs assigned to you</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">My Completed Jobs</CardTitle>
+          <CheckCircle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats?.completedJobs}</div>
+          <p className="text-xs text-muted-foreground">Total jobs you have completed</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to Solar Field Operations{user ? `, ${user.firstName}` : ""}</p>
+        <p className="text-muted-foreground">Welcome back, {user ? `${user.firstName} ${user.lastName}` : ""}</p>
         {user && user.role && (
           <Badge variant="outline" className="mt-2">
             {user.role.name}
@@ -60,144 +122,98 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalJobs}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.activeJobs} active, {stats?.completedJobs} completed
-            </p>
-          </CardContent>
-        </Card>
+      {isAdmin ? <AdminDashboard /> : <TechnicianDashboard />}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Technicians</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeTechnicians}</div>
-            <p className="text-xs text-muted-foreground">Currently in field</p>
-          </CardContent>
-        </Card>
+      {/* Admin-only Sections */}
+      {isAdmin && (
+        <>
+          {/* Monthly Job Summary */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Jobs This Month</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completionRate?.totalJobsThisMonth}</div>
+                <p className="text-xs text-muted-foreground">Total jobs so far this month</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completionRate?.completedJobsThisMonth}</div>
+                <p className="text-xs text-muted-foreground">Jobs completed this month</p>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Maintenance</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.pendingMaintenance}</div>
-            <p className="text-xs text-muted-foreground">Tasks scheduled</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₦{(stats?.totalRevenue || 0).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Monthly Job Summary */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Jobs This Month</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completionRate?.totalJobsThisMonth}</div>
-            <p className="text-xs text-muted-foreground">Total jobs so far this month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completionRate?.completedJobsThisMonth}</div>
-            <p className="text-xs text-muted-foreground">Jobs completed this month</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity & Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest job updates and technician check-ins</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <p className="ml-2">Loading activity...</p>
-              </div>
-            ) : activity.length > 0 ? (
-              activity.map((item, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  {item.type === 'job_update' ? (
-                    <FileText className="h-5 w-5 text-blue-500" />
+          {/* Recent Activity & Quick Actions */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>What's been happening across the platform</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {activity && activity.length > 0 ? (
+                    activity.slice(0, 5).map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+                          {item.type === 'job_created' && <Briefcase className="h-4 w-4 text-secondary-foreground" />}
+                          {item.type === 'job_completed' && <CheckCircle className="h-4 w-4 text-secondary-foreground" />}
+                          {item.type === 'user_login' && <Users className="h-4 w-4 text-secondary-foreground" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {item.type === 'job_created' && `New Job: ${item.title}`}
+                            {item.type === 'job_completed' && `Job Completed: ${item.title}`}
+                            {item.type === 'user_login' && `User Login: ${item.firstName} ${item.lastName}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <MapPin className="h-5 w-5 text-green-500" />
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No recent activity.</p>
+                    </div>
                   )}
-                  <div>
-                    <p className="font-medium">
-                      {item.type === 'job_update' ? 
-                        `Job "${item.title}" updated to ${item.status} by ${item.firstName || ''} ${item.lastName || ''}` : 
-                        `Technician ${item.firstName || ''} ${item.lastName || ''} ${item.type} at ${item.jobId}`}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(item.timestamp).toLocaleString()}
-                    </p>
-                  </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                <p>No recent activity to display.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Job Completion Rate</CardTitle>
-            <CardDescription>This month's performance metrics</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <p className="ml-2">Loading completion rate...</p>
-              </div>
-            ) : completionRate ? (
-              <div className="text-center py-4">
-                <p className="text-4xl font-bold text-primary">{completionRate.completionRate}%</p>
-                <p className="text-muted-foreground">{completionRate.completedJobsThisMonth} of {completionRate.totalJobsThisMonth} jobs completed this month</p>
-                <Progress value={parseFloat(completionRate.completionRate)} className="mt-4" />
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                <p>No completion rate data available.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Completion Rate</CardTitle>
+                <CardDescription>This month's performance metrics</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    <p className="ml-2">Loading completion rate...</p>
+                  </div>
+                ) : completionRate ? (
+                  <div className="text-center py-4">
+                    <p className="text-4xl font-bold text-primary">{completionRate.completionRate}%</p>
+                    <p className="text-muted-foreground">{completionRate.completedJobsThisMonth} of {completionRate.totalJobsThisMonth} jobs completed this month</p>
+                    <Progress value={parseFloat(completionRate.completionRate)} className="mt-4" />
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>No completion rate data available.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   )
 }

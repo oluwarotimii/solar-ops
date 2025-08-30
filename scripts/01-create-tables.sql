@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     location_lat DECIMAL(10, 8),
     location_lng DECIMAL(11, 8),
     scheduled_date DATE,
-    estimated_duration INTEGER, -- minutes
+    -- estimated_duration INTEGER, -- minutes
     job_value DECIMAL(12,2) DEFAULT 0, -- Changed to accommodate Naira amounts
     total_technician_share DECIMAL(5,2) DEFAULT 100.00, -- Total percentage for all technicians
     company_share_percentage DECIMAL(5,2) DEFAULT 0.00, -- Company's retained percentage

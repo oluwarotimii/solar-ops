@@ -106,18 +106,27 @@ export function hasPermission(user: User, permission: string): boolean {
     return true;
   }
 
-  // Check for the specific permission
-  const permissionParts = permission.split(':');
-  let currentPermission = user.role.permissions;
+  const keys = permission.split(':');
+  let current = user.role.permissions;
 
-  for (const part of permissionParts) {
-    if (currentPermission[part] === undefined) {
-      return false;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+
+    // Check for a direct match (e.g., 'dashboard:stats:read')
+    const remainingKey = keys.slice(i).join(':');
+    if (current[remainingKey] === true) {
+      return true;
     }
-    if (typeof currentPermission[part] === 'boolean') {
-      return currentPermission[part];
+
+    if (current[key] === undefined) {
+      return false; // No further path
     }
-    currentPermission = currentPermission[part];
+
+    if (typeof current[key] === 'boolean') {
+      return current[key];
+    }
+
+    current = current[key];
   }
 
   return false;

@@ -1,89 +1,76 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sun, Zap, MapPin, Users } from "lucide-react"
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
-export default function HomePage() {
-  const router = useRouter()
+export default function LandingPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem("token")
+    // Check for a token in localStorage or cookies
+    const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+    // You might also check for a cookie here if your auth system uses cookies
     if (token) {
-      router.push("/dashboard")
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
     }
-  }, [router])
-
+  }, []);
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-6">
-            <Sun className="h-16 w-16 text-yellow-500 mr-4" />
-            <h1 className="text-4xl font-bold text-gray-900">Solar Field Operations</h1>
+    <div className="min-h-screen bg-white text-gray-800 font-sans">
+      {/* Header */}
+      <header className="container mx-auto px-4 py-6 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          {/* Solar Panel Icon Placeholder */}
+          <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
+            <span className="text-white text-xs">☀️</span>
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Complete field operations management system for Nigerian solar installations, maintenance, and technician
-            tracking.
+          <span className="text-xl font-bold text-gray-900">Solar Field Ops</span>
+        </div>
+        <nav className="flex items-center space-x-4">
+          {/* <Link href="/contact" className="text-gray-600 hover:text-blue-600 transition-colors duration-200">
+            Contact
+          </Link> */}
+          <Link href="/login" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 shadow-md">
+            Sign In
+          </Link>
+        </nav>
+      </header>
+
+      {/* Hero Section */}
+      <main className="container mx-auto px-4 py-12 md:py-20 flex flex-col md:flex-row items-center justify-between">
+        <div className="md:w-1/2 text-center md:text-left mb-10 md:mb-0">
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-4">
+            Power your solar operations from anywhere.
+          </h1>
+          <p className="text-lg md:text-xl text-gray-600 mb-8">
+            Real-time job tracking, technician coordination, and smart maintenance — simplified.
           </p>
+          <Link href={isLoggedIn ? "/dashboard" : "/login"} className="inline-block px-8 py-3 bg-yellow-500 text-gray-900 font-semibold rounded-md hover:bg-yellow-600 transition-colors duration-200 shadow-lg">
+            Launch Dashboard
+          </Link>
         </div>
-
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <Card>
-            <CardHeader>
-              <Zap className="h-8 w-8 text-blue-500 mb-2" />
-              <CardTitle>Job Management</CardTitle>
-              <CardDescription>
-                Assign and track solar installations, maintenance, and repairs across Nigeria
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <MapPin className="h-8 w-8 text-green-500 mb-2" />
-              <CardTitle>Live Tracking</CardTitle>
-              <CardDescription>Real-time GPS tracking of technicians with OpenStreetMap integration</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Users className="h-8 w-8 text-purple-500 mb-2" />
-              <CardTitle>Team Management</CardTitle>
-              <CardDescription>Manage technicians, earnings, and performance across multiple locations</CardDescription>
-            </CardHeader>
-          </Card>
+        <div className="md:w-1/2 flex justify-center md:justify-end">
+          <Image
+            src="/hero.png"
+            alt="Solar Field Operations Illustration"
+            width={600}
+            height={400}
+            layout="responsive"
+            objectFit="contain"
+            className="rounded-lg shadow-xl"
+          />
         </div>
+      </main>
 
-        <div className="max-w-md mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Get Started</CardTitle>
-              <CardDescription className="text-center">
-                Sign in to access your dashboard or create a new account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button onClick={() => router.push("/login")} className="w-full" size="lg">
-                Sign In
-              </Button>
-
-              <Button onClick={() => router.push("/register")} variant="outline" className="w-full">
-                Create Account
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center mt-12 text-sm text-gray-500">
-          <p>🇳🇬 Built for Nigerian Solar Operations</p>
-          <p>Currency: Nigerian Naira (₦) • Timezone: West Africa Time (WAT)</p>
-        </div>
-      </div>
+      {/* Footer */}
+      <footer className="container mx-auto px-4 py-6 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 mt-12">
+        <span>© 2025 Solar Field Ops</span>
+        <Link href="/privacy-policy" className="hover:text-blue-600 transition-colors duration-200 mt-2 md:mt-0">
+          Privacy Policy
+        </Link>
+      </footer>
     </div>
-  )
+  );
 }

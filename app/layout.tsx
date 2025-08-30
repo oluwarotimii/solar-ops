@@ -19,7 +19,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
+      <body className={`${inter.className} bg-gray-100 dark:bg-gray-900 overflow-x-hidden`}>
         {children}
         <Toaster />
       </body>

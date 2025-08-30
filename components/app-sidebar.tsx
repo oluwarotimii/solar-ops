@@ -32,8 +32,10 @@ import {
   ChevronUp,
   User,
   DollarSign,
-  Shield
+  Shield,
+  History
 } from "lucide-react"
+import type { User as UserType } from "@/types"
 
 // Navigation items
 const data = {
@@ -56,16 +58,17 @@ const data = {
           url: "/dashboard/jobs",
           icon: Briefcase,
         },
-        {
-          title: "Technicians",
-          url: "/dashboard/technicians",
-          icon: Users,
-        },
-        {
-          title: "Live Tracking",
-          url: "/dashboard/tracking",
-          icon: MapPin,
-        },
+        // {
+        //   title: "Technicians",
+        //   url: "/dashboard/technicians",
+        //   icon: Users,
+        //   adminOnly: true,
+        // },
+        // {
+        //   title: "Live Tracking",
+        //   url: "/dashboard/tracking",
+        //   icon: MapPin,
+        // },
         {
           title: "Maintenance",
           url: "/dashboard/maintenance",
@@ -80,11 +83,13 @@ const data = {
           title: "Accrued Values",
           url: "/dashboard/accrued-values",
           icon: DollarSign,
+          adminOnly: true,
         },
         {
           title: "Reports",
           url: "/dashboard/reports",
           icon: FileText,
+          adminOnly: true,
         },
       ],
     },
@@ -95,11 +100,13 @@ const data = {
           title: "Users",
           url: "/dashboard/users",
           icon: User,
+          adminOnly: true,
         },
         {
           title: "Roles",
           url: "/dashboard/roles",
           icon: Shield,
+          adminOnly: true,
         },
         {
           title: "Notifications",
@@ -110,15 +117,25 @@ const data = {
           title: "Settings",
           url: "/dashboard/settings",
           icon: Settings,
+          adminOnly: true,
+        },
+        {
+          title: "Audit Trail",
+          url: "/dashboard/audit-trail",
+          icon: History,
+          adminOnly: true,
         },
       ],
     },
   ],
 }
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: { email: string } }) {
+import { useSidebar } from "@/components/ui/sidebar"
+
+export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: UserType }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   // Get user info from localStorage (demo)
   const userEmail = user.email
@@ -163,10 +180,12 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => (
+                {section.items
+                  .filter((item) => !item.adminOnly || (item.adminOnly && user.role?.isAdmin))
+                  .map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <Link href={item.url}>
+                      <Link href={item.url} onClick={() => { if (isMobile) setOpenMobile(false); }}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                     </Link>
