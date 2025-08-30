@@ -1,8 +1,55 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 
 export function PushSubscriptionManager() {
+  const { toast } = useToast();
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+
+  useEffect(() => {
+    const handleInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      console.log('beforeinstallprompt event fired');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (installPrompt) {
+      toast({
+        title: 'Install the App!',
+        description: 'For a better experience, install our app on your device.',
+        action: (
+          <Button onClick={handleInstallClick}>Install</Button>
+        ),
+        duration: 10000,
+      });
+    }
+  }, [installPrompt]);
+
+  const handleInstallClick = () => {
+    if (!installPrompt) {
+      return;
+    }
+    (installPrompt as any).prompt();
+    (installPrompt as any).userChoice.then((choiceResult: { outcome: string }) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      setInstallPrompt(null);
+    });
+  };
+
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       navigator.serviceWorker.register('/sw.js')
@@ -60,7 +107,7 @@ export function PushSubscriptionManager() {
   function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
+      .replace(/-/g, '+')
       .replace(/_/g, '/');
 
     const rawData = window.atob(base64);
