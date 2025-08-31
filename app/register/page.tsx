@@ -89,8 +89,8 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-blue-50 p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center  justify-center bg-gradient-to-br from-orange-50 to-blue-50 p-4">
+        <Card className="w-full max-w-md mt-10">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-green-100 rounded-full">
@@ -113,7 +113,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="relative flex w-full md:max-w-6xl mx-auto bg-white md:rounded-xl shadow-lg overflow-hidden">
         {/* Left Panel: Register Form */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">

@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import InstallPwaPrompt from "@/components/install-pwa-prompt"
 import "@/lib/logger" // Import the logger to disable console logs in production
 
 const inter = Inter({ subsets: ["latin"] })
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-gray-100 dark:bg-gray-900 overflow-x-hidden`}>
         {children}
         <Toaster />
+        <InstallPwaPrompt />
       </body>
     </html>
   )

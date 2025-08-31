@@ -153,7 +153,7 @@ export default function DashboardPage() {
 
           {/* Recent Activity & Quick Actions */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>What's been happening across the platform</CardDescription>
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                   )}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             <Card>
               <CardHeader>

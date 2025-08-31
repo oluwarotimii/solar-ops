@@ -55,7 +55,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="relative flex w-full md:max-w-6xl mx-auto bg-white md:rounded-xl shadow-lg overflow-hidden">
         {/* Left Panel: Login Form */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
