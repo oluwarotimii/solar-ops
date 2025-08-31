@@ -107,20 +107,18 @@ export default function UsersPage() {
       </div>
 
       {selectedUser && (
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <EditUserDialog
-              user={selectedUser}
-              roles={roles}
-              onUserUpdated={(updatedUser) => {
-                setSelectedUser(updatedUser)
-                setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
-                fetchUsers()
-                setShowEditDialog(false)
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <EditUserDialog
+          user={selectedUser}
+          roles={roles}
+          onUserUpdated={(updatedUser) => {
+            setSelectedUser(updatedUser)
+            setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
+            fetchUsers()
+            setShowEditDialog(false)
+          }}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+        />
       )}
 
       {/* Summary Cards */}
@@ -245,38 +243,46 @@ export default function UsersPage() {
         </CardHeader>
         <CardContent className="pt-0">
           {isMobile ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredUsers.map((user) => (
-                <MobileTableCard
-                  key={user.id}
-                  title={`${user.firstName} ${user.lastName}`}
-                  subtitle={user.email}
-                  status={user.status}
-                  statusColor={statusColors[user.status]}
-                  badges={[
-                    { label: user.role?.name || "No Role", variant: "outline" },
-                    { label: `${user.stats?.totalJobs || 0} jobs`, variant: "secondary" },
-                  ]}
-                  onEdit={() => {
-                    setSelectedUser(user)
-                    setShowEditDialog(true)
-                  }}
-                  onClick={() => {
-                    setSelectedUser(user)
-                    setShowEditDialog(true)
-                  }}
-                >
-                  <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" />
-                      <span>{user.stats?.completedJobs || 0} completed</span>
+                <Card key={user.id} className="p-4 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold">{user.firstName} {user.lastName}</h3>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3" />
-                      <span>{user.stats?.avgRating?.toFixed(1) || 'N/A'} rating</span>
+                    <Badge className={statusColors[user.status]}>{user.status}</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Role</p>
+                      <p className="font-medium">{user.role?.name || "No Role"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Jobs</p>
+                      <p className="font-medium">{user.stats?.totalJobs || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Completed</p>
+                      <p className="font-medium">{user.stats?.completedJobs || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Avg. Rating</p>
+                      <p className="font-medium">{user.stats?.avgRating?.toFixed(1) || 'N/A'}</p>
                     </div>
                   </div>
-                </MobileTableCard>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setSelectedUser(user)
+                      setShowEditDialog(true)
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit User
+                  </Button>
+                </Card>
               ))}
             </div>
           ) : (
