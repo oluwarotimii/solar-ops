@@ -13,7 +13,7 @@ import { Plus, Search, DollarSign, Users, Calendar, Star, FileText } from "lucid
 import { useToast } from "@/components/ui/use-toast"
 
 interface AccruedValueDisplay {
-  technician: {
+  user: {
     id: string
     name: string
     email: string
@@ -23,7 +23,7 @@ interface AccruedValueDisplay {
 
 interface AccruedValueDetailed {
   id: string
-  technician: {
+  user: {
     id: string
     name: string
     email: string
@@ -43,14 +43,14 @@ interface AccruedValueDetailed {
 export default function AccruedValuesPage() {
   const { toast } = useToast();
   const [accruedValues, setAccruedValues] = useState<AccruedValueDisplay[]>([])
-  const [allTechnicians, setAllTechnicians] = useState<{
+  const [allUsers, setAllUsers] = useState<{
     id: string;
     name: string;
     email: string;
   }[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [technicianFilter, setTechnicianFilter] = useState("all")
+  const [userFilter, setUserFilter] = useState("all")
   const [monthFilter, setMonthFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString())
   const [minAccruedYear, setMinAccruedYear] = useState(new Date().getFullYear());
@@ -88,40 +88,40 @@ export default function AccruedValuesPage() {
       }
     }
 
-    const fetchAllTechnicians = async () => {
+    const fetchAllUsers = async () => {
       try {
-        const response = await fetch("/api/users/technicians", {
+        const response = await fetch("/api/users/all", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
         if (response.ok) {
           const data = await response.json();
-          setAllTechnicians(data.map((tech: any) => ({ id: tech.id, name: `${tech.firstName} ${tech.lastName}`, email: tech.email })));
+          setAllUsers(data.map((user: any) => ({ id: user.id, name: `${user.firstName} ${user.lastName}`, email: user.email })));
         } else {
-          console.error("Failed to fetch technicians");
+          console.error("Failed to fetch users");
         }
       } catch (error) {
-        console.error("Error fetching technicians:", error);
+        console.error("Error fetching users:", error);
       }
     };
 
     fetchAccruedValues()
-    fetchAllTechnicians()
+    fetchAllUsers()
   }
   , [monthFilter, yearFilter])
 
   const filteredValues = accruedValues.filter((value) => {
     const matchesSearch =
-      value.technician.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesTechnician = technicianFilter === "all" || value.technician.id === technicianFilter
+      value.user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesUser = userFilter === "all" || value.user.id === userFilter
 
-    return matchesSearch && matchesTechnician
+    return matchesSearch && matchesUser
   })
 
   // Calculate summary stats
   const totalEarned = filteredValues.reduce((sum, value) => sum + parseFloat(value.totalEarnedAmount.toString()), 0)
-  const uniqueTechnicians = new Set(filteredValues.map((v) => v.technician.id)).size
+  const uniqueUsers = new Set(filteredValues.map((v) => v.user.id)).size
 
   const formatNaira = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -150,28 +150,28 @@ export default function AccruedValuesPage() {
       const { accruedValues: detailedAccruedValues } = await response.json();
 
       // Process data for export
-      const technicianData: { [key: string]: { name: string; email: string; totalEarned: number; jobsPerMonth: { [month: string]: number }; totalJobs: number } } = {};
+      const userData: { [key: string]: { name: string; email: string; totalEarned: number; jobsPerMonth: { [month: string]: number }; totalJobs: number } } = {};
 
       detailedAccruedValues.forEach((value: AccruedValueDetailed) => {
-        const technicianId = value.technician.id;
+        const userId = value.user.id;
         const monthYear = `${value.month}-${value.year}`;
 
-        if (!technicianData[technicianId]) {
-          technicianData[technicianId] = {
-            name: value.technician.name,
-            email: value.technician.email,
+        if (!userData[userId]) {
+          userData[userId] = {
+            name: value.user.name,
+            email: value.user.email,
             totalEarned: 0,
             jobsPerMonth: {},
             totalJobs: 0,
           };
         }
 
-        technicianData[technicianId].totalEarned += parseFloat(value.earnedAmount.toString());
-        technicianData[technicianId].totalJobs += 1;
-        technicianData[technicianId].jobsPerMonth[monthYear] = (technicianData[technicianId].jobsPerMonth[monthYear] || 0) + 1;
+        userData[userId].totalEarned += parseFloat(value.earnedAmount.toString());
+        userData[userId].totalJobs += 1;
+        userData[userId].jobsPerMonth[monthYear] = (userData[userId].jobsPerMonth[monthYear] || 0) + 1;
       });
 
-      let csvContent = "Technician Name,Technician Email,Total Earned,Total Jobs";
+      let csvContent = "User Name,User Email,Total Earned,Total Jobs";
       const allMonthsYears = Array.from(new Set(detailedAccruedValues.map((v: AccruedValueDetailed) => `${v.month}-${v.year}`))).sort();
 
       allMonthsYears.forEach(my => {
@@ -179,8 +179,8 @@ export default function AccruedValuesPage() {
       });
       csvContent += "\n";
 
-      for (const techId in technicianData) {
-        const data = technicianData[techId];
+      for (const userId in userData) {
+        const data = userData[userId];
         let row = `"${data.name}","${data.email}",${data.totalEarned},${data.totalJobs}`;
         allMonthsYears.forEach(my => {
           row += `,${data.jobsPerMonth[my] || 0}`;
@@ -215,10 +215,10 @@ export default function AccruedValuesPage() {
     }
   };
 
-  const uniqueTechniciansList = Array.from(new Set(accruedValues.map((v) => v.technician.id)))
+  const uniqueUsersList = Array.from(new Set(accruedValues.map((v) => v.user.id)))
     .map((id) => {
-      const tech = accruedValues.find((v) => v.technician.id === id)?.technician
-      return tech
+      const user = accruedValues.find((v) => v.user.id === id)?.user
+      return user
     })
     .filter(Boolean)
 
@@ -242,7 +242,7 @@ export default function AccruedValuesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Accrued Values</h1>
-          <p className="text-muted-foreground">Track technician performance</p>
+          <p className="text-muted-foreground">Track user performance</p>
         </div>
         <Button onClick={handleExport} disabled={loading || accruedValues.length === 0}>
           <FileText className="h-4 w-3 mr-2" />
@@ -259,7 +259,7 @@ export default function AccruedValuesPage() {
                 <DollarSign className="h-4 w-4 text-green-600" />
               </div>
               <div>
-                <p className="text-sm font-medium">Total Earned Across All Technicians</p>
+                <p className="text-sm font-medium">Total Earned Across All Users</p>
                 <p className="text-2xl font-bold">{formatNaira(totalEarned)}</p>
               </div>
             </div>
@@ -273,8 +273,8 @@ export default function AccruedValuesPage() {
                 <Users className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-medium">Unique Technicians with Earnings</p>
-                <p className="text-2xl font-bold">{uniqueTechnicians}</p>
+                <p className="text-sm font-medium">Unique Users with Earnings</p>
+                <p className="text-2xl font-bold">{uniqueUsers}</p>
               </div>
             </div>
           </CardContent>
@@ -287,7 +287,7 @@ export default function AccruedValuesPage() {
                 <Calendar className="h-4 w-4 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm font-medium">Total Records (Technicians)</p>
+                <p className="text-sm font-medium">Total Records (Users)</p>
                 <p className="text-2xl font-bold">{filteredValues.length}</p>
               </div>
             </div>
@@ -306,7 +306,7 @@ export default function AccruedValuesPage() {
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search technicians..."
+                  placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -314,15 +314,15 @@ export default function AccruedValuesPage() {
               </div>
             </div>
 
-            <Select value={technicianFilter} onValueChange={setTechnicianFilter}>
+            <Select value={userFilter} onValueChange={setUserFilter}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filter by technician" />
+                <SelectValue placeholder="Filter by user" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Technicians</SelectItem>
-                {allTechnicians.map((tech) => (
-                  <SelectItem key={tech?.id} value={tech?.id || ""}>
-                    {tech?.name}
+                <SelectItem value="all">All Users</SelectItem>
+                {allUsers.map((user) => (
+                  <SelectItem key={user?.id} value={user?.id || ""}>
+                    {user?.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -362,7 +362,7 @@ export default function AccruedValuesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Accrued Values ({filteredValues.length})</CardTitle>
-          <CardDescription>Total earnings per technician</CardDescription>
+          <CardDescription>Total earnings per user</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -374,15 +374,15 @@ export default function AccruedValuesPage() {
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {filteredValues.map((value) => (
-                  <Card key={value.technician.id}>
+                  <Card key={value.user.id}>
                     <CardHeader>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback>{getInitials(value.technician.name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(value.user.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <CardTitle>{value.technician.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{value.technician.email}</p>
+                          <CardTitle>{value.user.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{value.user.email}</p>
                         </div>
                       </div>
                     </CardHeader>
@@ -401,22 +401,22 @@ export default function AccruedValuesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Technician</TableHead>
+                      <TableHead>User</TableHead>
                       <TableHead>Total Earned</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredValues.map((value) => (
-                      <TableRow key={value.technician.id}>
+                      <TableRow key={value.user.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs">{getInitials(value.technician.name)}</AvatarFallback>
+                              <AvatarFallback className="text-xs">{getInitials(value.user.name)}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p>{value.technician.name}</p>
-                              <p className="text-sm text-muted-foreground">{value.technician.email}</p>
+                              <p>{value.user.name}</p>
+                              <p className="text-sm text-muted-foreground">{value.user.email}</p>
                             </div>
                           </div>
                         </TableCell>

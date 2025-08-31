@@ -20,14 +20,22 @@ export async function GET(request: NextRequest) {
     const rows = await db`
       SELECT 
         u.id, u.email, u.first_name, u.last_name, u.phone, u.role_id, u.status, u.created_at, u.updated_at,
-        r.name as role_name, r.description as role_description, r.is_admin as role_is_admin, r.permissions as role_permissions
+        r.name as role_name, r.description as role_description, r.is_admin as role_is_admin, r.permissions as role_permissions,
+        COUNT(j.id) AS total_jobs,
+        COUNT(CASE WHEN j.status = 'completed' THEN j.id END) AS completed_jobs,
+        AVG(jt.rating) AS avg_rating,
+        SUM(av.earned_amount) AS total_earned
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN job_technicians jt ON u.id = jt.technician_id
+      LEFT JOIN jobs j ON jt.job_id = j.id
+      LEFT JOIN accrued_values av ON u.id = av.user_id
+      GROUP BY u.id, r.id
     `;
     console.log('[API] Raw user rows from DB:', rows);
     const users = rows.map(row => {
       const camelCaseRow = toCamelCase(row);
-      const user: User = {
+      const user: any = {
         id: camelCaseRow.id,
         email: camelCaseRow.email,
         firstName: camelCaseRow.firstName,
@@ -38,6 +46,12 @@ export async function GET(request: NextRequest) {
         approved: camelCaseRow.status === 'active',
         createdAt: camelCaseRow.createdAt,
         updatedAt: camelCaseRow.updatedAt,
+        stats: {
+          totalJobs: parseInt(camelCaseRow.totalJobs || 0),
+          completedJobs: parseInt(camelCaseRow.completedJobs || 0),
+          avgRating: parseFloat(camelCaseRow.avgRating || 0),
+          totalEarned: parseFloat(camelCaseRow.totalEarned || 0),
+        }
       };
 
       if (camelCaseRow.roleName) {

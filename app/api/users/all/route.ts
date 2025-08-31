@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN job_technicians jt ON u.id = jt.technician_id
       LEFT JOIN jobs j ON jt.job_id = j.id
       LEFT JOIN accrued_values av ON u.id = av.user_id
-      WHERE r.name = 'Technician' AND u.status = 'active'
+      WHERE u.status = 'active'
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.status
       ORDER BY u.first_name, u.last_name
     `
