@@ -1,60 +1,39 @@
-import { Suspense } from "react"
-import { DashboardProvider } from "@/lib/dashboard-context"
-import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
-import { verifyToken, getUserById } from "@/lib/auth"
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
-import { PushSubscriptionManager } from "@/components/PushSubscriptionManager"
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { verifyToken, getUserById } from "@/lib/auth";
+import DashboardClientLayout from "./client-layout";
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const cookieStore = cookies()
-  const token = cookieStore.get('token')?.value
-
-  console.log(`[Auth Debug] Token in dashboard layout: ${token ? token.substring(0, 10) + '...' : 'not found'}`);
+  const cookieStore = cookies();
+  const token = cookieStore.get('token')?.value;
 
   if (!token) {
-    console.log("[Auth Debug] Redirecting to login because token is missing.");
-    redirect('/login')
+    redirect('/login');
   }
 
-  let user = null
+  let user = null;
   try {
-    const decodedToken = verifyToken(token)
+    const decodedToken = verifyToken(token);
     if (decodedToken) {
-      user = await getUserById(decodedToken.userId)
+      user = await getUserById(decodedToken.userId);
     }
   } catch (error) {
-    console.error("Server-side token verification failed:", error)
+    console.error("Server-side token verification failed:", error);
+    redirect('/login');
   }
 
   if (!user) {
-    redirect('/login')
+    redirect('/login');
   }
 
   return (
-    <SidebarProvider>
-      <PushSubscriptionManager />
-      <AppSidebar user={user} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex items-center gap-2">
-            <h1 className="font-semibold">Solar Field Operations</h1>
-          </div>
-        </header>
-        <Suspense fallback={<div className="flex-1 overflow-auto p-4">Loading dashboard data...</div>}>
-          <DashboardProvider user={user}>
-            <div className="flex-1 overflow-auto p-4">{children}</div>
-          </DashboardProvider>
-        </Suspense>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+    <DashboardClientLayout user={user}>
+      {children}
+    </DashboardClientLayout>
+  );
 }

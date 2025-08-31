@@ -242,11 +242,11 @@ export default function AccruedValuesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Accrued Values</h1>
-          <p className="text-muted-foreground">Track technician earnings and performance in Nigerian Naira</p>
+          <p className="text-muted-foreground">Track technician performance</p>
         </div>
         <Button onClick={handleExport} disabled={loading || accruedValues.length === 0}>
-          <FileText className="h-4 w-4 mr-2" />
-          Export Data
+          <FileText className="h-4 w-3 mr-2" />
+          Export
         </Button>
       </div>
 
@@ -370,39 +370,67 @@ export default function AccruedValuesPage() {
               <p className="text-muted-foreground">Loading accrued values...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="hidden md:table-header-group">
-                  <TableRow>
-                    <TableHead>Technician</TableHead>
-                    <TableHead>Total Earned</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredValues.map((value) => (
-                    <tr key={value.technician.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
-                      <td className="md:table-cell py-2 font-medium" data-label="Technician">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs">{getInitials(value.technician.name)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p>{value.technician.name}</p>
-                            <p className="text-sm text-muted-foreground">{value.technician.email}</p>
-                          </div>
+            <div>
+              {/* Mobile Card View */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {filteredValues.map((value) => (
+                  <Card key={value.technician.id}>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>{getInitials(value.technician.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <CardTitle>{value.technician.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{value.technician.email}</p>
                         </div>
-                      </td>
-                      <td className="md:table-cell py-2" data-label="Total Earned">
-                        <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
-                      </td>
-                      <td className="md:table-cell py-2 text-right">
-                        {/* Actions can go here */}
-                      </td>
-                    </tr>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium">Total Earned</p>
+                        <p className="text-lg font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Technician</TableHead>
+                      <TableHead>Total Earned</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredValues.map((value) => (
+                      <TableRow key={value.technician.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs">{getInitials(value.technician.name)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p>{value.technician.name}</p>
+                              <p className="text-sm text-muted-foreground">{value.technician.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {/* Actions can go here */}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
 

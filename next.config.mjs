@@ -1,3 +1,6 @@
+import withPWA from 'next-pwa';
+import runtimeCaching from 'next-pwa/cache.js';
+
 const nextConfig = {
   async headers() {
     return [
@@ -25,6 +28,23 @@ const nextConfig = {
   env: {
     JWT_SECRET: process.env.JWT_SECRET,
   },
-}
+};
 
-export default nextConfig
+const pwaConfig = {
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  runtimeCaching: [
+    ...runtimeCaching,
+    {
+      urlPattern: /^\/api\/.*/,
+      handler: 'NetworkOnly',
+      options: {
+        cacheName: 'api-calls',
+      },
+    },
+  ],
+};
+
+export default withPWA(pwaConfig)(nextConfig);

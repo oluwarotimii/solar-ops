@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
@@ -12,13 +12,19 @@ export const metadata: Metadata = {
   title: "Solar Field Operations",
   description: "Solar Field Operations Management Platform",
   manifest: "/manifest.json",
-  themeColor: "#eab308",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "SolarOps",
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: "#eab308",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({
