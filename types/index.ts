@@ -10,6 +10,11 @@ export interface User {
   role?: Role
   createdAt: string
   updatedAt: string
+  stats?: {
+    totalJobs: number
+    completedJobs: number
+    avgRating: number
+  }
 }
 
 export interface Role {

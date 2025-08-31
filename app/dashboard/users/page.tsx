@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Users, Search, UserCheck, Phone, Clock, Edit } from "lucide-react"
+import { Users, Search, UserCheck, Phone, Clock, Edit, Star, Briefcase } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { MobileTableCard } from "@/components/mobile-table-card"
 import type { User, Role } from "@/types"
 import EditUserDialog from "@/components/edit-user-dialog"
 
-const statusColors = {
+const statusColors: { [key: string]: string } = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   active: "bg-green-100 text-green-800 border-green-200",
   suspended: "bg-red-100 text-red-800 border-red-200",
@@ -43,7 +43,6 @@ export default function UsersPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log("[Frontend] Users data received after refresh:", data)
         setUsers(data)
       }
     } catch (error) {
@@ -67,7 +66,7 @@ export default function UsersPage() {
   }
 
   const filteredUsers = users.filter((user) => {
-    if (!user) return false // Ensure user is not undefined or null
+    if (!user) return false
     const matchesSearch =
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,8 +78,9 @@ export default function UsersPage() {
   })
 
   const pendingUsers = users.filter((user) => user && user.status === "pending")
-  console.log("[Frontend] Current users array:", users)
-  console.log("[Frontend] Filtered pending users:", pendingUsers)
+
+  const totalUsers = users.length
+  const activeUsers = users.filter((u) => u.status === "active").length
 
   if (loading) {
     return (
@@ -122,6 +122,28 @@ export default function UsersPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeUsers}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Pending Approvals */}
       {pendingUsers.length > 0 && (
@@ -233,7 +255,7 @@ export default function UsersPage() {
                   statusColor={statusColors[user.status]}
                   badges={[
                     { label: user.role?.name || "No Role", variant: "outline" },
-                    { label: new Date(user.createdAt).toLocaleDateString(), variant: "secondary" },
+                    { label: `${user.stats?.totalJobs || 0} jobs`, variant: "secondary" },
                   ]}
                   onEdit={() => {
                     setSelectedUser(user)
@@ -244,12 +266,16 @@ export default function UsersPage() {
                     setShowEditDialog(true)
                   }}
                 >
-                  {user.phone && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-                      <Phone className="h-3 w-3" />
-                      <span>{user.phone}</span>
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" />
+                      <span>{user.stats?.completedJobs || 0} completed</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3" />
+                      <span>{user.stats?.avgRating?.toFixed(1) || 'N/A'} rating</span>
+                    </div>
+                  </div>
                 </MobileTableCard>
               ))}
             </div>
@@ -260,11 +286,11 @@ export default function UsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Registered</TableHead>
+                    <TableHead>Total Jobs</TableHead>
+                    <TableHead>Completed</TableHead>
+                    <TableHead>Avg. Rating</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -272,18 +298,16 @@ export default function UsersPage() {
                   {filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          {user.firstName} {user.lastName}
-                        </div>
+                        {user.firstName} {user.lastName}
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || "-"}</TableCell>
                       <TableCell>{user.role?.name || "-"}</TableCell>
                       <TableCell>
                         <Badge className={statusColors[user.status]}>{user.status}</Badge>
                       </TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{user.stats?.totalJobs || 0}</TableCell>
+                      <TableCell>{user.stats?.completedJobs || 0}</TableCell>
+                      <TableCell>{user.stats?.avgRating?.toFixed(1) || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="outline"
