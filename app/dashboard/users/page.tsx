@@ -7,27 +7,18 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Users, Search, UserCheck, UserX, Shield, Mail, Phone, Clock } from "lucide-react"
+import { Users, Search, UserCheck, Phone, Clock, Edit } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { MobileTableCard } from "@/components/mobile-table-card"
 import type { User, Role } from "@/types"
 import EditUserDialog from "@/components/edit-user-dialog"
 
 const statusColors = {
-  pending: "bg-yellow-100 text-yellow-800",
-  active: "bg-green-100 text-green-800",
-  suspended: "bg-red-100 text-red-800",
-  deactivated: "bg-gray-100 text-gray-800",
+  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  active: "bg-green-100 text-green-800 border-green-200",
+  suspended: "bg-red-100 text-red-800 border-red-200",
+  deactivated: "bg-gray-100 text-gray-800 border-gray-200",
 }
 
 export default function UsersPage() {
@@ -39,6 +30,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     fetchUsers()
@@ -47,11 +39,11 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users", {});
+      const response = await fetch("/api/users", {})
 
       if (response.ok) {
         const data = await response.json()
-        console.log('[Frontend] Users data received after refresh:', data);
+        console.log("[Frontend] Users data received after refresh:", data)
         setUsers(data)
       }
     } catch (error) {
@@ -63,7 +55,7 @@ export default function UsersPage() {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("/api/roles", {});
+      const response = await fetch("/api/roles", {})
 
       if (response.ok) {
         const data = await response.json()
@@ -74,10 +66,8 @@ export default function UsersPage() {
     }
   }
 
-  
-
   const filteredUsers = users.filter((user) => {
-    if (!user) return false; // Ensure user is not undefined or null
+    if (!user) return false // Ensure user is not undefined or null
     const matchesSearch =
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,14 +79,14 @@ export default function UsersPage() {
   })
 
   const pendingUsers = users.filter((user) => user && user.status === "pending")
-  console.log('[Frontend] Current users array:', users);
-  console.log('[Frontend] Filtered pending users:', pendingUsers);
+  console.log("[Frontend] Current users array:", users)
+  console.log("[Frontend] Filtered pending users:", pendingUsers)
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 md:p-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">User Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">User Management</h1>
         </div>
         <div className="animate-pulse space-y-4">
           <div className="h-32 bg-muted rounded"></div>
@@ -108,11 +98,11 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage user accounts, roles, and permissions</p>
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6 max-w-full overflow-hidden">
+      <div className="flex justify-between items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">User Management</h1>
+          {!isMobile && <p className="text-muted-foreground mt-1">Manage user accounts, roles, and permissions</p>}
         </div>
       </div>
 
@@ -123,19 +113,10 @@ export default function UsersPage() {
               user={selectedUser}
               roles={roles}
               onUserUpdated={(updatedUser) => {
-                console.log("[Frontend] onUserUpdated received:", updatedUser);
-                setSelectedUser(updatedUser); // Update selectedUser with the latest data
-                // Immediately update the users array to reflect the change
-                setUsers((prevUsers) => {
-                  console.log("[Frontend] prevUsers before update:", prevUsers);
-                  const newUsers = prevUsers.map((user) =>
-                    user.id === updatedUser.id ? updatedUser : user
-                  );
-                  console.log("[Frontend] newUsers after update:", newUsers);
-                  return newUsers;
-                });
-                fetchUsers(); // Refresh the list in the background for full consistency
-                setShowEditDialog(false);
+                setSelectedUser(updatedUser)
+                setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
+                fetchUsers()
+                setShowEditDialog(false)
               }}
             />
           </DialogContent>
@@ -145,35 +126,40 @@ export default function UsersPage() {
       {/* Pending Approvals */}
       {pendingUsers.length > 0 && (
         <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-orange-800 text-lg">
               <Clock className="h-5 w-5" />
               Pending Approvals ({pendingUsers.length})
             </CardTitle>
-            <CardDescription>New user registrations awaiting approval</CardDescription>
+            {!isMobile && <CardDescription>New user registrations awaiting approval</CardDescription>}
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="pt-0">
+            <div className="space-y-3">
               {pendingUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                  <div>
-                    <p className="font-medium">
+                <div key={user.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowEditDialog(true);
-                      }}
-                    >
-                      <UserCheck className="h-4 w-4 mr-1" />
-                      Review & Approve
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setSelectedUser(user)
+                      setShowEditDialog(true)
+                    }}
+                    className="ml-3 flex-shrink-0"
+                  >
+                    {isMobile ? (
+                      <UserCheck className="h-4 w-4" />
+                    ) : (
+                      <>
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        Review
+                      </>
+                    )}
+                  </Button>
                 </div>
               ))}
             </div>
@@ -181,111 +167,142 @@ export default function UsersPage() {
         </Card>
       )}
 
-      {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+        <CardContent className="pt-0">
+          <div className="flex flex-col gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10"
+              />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-                <SelectItem value="deactivated">Deactivated</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="deactivated">Deactivated</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {roles.map((role) => (
-                  <SelectItem key={role.id} value={role.id}>
-                    {role.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Users Table */}
+      {/* Users Table/Cards */}
       <Card>
-        <CardHeader>
-          <CardTitle>Users ({filteredUsers.length})</CardTitle>
-          <CardDescription>All registered users and their account details</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Users ({filteredUsers.length})</CardTitle>
+          {!isMobile && <CardDescription>All registered users and their account details</CardDescription>}
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="hidden md:table-header-group">
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
-                    <td className="md:table-cell py-2 font-medium" data-label="Name">
-                      <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p>{user.firstName} {user.lastName}</p>
-                          <p className="text-sm text-muted-foreground md:hidden">{user.email}</p>
+        <CardContent className="pt-0">
+          {isMobile ? (
+            <div className="space-y-3">
+              {filteredUsers.map((user) => (
+                <MobileTableCard
+                  key={user.id}
+                  title={`${user.firstName} ${user.lastName}`}
+                  subtitle={user.email}
+                  status={user.status}
+                  statusColor={statusColors[user.status]}
+                  badges={[
+                    { label: user.role?.name || "No Role", variant: "outline" },
+                    { label: new Date(user.createdAt).toLocaleDateString(), variant: "secondary" },
+                  ]}
+                  onEdit={() => {
+                    setSelectedUser(user)
+                    setShowEditDialog(true)
+                  }}
+                  onClick={() => {
+                    setSelectedUser(user)
+                    setShowEditDialog(true)
+                  }}
+                >
+                  {user.phone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                      <Phone className="h-3 w-3" />
+                      <span>{user.phone}</span>
+                    </div>
+                  )}
+                </MobileTableCard>
+              ))}
+            </div>
+          ) : (
+            /* Desktop table view */
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Registered</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          {user.firstName} {user.lastName}
                         </div>
-                      </div>
-                    </td>
-                    <td className="md:table-cell py-2 hidden md:table-cell" data-label="Email">{user.email}</td>
-                    <td className="md:table-cell py-2" data-label="Phone">{user.phone || '-'}</td>
-                    <td className="md:table-cell py-2" data-label="Role">{user.role?.name || '-'}</td>
-                    <td className="md:table-cell py-2" data-label="Status">
-                      <Badge className={statusColors[user.status]}>{user.status}</Badge>
-                    </td>
-                    <td className="md:table-cell py-2" data-label="Registered">{new Date(user.createdAt).toLocaleDateString()}</td>
-                    <td className="md:table-cell py-2 text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowEditDialog(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.phone || "-"}</TableCell>
+                      <TableCell>{user.role?.name || "-"}</TableCell>
+                      <TableCell>
+                        <Badge className={statusColors[user.status]}>{user.status}</Badge>
+                      </TableCell>
+                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user)
+                            setShowEditDialog(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {filteredUsers.length === 0 && (
             <div className="text-center py-8">

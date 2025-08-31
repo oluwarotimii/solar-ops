@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { PlusCircle, Shield, Trash2 } from "lucide-react";
+import { PlusCircle, Shield, Trash2, Edit } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { MobileTableCard } from "@/components/mobile-table-card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,164 +16,211 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { RoleEditDialog } from "@/components/role-edit-dialog";
+} from "@/components/ui/alert-dialog"
+import { RoleEditDialog } from "@/components/role-edit-dialog"
+import type { Role } from "@/types/role" // Declare the Role variable
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [roles, setRoles] = useState<Role[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
-    fetchRoles();
-  }, []);
+    fetchRoles()
+  }, [])
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("/api/roles");
+      const response = await fetch("/api/roles")
       if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
+        const data = await response.json()
+        setRoles(data)
       }
     } catch (error) {
-      console.error("Failed to fetch roles:", error);
+      console.error("Failed to fetch roles:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleCreateRole = () => {
-    setSelectedRole(null);
-    setIsDialogOpen(true);
-  };
+    setSelectedRole(null)
+    setIsDialogOpen(true)
+  }
 
   const handleEditRole = (role: Role) => {
-    setSelectedRole(role);
-    setIsDialogOpen(true);
-  };
+    setSelectedRole(role)
+    setIsDialogOpen(true)
+  }
 
   const handleSaveRole = async (role: Role) => {
-    const method = role.id ? "PUT" : "POST";
-    const url = role.id ? `/api/roles/${role.id}` : "/api/roles";
+    const method = role.id ? "PUT" : "POST"
+    const url = role.id ? `/api/roles/${role.id}` : "/api/roles"
 
     try {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(role),
-      });
+      })
 
       if (response.ok) {
-        fetchRoles();
+        fetchRoles()
       }
     } catch (error) {
-      console.error("Failed to save role:", error);
+      console.error("Failed to save role:", error)
     }
 
-    setIsDialogOpen(false);
-  };
+    setIsDialogOpen(false)
+  }
 
   const handleDeleteRole = async (roleId: string) => {
     try {
       const response = await fetch(`/api/roles/${roleId}`, {
         method: "DELETE",
-      });
+      })
 
       if (response.ok) {
-        fetchRoles();
+        fetchRoles()
       }
     } catch (error) {
-      console.error("Failed to delete role:", error);
+      console.error("Failed to delete role:", error)
     }
-  };
+  }
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 md:p-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Role Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Role Management</h1>
         </div>
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-muted rounded"></div>
           <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Role Management</h1>
-          <p className="text-muted-foreground">Define user roles and their permissions</p>
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6 max-w-full overflow-hidden">
+      <div className="flex justify-between items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">Role Management</h1>
+          {!isMobile && <p className="text-muted-foreground mt-1">Define user roles and their permissions</p>}
         </div>
-        <Button onClick={handleCreateRole}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Create Role
+        <Button onClick={handleCreateRole} className="flex-shrink-0">
+          <PlusCircle className="h-4 w-4" />
+          {!isMobile && <span className="ml-2">Create Role</span>}
         </Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Roles ({roles.length})</CardTitle>
-          <CardDescription>All defined roles in the system</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Roles ({roles.length})</CardTitle>
+          {!isMobile && <CardDescription>All defined roles in the system</CardDescription>}
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="hidden md:table-header-group">
-                <TableRow>
-                  <TableHead>Role Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Users</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles.map((role) => (
-                  <tr key={role.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
-                    <td className="md:table-cell py-2 font-medium" data-label="Role Name">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{role.name}</span>
-                      </div>
-                    </td>
-                    <td className="md:table-cell py-2" data-label="Description">{role.description}</td>
-                    <td className="md:table-cell py-2" data-label="Users">0</td>
-                    <td className="md:table-cell py-2 text-right">
-                      <div className="flex justify-end gap-2 mt-2 md:mt-0">
-                        <Button variant="outline" size="sm" onClick={() => handleEditRole(role)}>Edit</Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="ml-2">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the role.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteRole(role.id)}>Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="pt-0">
+          {isMobile ? (
+            <div className="space-y-3">
+              {roles.map((role) => (
+                <MobileTableCard
+                  key={role.id}
+                  title={role.name}
+                  subtitle={role.description}
+                  badges={[{ label: "0 users", variant: "secondary" }]}
+                  onEdit={() => handleEditRole(role)}
+                  onDelete={() => {
+                    setRoleToDelete(role)
+                    setDeleteDialogOpen(true)
+                  }}
+                  onClick={() => handleEditRole(role)}
+                >
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                    <Shield className="h-3 w-3" />
+                    <span>System Role</span>
+                  </div>
+                </MobileTableCard>
+              ))}
+            </div>
+          ) : (
+            /* Desktop table view */
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Role Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Users</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {roles.map((role) => (
+                    <TableRow key={role.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-muted-foreground" />
+                          <span>{role.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{role.description}</TableCell>
+                      <TableCell>0</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEditRole(role)}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setRoleToDelete(role)
+                              setDeleteDialogOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the role "{roleToDelete?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (roleToDelete) {
+                  handleDeleteRole(roleToDelete.id)
+                  setDeleteDialogOpen(false)
+                  setRoleToDelete(null)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <RoleEditDialog
         role={selectedRole}
@@ -180,5 +229,5 @@ export default function RolesPage() {
         onSave={handleSaveRole}
       />
     </div>
-  );
+  )
 }

@@ -6,14 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import { Plus, Search, MapPin, CalendarIcon, User, Clock, RefreshCw, AlertTriangle } from "lucide-react"
 import type { MaintenanceTask, User as UserType } from "@/types"
-import { formatDate } from "@/lib/date-utils";
-import CreateMaintenanceDialog from "@/components/create-maintenance-dialog";
+import { formatDate } from "@/lib/date-utils"
+import CreateMaintenanceDialog from "@/components/create-maintenance-dialog"
+import MobileTableCard from "@/components/mobile-table-card"
+import BottomSheet from "@/components/bottom-sheet"
 
 const statusColors = {
   scheduled: "bg-blue-100 text-blue-800",
@@ -38,6 +40,8 @@ export default function MaintenancePage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [calendarTasks, setCalendarTasks] = useState<Record<string, MaintenanceTask[]>>({})
+  const [selectedTaskForSheet, setSelectedTaskForSheet] = useState<MaintenanceTask | null>(null)
+  const [showBottomSheet, setShowBottomSheet] = useState(false)
 
   useEffect(() => {
     fetchTasks()
@@ -94,6 +98,11 @@ export default function MaintenancePage() {
   const handleTaskCreated = () => {
     fetchTasks()
     setShowCreateDialog(false)
+  }
+
+  const handleTaskCardClick = (task: MaintenanceTask) => {
+    setSelectedTaskForSheet(task)
+    setShowBottomSheet(true)
   }
 
   const filteredTasks = tasks.filter((task) => {
@@ -237,7 +246,8 @@ export default function MaintenancePage() {
               <CardDescription>All scheduled maintenance tasks and their status</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader className="hidden md:table-header-group">
                     <TableRow>
@@ -253,7 +263,10 @@ export default function MaintenancePage() {
                   </TableHeader>
                   <TableBody>
                     {filteredTasks.map((task) => (
-                      <tr key={task.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
+                      <tr
+                        key={task.id}
+                        className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none"
+                      >
                         <td className="md:table-cell py-2 font-medium" data-label="Task">
                           <div>
                             <p className="font-medium">{task.title}</p>
@@ -327,11 +340,49 @@ export default function MaintenancePage() {
                 </Table>
               </div>
 
-              {filteredTasks.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No maintenance tasks found matching your criteria.</p>
-                </div>
-              )}
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {filteredTasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">No maintenance tasks found matching your criteria.</p>
+                  </div>
+                ) : (
+                  filteredTasks.map((task) => (
+                    <MobileTableCard
+                      key={task.id}
+                      title={task.title}
+                      subtitle={task.siteLocation}
+                      status={task.status.replace("_", " ")}
+                      statusColor={statusColors[task.status]}
+                      badges={[{ label: task.priority, variant: "outline" }]}
+                      onClick={() => handleTaskCardClick(task)}
+                    >
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CalendarIcon className="h-3 w-3" />
+                        <span>{formatDate(task.scheduledDate)}</span>
+                        {task.assignedUser && (
+                          <>
+                            <span>•</span>
+                            <User className="h-3 w-3" />
+                            <span>
+                              {task.assignedUser.firstName} {task.assignedUser.lastName}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      {task.recurrenceType && (
+                        <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                          <RefreshCw className="h-3 w-3" />
+                          <span>
+                            Every {task.recurrenceInterval} {task.recurrenceType}
+                            {task.recurrenceInterval > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                    </MobileTableCard>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -423,6 +474,92 @@ export default function MaintenancePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <BottomSheet
+        isOpen={showBottomSheet}
+        onClose={() => setShowBottomSheet(false)}
+        title={selectedTaskForSheet?.title || "Task Details"}
+        actions={
+          selectedTaskForSheet && (
+            <div className="flex gap-2">
+              {selectedTaskForSheet.status === "scheduled" && (
+                <Button size="sm" variant="outline">
+                  Start Task
+                </Button>
+              )}
+              {selectedTaskForSheet.status === "in_progress" && <Button size="sm">Complete Task</Button>}
+              <Button size="sm" variant="outline">
+                Edit Task
+              </Button>
+            </div>
+          )
+        }
+      >
+        {selectedTaskForSheet && (
+          <div className="space-y-4">
+            {selectedTaskForSheet.description && (
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground">Description</h3>
+                <p className="text-sm mt-1">{selectedTaskForSheet.description}</p>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-medium text-sm text-muted-foreground">Location</h3>
+              <p className="text-sm mt-1 flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {selectedTaskForSheet.siteLocation}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground">Priority</h3>
+                <Badge className={`mt-1 ${priorityColors[selectedTaskForSheet.priority]}`}>
+                  {selectedTaskForSheet.priority}
+                </Badge>
+              </div>
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground">Status</h3>
+                <Badge className={`mt-1 ${statusColors[selectedTaskForSheet.status]}`}>
+                  {selectedTaskForSheet.status.replace("_", " ")}
+                </Badge>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-medium text-sm text-muted-foreground">Scheduled Date</h3>
+              <p className="text-sm mt-1 flex items-center gap-1">
+                <CalendarIcon className="h-3 w-3" />
+                {formatDate(selectedTaskForSheet.scheduledDate)}
+              </p>
+            </div>
+
+            {selectedTaskForSheet.assignedUser && (
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground">Assigned Technician</h3>
+                <div className="mt-2 p-2 bg-muted rounded-lg flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm">
+                    {selectedTaskForSheet.assignedUser.firstName} {selectedTaskForSheet.assignedUser.lastName}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {selectedTaskForSheet.recurrenceType && (
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground">Recurrence</h3>
+                <p className="text-sm mt-1 flex items-center gap-1">
+                  <RefreshCw className="h-3 w-3" />
+                  Every {selectedTaskForSheet.recurrenceInterval} {selectedTaskForSheet.recurrenceType}
+                  {selectedTaskForSheet.recurrenceInterval > 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </BottomSheet>
     </div>
   )
 }
