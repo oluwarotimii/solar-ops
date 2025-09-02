@@ -9,6 +9,7 @@ import { Loader2, AlertCircle, ChevronsLeft, ChevronLeft, ChevronRight, Chevrons
 import { format, formatDistanceToNow } from 'date-fns';
 import { formatAction, getTargetLink } from '@/lib/audit-helpers';
 import AuditLogDetails from '@/components/audit-log-details';
+import AuditLogCard from '@/components/audit-log-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface AuditLog {
@@ -73,7 +74,8 @@ export default function AuditTrailPage() {
           <CardDescription>A chronological record of all actions performed.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -93,8 +95,8 @@ export default function AuditTrailPage() {
                     const targetLink = getTargetLink(log);
                     const userName = log.first_name ? `${log.first_name} ${log.last_name}` : 'System';
                     return (
-                      <tr key={log.id} className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none">
-                        <td className="md:table-cell py-2 font-medium" data-label="Event">
+                      <TableRow key={log.id}>
+                        <TableCell className="py-2 font-medium">
                           <div className="flex items-start gap-4">
                             <Avatar className="h-10 w-10">
                               <AvatarFallback>{getInitials(log)}</AvatarFallback>
@@ -113,16 +115,29 @@ export default function AuditTrailPage() {
                               </p>
                             </div>
                           </div>
-                        </td>
-                        <td className="md:table-cell py-2 align-top" data-label="Details">
+                        </TableCell>
+                        <TableCell className="py-2 align-top">
                           <AuditLogDetails log={log} />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )
                   })
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {loading ? (
+              <div className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-500"><AlertCircle className="h-8 w-8 mx-auto" /><p className="mt-2">Error: {error}</p></div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-12">No audit logs found.</div>
+            ) : (
+              logs.map((log) => <AuditLogCard key={log.id} log={log} />)
+            )}
           </div>
         </CardContent>
       </Card>

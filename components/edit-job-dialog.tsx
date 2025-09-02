@@ -46,6 +46,7 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
   const [error, setError] = useState("");
   const [jobTypes, setJobTypes] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
+  const [techniciansLoading, setTechniciansLoading] = useState(true);
 
   useEffect(() => {
     const fetchJobTypes = async () => {
@@ -56,9 +57,14 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
     };
     const fetchTechnicians = async () => {
       try {
-        const response = await fetch("/api/users/technicians");
-        if (response.ok) setTechnicians(await response.json());
+        const response = await fetch("/api/users/all");
+        if (response.ok) {
+        const data = await response.json();
+        setTechnicians(data);
+        console.log("Fetched technicians:", data);
+      }
       } catch (error) { console.error("Error fetching technicians:", error); }
+      finally { setTechniciansLoading(false); }
     };
     fetchJobTypes();
     fetchTechnicians();
@@ -211,7 +217,12 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {assignedTechnicians.map((tech, index) => (
+            {techniciansLoading ? (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Loading technicians...</span>
+              </div>
+            ) : assignedTechnicians.map((tech, index) => (
               <div key={tech.clientId} className="border rounded-lg p-4 space-y-4">
                 <div className="flex justify-between items-start">
                   <h4 className="font-medium">Technician Slot {index + 1}</h4>
