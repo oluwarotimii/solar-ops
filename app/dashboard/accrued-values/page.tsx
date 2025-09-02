@@ -112,6 +112,9 @@ export default function AccruedValuesPage() {
   , [monthFilter, yearFilter])
 
   const filteredValues = accruedValues.filter((value) => {
+    if (!value.user) {
+      return false;
+    }
     const matchesSearch =
       value.user.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesUser = userFilter === "all" || value.user.id === userFilter
@@ -215,9 +218,9 @@ export default function AccruedValuesPage() {
     }
   };
 
-  const uniqueUsersList = Array.from(new Set(accruedValues.map((v) => v.user.id)))
+  const uniqueUsersList = Array.from(new Set(accruedValues.map((v) => v.user?.id).filter(Boolean)))
     .map((id) => {
-      const user = accruedValues.find((v) => v.user.id === id)?.user
+      const user = accruedValues.find((v) => v.user?.id === id)?.user
       return user
     })
     .filter(Boolean)

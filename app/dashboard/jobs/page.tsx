@@ -20,6 +20,8 @@ import {
   AlertCircle,
   CheckSquare,
   RotateCcw,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { formatDate } from "@/lib/date-utils"
 import CreateJobDialog from "@/components/create-job-dialog"
@@ -73,6 +75,9 @@ export default function JobsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [selectedJobForSheet, setSelectedJobForSheet] = useState<Job | null>(null)
   const [showBottomSheet, setShowBottomSheet] = useState(false)
+  const [stats, setStats] = useState({ totalJobsValue: 0, completedJobsValue: 0 });
+  const [showTotalValue, setShowTotalValue] = useState(false);
+  const [showCompletedValue, setShowCompletedValue] = useState(false);
   const { toast } = useToast()
 
   const fetchJobs = async () => {
@@ -208,6 +213,12 @@ export default function JobsPage() {
       (typeFilter === "all" || job.jobType.name === typeFilter),
   )
 
+  const totalJobsValue = jobs.reduce((acc, job) => acc + job.jobValue, 0)
+
+  const isUserAssigned = selectedJobForSheet?.technicians?.some((t) => t.technicianId === currentUser?.id)
+  const technicianInfo = selectedJobForSheet?.technicians?.find((t) => t.technicianId === currentUser?.id)
+  const hasCompleted = !!technicianInfo?.completedAt
+
   return (
     <>
       {/* Header and Filters remain the same */}
@@ -231,6 +242,51 @@ export default function JobsPage() {
             </Dialog>
           )}
         </div>
+
+        {/* <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{jobs.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{jobs.filter((j) => j.status === "completed").length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">All-Time Job Value</CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setShowTotalValue(!showTotalValue)}>
+                {showTotalValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {showTotalValue ? `₦${Number(stats.totalJobsValue).toLocaleString()}` : "••••••••"}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed Job Value</CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setShowCompletedValue(!showCompletedValue)}>
+                {showCompletedValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {showCompletedValue ? `₦${Number(stats.completedJobsValue).toLocaleString()}` : "••••••••"}
+              </div>
+            </CardContent>
+          </Card>
+        </div> */}
 
         <Card>
           <CardHeader>
@@ -442,6 +498,8 @@ export default function JobsPage() {
                           { label: job.jobType.name, variant: "secondary" },
                         ]}
                         onClick={() => handleJobCardClick(job)}
+                        onMarkComplete={() => handleMarkComplete(job.id)}
+                        showMarkComplete={isUserAssigned && !hasCompleted && job.status !== "completed"}
                       >
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>₦{job.jobValue.toLocaleString()}</span>
@@ -486,6 +544,17 @@ export default function JobsPage() {
                   }}
                 >
                   Edit Job
+                </Button>
+              )}
+              {isUserAssigned && !hasCompleted && selectedJobForSheet.status !== "completed" && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    handleMarkComplete(selectedJobForSheet.id)
+                    setShowBottomSheet(false)
+                  }}
+                >
+                  Mark as Complete
                 </Button>
               )}
               <Button

@@ -107,18 +107,20 @@ export default function UsersPage() {
       </div>
 
       {selectedUser && (
-        <EditUserDialog
-          user={selectedUser}
-          roles={roles}
-          onUserUpdated={(updatedUser) => {
-            setSelectedUser(updatedUser)
-            setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
-            fetchUsers()
-            setShowEditDialog(false)
-          }}
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-        />
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <EditUserDialog
+              user={selectedUser}
+              roles={roles}
+              onUserUpdated={(updatedUser) => {
+                setSelectedUser(updatedUser)
+                setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
+                fetchUsers()
+                setShowEditDialog(false)
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Summary Cards */}

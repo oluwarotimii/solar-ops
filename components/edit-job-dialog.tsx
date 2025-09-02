@@ -222,7 +222,7 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
                     <Label>Technician *</Label>
                     <Select value={tech.technicianId} onValueChange={(value) => updateTechnician(tech.clientId, "technicianId", value)}>
                       <SelectTrigger><SelectValue placeholder="Select technician" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-50">
                         {getAvailableTechnicians(tech.technicianId).map(t => <SelectItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</SelectItem>)}
                       </SelectContent>
                     </Select>

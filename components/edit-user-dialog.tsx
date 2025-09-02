@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { User, Role } from "@/types";
 
 interface EditUserDialogProps {
@@ -22,7 +23,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     email: user.email,
     phone: user.phone || "",
     roleId: user.roleId,
-    status: user.status, // Add status to form data
+    status: user.status,
   });
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
       email: user.email,
       phone: user.phone || "",
       roleId: user.roleId,
-      status: user.status, // Update status on user change
+      status: user.status,
     });
     setNewPassword("");
   }, [user]);
@@ -52,7 +53,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     setLoading(true);
     try {
       const response = await fetch(`/api/users/${user.id}/reset-password`, {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -67,7 +68,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
       setNewPassword(data.newPassword);
       toast({
         title: "Password Reset",
-        description: `New password for ${user.firstName} ${user.lastName} generated.`, // Consider more secure delivery in production
+        description: `New password for ${user.firstName} ${user.lastName} generated.`,
       });
     } catch (error: any) {
       toast({
@@ -91,7 +92,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
         email: formData.email,
         phone: formData.phone || null,
         roleId: formData.roleId,
-        status: formData.status, // Include status in the payload
+        status: formData.status,
       };
 
       const response = await fetch(`/api/users/${user.id}`, {
@@ -123,11 +124,11 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     }
   };
 
-  const handleStatusChange = async (newStatus: 'active' | 'inactive') => {
+  const handleStatusChange = async (newStatus: 'active' | 'deactivated') => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: "PUT",
+      const response = await fetch(`/api/users/${user.id}/status`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
@@ -136,15 +137,14 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to ${newStatus} user.`);
+        throw new Error(errorData.error || `Failed to ${newStatus === 'active' ? 'activate' : 'deactivate'} user.`);
       }
 
       toast({
         title: "User Status Updated",
-        description: `User ${user.firstName} ${user.lastName} has been ${newStatus}.`,
+        description: `User ${user.firstName} ${user.lastName} has been ${newStatus === 'active' ? 'activated' : 'deactivated'}.`,
       });
-      setFormData((prev) => ({ ...prev, status: newStatus })); // Update local state immediately
-      // Pass the updated user object to the parent callback
+      setFormData((prev) => ({ ...prev, status: newStatus }));
       onUserUpdated({ ...user, status: newStatus });
     } catch (error: any) {
       toast({
@@ -161,109 +161,113 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     <form onSubmit={handleSubmit} className="space-y-4">
       <DialogTitle>Edit User</DialogTitle>
       <DialogDescription>Make changes to the user's profile here. Click save when you're done.</DialogDescription>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="firstName" className="text-right">First Name</Label>
-          <Input id="firstName" value={formData.firstName} onChange={handleChange} className="col-span-3" required />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="lastName" className="text-right">Last Name</Label>
-          <Input id="lastName" value={formData.lastName} onChange={handleChange} className="col-span-3" required />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="email" className="text-right">Email</Label>
-          <Input id="email" type="email" value={formData.email} onChange={handleChange} className="col-span-3" required />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="phone" className="text-right">Phone</Label>
-          <Input id="phone" value={formData.phone} onChange={handleChange} className="col-span-3" />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="roleId" className="text-right">Role</Label>
-          <Select value={formData.roleId} onValueChange={(value) => handleSelectChange(value, "roleId")}>
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="Select a role" />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id}>
-                  {role.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="newPassword" className="text-right">New Password</Label>
-          <div className="col-span-3 flex items-center space-x-2">
-            <Input
-              id="newPassword"
-              type="text"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="flex-grow"
-              placeholder="Click 'Reset' to generate a new password"
-              readOnly // Make it read-only as it will be populated by the reset function
-            />
-            <Button
-              type="button"
-              onClick={handleResetPassword}
-              disabled={loading}
-            >
-              {loading ? "Resetting..." : "Reset"}
-            </Button>
+      <ScrollArea className="h-[400px] w-full">
+        <div className="grid gap-4 py-4 px-2">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="firstName" className="text-left sm:text-right">First Name</Label>
+            <Input id="firstName" value={formData.firstName} onChange={handleChange} className="col-span-1 sm:col-span-3" required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="lastName" className="text-left sm:text-right">Last Name</Label>
+            <Input id="lastName" value={formData.lastName} onChange={handleChange} className="col-span-1 sm:col-span-3" required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="email" className="text-left sm:text-right">Email</Label>
+            <Input id="email" type="email" value={formData.email} onChange={handleChange} className="col-span-1 sm:col-span-3" required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="phone" className="text-left sm:text-right">Phone</Label>
+            <Input id="phone" value={formData.phone} onChange={handleChange} className="col-span-1 sm:col-span-3" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="roleId" className="text-left sm:text-right">Role</Label>
+            <Select value={String(formData.roleId)} onValueChange={(value) => handleSelectChange(value, "roleId")}>
+              <SelectTrigger className="col-span-1 sm:col-span-3">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={String(role.id)}>
+                    {role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="newPassword" className="text-left sm:text-right">New Password</Label>
+            <div className="col-span-1 sm:col-span-3 flex items-center space-x-2">
+              <Input
+                id="newPassword"
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="flex-grow"
+                placeholder="Click 'Reset' to generate a new password"
+                readOnly
+              />
+              <Button
+                type="button"
+                onClick={handleResetPassword}
+                disabled={loading}
+              >
+                {loading ? "Resetting..." : "Reset"}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </ScrollArea>
       <DialogFooter>
-        {user.status === 'active' ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" disabled={loading}>
-                Deactivate User
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action will deactivate the user &apos;{user.firstName} {user.lastName}&apos;. They will no longer be able to log in.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleStatusChange('deactivated')} disabled={loading} asChild>
-                  <DialogClose>{loading ? "Deactivating..." : "Deactivate"}</DialogClose>
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button type="button" variant="default" disabled={loading}>
-                Activate User
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to activate this user?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action will activate the user &apos;{user.firstName} {user.lastName}&apos;. They will be able to log in again.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleStatusChange('active')} disabled={loading} asChild>
-                  <DialogClose>{loading ? "Activating..." : "Activate"}</DialogClose>
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {user.status === 'active' ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" disabled={loading} className="w-full sm:w-auto">
+                  Deactivate User
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will deactivate the user '{user.firstName} {user.lastName}'. They will no longer be able to log in.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleStatusChange('deactivated')} disabled={loading}>
+                    {loading ? "Deactivating..." : "Deactivate"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="outline" disabled={loading} className="w-full sm:w-auto">
+                  Activate User
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure you want to activate this user?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will activate the user '{user.firstName} {user.lastName}'. They will be able to log in again.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleStatusChange('active')} disabled={loading}>
+                    {loading ? "Activating..." : "Activate"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            {loading ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   );

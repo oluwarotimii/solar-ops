@@ -1,41 +1,47 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getDbSql, sql } from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
-import crypto from "crypto";
+import { NextResponse } from 'next/server';
+import { getDbSql } from '@/lib/db';
+import bcrypt from 'bcrypt';
+import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// Function to generate a random password
+const generateRandomPassword = (length: number = 12) => {
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+};
+
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+  const { user, response } = await authenticateApiRequest(req);
+  if (response) {
+    return response;
+  }
+
+  if (!user || !hasPermission(user, 'users:update')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { id } = params;
+
   try {
-    const { id } = params;
+    const newPassword = generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Generate a random password (e.g., 12 characters long)
-    const newPassword = crypto.randomBytes(6).toString("hex"); // 6 bytes = 12 hex chars
-
-    const hashedPassword = await hashPassword(newPassword);
-
-    const db = getDbSql();
-    const result = await db`
-      UPDATE users
-      SET password_hash = ${hashedPassword}
-      WHERE id = ${id}
-      RETURNING id;
-    `;
+    const sql = getDbSql();
+    const result = await sql`
+      UPDATE users SET password_hash = ${hashedPassword} WHERE id = ${id} RETURNING id`;
 
     if (result.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      message: "Password reset successfully",
-      newPassword: newPassword, // IMPORTANT: In a real application, you would typically email this to the user or use a secure one-time link. Returning it directly is for admin convenience/testing.
-    });
+    return NextResponse.json({ newPassword });
   } catch (error) {
-    console.error("Error resetting password:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error('Error resetting password:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

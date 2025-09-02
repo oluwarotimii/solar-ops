@@ -1,10 +1,10 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getDbSql } from "@/lib/db";
+import { NextResponse } from 'next/server';
+import { getDbSql } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
 
-export async function GET(request: NextRequest) {
-  const { user, response } = await authenticateApiRequest(request);
+export async function GET(req: Request) {
+  const { user, response } = await authenticateApiRequest(req);
   if (response) {
     return response;
   }
@@ -16,65 +16,20 @@ export async function GET(request: NextRequest) {
   try {
     const sql = getDbSql();
 
-    // Get total jobs
-    const totalJobsResult = await sql`SELECT COUNT(*) as count FROM jobs`;
-    const totalJobs = Number(totalJobsResult[0].count);
+    const totalJobsValueResult = await sql`
+      SELECT SUM(job_value) as total_value FROM jobs`;
 
-    // Get active jobs
-    const activeJobsResult = await sql`
-      SELECT COUNT(*) as count FROM jobs 
-      WHERE status IN ('assigned', 'in_progress')
-    `;
-    const activeJobs = Number(activeJobsResult[0].count);
+    const completedJobsValueResult = await sql`
+      SELECT SUM(job_value) as total_value FROM jobs WHERE status = 'completed'`;
 
-    // Get completed jobs
-    const completedJobsResult = await sql`
-      SELECT COUNT(*) as count FROM jobs WHERE status = 'completed'
-    `;
-    const completedJobs = Number(completedJobsResult[0].count);
+    const stats = {
+      totalJobsValue: totalJobsValueResult[0].total_value || 0,
+      completedJobsValue: completedJobsValueResult[0].total_value || 0,
+    };
 
-    // Get active technicians (users with technician role who have active jobs)
-    const activeTechniciansResult = await sql`
-      SELECT COUNT(DISTINCT jt.technician_id) as count
-      FROM job_technicians jt
-      JOIN jobs j ON jt.job_id = j.id
-      JOIN users u ON jt.technician_id = u.id
-      JOIN roles r ON u.role_id = r.id
-      WHERE j.status IN ('assigned', 'in_progress')
-      AND r.name = 'Technician'
-    `;
-    const activeTechnicians = Number(activeTechniciansResult[0].count);
-
-    // Get pending maintenance tasks
-    const pendingMaintenanceResult = await sql`
-      SELECT COUNT(*) as count FROM maintenance_tasks 
-      WHERE status IN ('scheduled', 'overdue')
-    `;
-    const pendingMaintenance = Number(pendingMaintenanceResult[0].count);
-
-    // Get total revenue for current month
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
-
-    const revenueResult = await sql`
-      SELECT COALESCE(SUM(job_value), 0) as total
-      FROM jobs 
-      WHERE status = 'completed'
-      AND EXTRACT(MONTH FROM completed_at) = ${currentMonth}
-      AND EXTRACT(YEAR FROM completed_at) = ${currentYear}
-    `;
-    const totalRevenue = Number(revenueResult[0].total);
-
-    return NextResponse.json({
-      totalJobs,
-      activeJobs,
-      completedJobs,
-      activeTechnicians,
-      pendingMaintenance,
-      totalRevenue,
-    });
+    return NextResponse.json(stats);
   } catch (error) {
-    console.error("Dashboard stats error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Error fetching dashboard stats:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import type React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronRight, Edit, Trash2 } from "lucide-react"
+import { ChevronRight, Edit, Trash2, CheckSquare } from "lucide-react"
 
 interface MobileTableCardProps {
   title: string
@@ -14,9 +14,11 @@ interface MobileTableCardProps {
   badges?: Array<{ label: string; variant?: "default" | "secondary" | "destructive" | "outline" }>
   onEdit?: () => void
   onDelete?: () => void
+  onMarkComplete?: () => void
   onClick?: () => void
   children?: React.ReactNode
   showActions?: boolean
+  showMarkComplete?: boolean
 }
 
 function MobileTableCard({
@@ -27,9 +29,11 @@ function MobileTableCard({
   badges,
   onEdit,
   onDelete,
+  onMarkComplete,
   onClick,
   children,
   showActions = true,
+  showMarkComplete = false,
 }: MobileTableCardProps) {
   return (
     <Card className="mb-3 hover:shadow-md transition-all duration-200 active:scale-[0.98] bg-white border border-gray-200">
@@ -87,6 +91,21 @@ function MobileTableCard({
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+
+            {showMarkComplete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onMarkComplete?.()
+                }}
+                className="h-9 w-9 p-0 hover:bg-green-50 hover:text-green-600 transition-colors"
+                title="Mark as Complete"
+              >
+                <CheckSquare className="h-4 w-4" />
               </Button>
             )}
 
