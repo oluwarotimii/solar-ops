@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const value = toCamelCase(result[0]);
     const accruedValue = {
       id: value.id,
-      technician: {
+      user: {
         id: value.userId,
         name: `${value.technicianFirstName} ${value.technicianLastName}`,
         email: value.technicianEmail,

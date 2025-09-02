@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         const value = toCamelCase(row);
         return {
           id: value.id,
-          technician: {
+          user: {
             id: value.userId,
             name: `${value.technicianFirstName} ${value.technicianLastName}`,
             email: value.technicianEmail,
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       accruedValues = result.map((row: any) => {
         const value = toCamelCase(row);
         return {
-          technician: {
+          user: {
             id: value.userId,
             name: `${value.technicianFirstName} ${value.technicianLastName}`,
             email: value.technicianEmail,
