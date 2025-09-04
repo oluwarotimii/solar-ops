@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2, Briefcase } from "lucide-react"
 
 export default function DashboardPage() {
-  const { stats, activity, completionRate, loading, error, user } = useDashboardData()
+  const { stats, activity, completionRate, spilloverJobs, loading, error, user } = useDashboardData()
 
   if (loading) {
     return (
@@ -152,6 +152,31 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Activity & Quick Actions */}
+          {/* Spillover Jobs */}
+          {spilloverJobs && spilloverJobs.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-orange-500" />
+                  Spillover Jobs ({spilloverJobs.length})
+                </CardTitle>
+                <CardDescription>Jobs from last month not yet completed or cancelled.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {spilloverJobs.map((job: any) => (
+                  <div key={job.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                    <div>
+                      <p className="font-medium">{job.title}</p>
+                      <p className="text-sm text-muted-foreground">{job.jobTypeName} - {job.locationAddress}</p>
+                      <p className="text-xs text-muted-foreground">Scheduled: {new Date(job.scheduledDate).toLocaleDateString()}</p>
+                    </div>
+                    <Badge variant="outline" className="bg-orange-100 text-orange-800">{job.status.replace("_", " ")}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             {/* <Card>
               <CardHeader>

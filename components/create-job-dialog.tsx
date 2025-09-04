@@ -18,9 +18,9 @@ interface CreateJobDialogProps {
 }
 
 // Add a unique client-side ID for stable keying
-interface JobTechnician {
+interface JobUser {
   clientId: number;
-  technicianId: string;
+  userId: string;
   role: "lead" | "assistant" | "specialist";
 }
 
@@ -34,15 +34,15 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     scheduledDate: "",
     scheduledTime: "",
     estimatedDuration: "",
-    jobValue: 0,
+    jobValue: "",
     instructions: "",
   })
 
-  const [assignedTechnicians, setAssignedTechnicians] = useState<JobTechnician[]>([])
+  const [assignedUsers, setAssignedUsers] = useState<JobUser[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [jobTypes, setJobTypes] = useState<any[]>([])
-  const [technicians, setTechnicians] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
 
   useEffect(() => {
     const fetchJobTypes = async () => {
@@ -54,47 +54,47 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
       }
     };
 
-    const fetchTechnicians = async () => {
+    const fetchUsers = async () => {
       try {
-        const response = await fetch("/api/users/technicians");
-        if (response.ok) setTechnicians(await response.json());
+        const response = await fetch("/api/users/all");
+        if (response.ok) setUsers(await response.json());
       } catch (error) {
-        console.error("Error fetching technicians:", error);
+        console.error("Error fetching users:", error);
       }
     };
 
     fetchJobTypes();
-    fetchTechnicians();
+    fetchUsers();
   }, []);
 
-  const addTechnician = () => {
-    setAssignedTechnicians(prev => [
+  const addUser = () => {
+    setAssignedUsers(prev => [
       ...prev,
       {
         clientId: Date.now(), // Use a simple unique ID
-        technicianId: "",
+        userId: "",
         role: "assistant",
       },
     ])
   }
 
-  const updateTechnician = (clientId: number, field: keyof Omit<JobTechnician, 'clientId'>, value: any) => {
-    setAssignedTechnicians(prev => 
-      prev.map(tech => 
-        tech.clientId === clientId ? { ...tech, [field]: value } : tech
+  const updateUser = (clientId: number, field: keyof Omit<JobUser, 'clientId'>, value: any) => {
+    setAssignedUsers(prev => 
+      prev.map(user => 
+        user.clientId === clientId ? { ...user, [field]: value } : user
       )
     );
   }
 
-  const removeTechnician = (clientId: number) => {
-    setAssignedTechnicians(prev => prev.filter(tech => tech.clientId !== clientId));
+  const removeUser = (clientId: number) => {
+    setAssignedUsers(prev => prev.filter(user => user.clientId !== clientId));
   }
 
-  const getAvailableTechnicians = (currentClientId: number) => {
-    const selectedIds = assignedTechnicians
-      .map(tech => (tech.clientId !== currentClientId ? tech.technicianId : null))
+  const getAvailableUsers = (currentClientId: number) => {
+    const selectedIds = assignedUsers
+      .map(user => (user.clientId !== currentClientId ? user.userId : null))
       .filter(Boolean)
-    return technicians.filter(tech => !selectedIds.includes(tech.id))
+    return users.filter(user => !selectedIds.includes(user.id))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,14 +103,14 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
     setError("");
 
     // Validation
-    if (assignedTechnicians.some(t => !t.technicianId)) {
-      setError("Please select a technician for each role.");
+    if (assignedUsers.some(t => !t.userId)) {
+      setError("Please select a user for each role.");
       setLoading(false);
       return;
     }
-    const techIds = assignedTechnicians.map(t => t.technicianId);
-    if (new Set(techIds).size !== techIds.length) {
-      setError("Cannot assign the same technician multiple times.");
+    const userIds = assignedUsers.map(t => t.userId);
+    if (new Set(userIds).size !== userIds.length) {
+      setError("Cannot assign the same user multiple times.");
       setLoading(false);
       return;
     }
@@ -122,7 +122,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         body: JSON.stringify({
           ...formData,
           // Strip clientId before sending to backend
-          assignedTechnicians: assignedTechnicians.map(({ clientId, ...rest }) => rest),
+          assignedUsers: assignedUsers.map(({ clientId, ...rest }) => rest),
           estimatedDuration: Number.parseInt(formData.estimatedDuration) || 0,
         }),
       });
@@ -211,30 +211,30 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">Assign Technicians</CardTitle>
-              <Button type="button" variant="outline" onClick={addTechnician}><Plus className="mr-2 h-4 w-4" />Add</Button>
+              <CardTitle className="text-lg">Assign Users</CardTitle>
+              <Button type="button" variant="outline" onClick={addUser}><Plus className="mr-2 h-4 w-4" />Add</Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {assignedTechnicians.map((tech, index) => (
-              <div key={tech.clientId} className="border rounded-lg p-4 space-y-4">
+            {assignedUsers.map((user, index) => (
+              <div key={user.clientId} className="border rounded-lg p-4 space-y-4">
                 <div className="flex justify-between items-start">
-                  <h4 className="font-medium">Technician Slot {index + 1}</h4>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeTechnician(tech.clientId)}><Trash2 className="h-4 w-4" /></Button>
+                  <h4 className="font-medium">User Slot {index + 1}</h4>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeUser(user.clientId)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Technician *</Label>
-                    <Select value={tech.technicianId} onValueChange={(value) => updateTechnician(tech.clientId, "technicianId", value)}>
-                      <SelectTrigger><SelectValue placeholder="Select technician" /></SelectTrigger>
+                    <Label>User *</Label>
+                    <Select value={user.userId} onValueChange={(value) => updateUser(user.clientId, "userId", value)}>
+                      <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
                       <SelectContent>
-                        {getAvailableTechnicians(tech.clientId).map(t => <SelectItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</SelectItem>)}
+                        {getAvailableUsers(user.clientId).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Role</Label>
-                    <Select value={tech.role} onValueChange={(value) => updateTechnician(tech.clientId, "role", value)}>
+                    <Select value={user.role} onValueChange={(value) => updateUser(user.clientId, "role", value)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="lead">Lead</SelectItem>

@@ -15,11 +15,11 @@ import { Loader2 } from "lucide-react"
 import type { User } from "@/types"
 
 interface CreateMaintenanceDialogProps {
-  technicians: User[]
+  users: User[]
   onTaskCreated: () => void
 }
 
-export default function CreateMaintenanceDialog({ technicians, onTaskCreated }: CreateMaintenanceDialogProps) {
+export default function CreateMaintenanceDialog({ users, onTaskCreated }: CreateMaintenanceDialogProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -115,18 +115,18 @@ export default function CreateMaintenanceDialog({ technicians, onTaskCreated }: 
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="assignedTo">Assign Technician</Label>
+            <Label htmlFor="assignedTo">Assign User</Label>
             <Select
               value={formData.assignedTo}
               onValueChange={(value) => setFormData((prev) => ({ ...prev, assignedTo: value }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select technician" />
+                <SelectValue placeholder="Select user" />
               </SelectTrigger>
               <SelectContent>
-                {technicians.map((tech) => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.firstName} {tech.lastName}
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>

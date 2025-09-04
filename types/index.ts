@@ -26,14 +26,14 @@ export interface Role {
   createdAt: string
 }
 
-export interface JobTechnician {
+export interface JobUser {
   id: string
   jobId: string
-  technicianId: string
+  userId: string
   role: "lead" | "assistant" | "specialist"
   rating?: number
   feedback?: string
-  technician?: User
+  user?: User
   createdAt: string
 }
 
@@ -57,7 +57,7 @@ export interface Job {
   completedAt?: string
   jobType?: JobType
   createdUser?: User
-  technicians?: JobTechnician[]
+  users?: JobUser[]
   createdAt: string
   updatedAt: string
 }

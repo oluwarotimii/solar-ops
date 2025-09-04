@@ -32,7 +32,7 @@ const priorityColors = {
 
 export default function MaintenancePage() {
   const [tasks, setTasks] = useState<MaintenanceTask[]>([])
-  const [technicians, setTechnicians] = useState<UserType[]>([])
+  const [users, setUsers] = useState<UserType[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -45,7 +45,7 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     fetchTasks()
-    fetchTechnicians()
+    fetchUsers()
   }, [])
 
   const fetchTasks = async () => {
@@ -78,9 +78,9 @@ export default function MaintenancePage() {
     }
   }
 
-  const fetchTechnicians = async () => {
+  const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users/technicians", {
+      const response = await fetch("/api/users/all", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -88,10 +88,10 @@ export default function MaintenancePage() {
 
       if (response.ok) {
         const data = await response.json()
-        setTechnicians(data)
+        setUsers(data)
       }
     } catch (error) {
-      console.error("Failed to fetch technicians:", error)
+      console.error("Failed to fetch users:", error)
     }
   }
 
@@ -150,7 +150,7 @@ export default function MaintenancePage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <CreateMaintenanceDialog technicians={technicians} onTaskCreated={handleTaskCreated} />
+            <CreateMaintenanceDialog users={users} onTaskCreated={handleTaskCreated} />
           </DialogContent>
         </Dialog>
       </div>

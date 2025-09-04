@@ -32,8 +32,8 @@ import { MobileTableCard } from "@/components/mobile-table-card"
 import { BottomSheet } from "@/components/bottom-sheet"
 
 // ... (interfaces and color constants remain the same)
-interface Technician {
-  technicianId: string
+interface UserJobAssignment {
+  userId: string
   role: "lead" | "assistant" | "specialist"
   firstName: string
   lastName: string
@@ -50,8 +50,8 @@ interface Job {
   locationAddress: string
   scheduledDate?: string | Date | null
   jobValue: number
-  // estimatedDuration: number
-  technicians?: Technician[]
+  estimatedDuration?: number
+  users?: UserJobAssignment[]
 }
 
 interface JobType {
@@ -345,7 +345,7 @@ export default function JobsPage() {
                   <TableHeader className="hidden md:table-header-group">
                     <TableRow>
                       <TableHead>Job</TableHead>
-                      <TableHead>Technicians</TableHead>
+                      <TableHead>Users</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Priority</TableHead>
                       <TableHead>Scheduled</TableHead>
@@ -375,9 +375,9 @@ export default function JobsPage() {
                     ) : (
                       filteredJobs.map((job) => {
                         const isUserAdmin = currentUser?.role?.isAdmin
-                        const isUserAssigned = job.technicians?.some((t) => t.technicianId === currentUser?.id)
-                        const technicianInfo = job.technicians?.find((t) => t.technicianId === currentUser?.id)
-                        const hasCompleted = !!technicianInfo?.completedAt
+                        const isUserAssigned = job.users?.some((u) => u.userId === currentUser?.id)
+                        const userInfo = job.users?.find((u) => u.userId === currentUser?.id)
+                        const hasCompleted = !!userInfo?.completedAt
 
                         return (
                           <tr
@@ -395,21 +395,20 @@ export default function JobsPage() {
                                 {job.locationAddress}
                               </div>
                             </td>
-                            <td className="md:table-cell py-2" data-label="Technicians">
-                              {job.technicians?.map((tech) => (
-                                <div key={tech.technicianId} className="flex items-center gap-2 text-sm">
+                            <td className="md:table-cell py-2" data-label="Users">
+                              {job.users?.map((user) => (
+                                <div key={user.userId} className="flex items-center gap-2 text-sm">
                                   <User className="h-4 w-4" />
                                   <span>
-                                    {tech.firstName} {tech.lastName}
+                                    {user.firstName} {user.lastName}
                                   </span>
-                                  {tech.completedAt && (
+                                  {user.completedAt && (
                                     <Badge variant="outline" className="bg-green-100 text-green-800">
                                       Done
                                     </Badge>
                                   )}
                                 </div>
-                              ))}
-                            </td>
+                              ))}</td>
                             <td className="md:table-cell py-2" data-label="Status">
                               <Badge>{job.status}</Badge>
                             </td>
@@ -482,9 +481,9 @@ export default function JobsPage() {
                 ) : (
                   filteredJobs.map((job) => {
                     const isUserAdmin = currentUser?.role?.isAdmin
-                    const isUserAssigned = job.technicians?.some((t) => t.technicianId === currentUser?.id)
-                    const technicianInfo = job.technicians?.find((t) => t.technicianId === currentUser?.id)
-                    const hasCompleted = !!technicianInfo?.completedAt
+                    const isUserAssigned = job.users?.some((u) => u.userId === currentUser?.id)
+                    const userInfo = job.users?.find((u) => u.userId === currentUser?.id)
+                    const hasCompleted = !!userInfo?.completedAt
 
                     return (
                       <MobileTableCard
@@ -510,10 +509,10 @@ export default function JobsPage() {
                             </>
                           )}
                         </div>
-                        {job.technicians && job.technicians.length > 0 && (
+                        {job.users && job.users.length > 0 && (
                           <div className="mt-2 text-xs">
                             <span className="text-muted-foreground">Assigned: </span>
-                            <span>{job.technicians.map((t) => `${t.firstName} ${t.lastName}`).join(", ")}</span>
+                            <span>{job.users.map((u) => `${u.firstName} ${u.lastName}`).join(", ")}</span>
                           </div>
                         )}
                       </MobileTableCard>
@@ -609,19 +608,19 @@ export default function JobsPage() {
               </div>
             )}
 
-            {selectedJobForSheet.technicians && selectedJobForSheet.technicians.length > 0 && (
+            {selectedJobForSheet.users && selectedJobForSheet.users.length > 0 && (
               <div>
-                <h3 className="font-medium text-sm text-muted-foreground">Assigned Technicians</h3>
+                <h3 className="font-medium text-sm text-muted-foreground">Assigned Users</h3>
                 <div className="mt-2 space-y-2">
-                  {selectedJobForSheet.technicians.map((tech) => (
-                    <div key={tech.technicianId} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                  {selectedJobForSheet.users.map((user) => (
+                    <div key={user.userId} className="flex items-center justify-between p-2 bg-muted rounded-lg">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         <span className="text-sm">
-                          {tech.firstName} {tech.lastName}
+                          {user.firstName} {user.lastName}
                         </span>
                       </div>
-                      {tech.completedAt && (
+                      {user.completedAt && (
                         <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
                           Completed
                         </Badge>
