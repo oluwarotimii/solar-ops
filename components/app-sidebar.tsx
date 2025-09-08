@@ -147,10 +147,9 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
   const displayName = userName.charAt(0).toUpperCase() + userName.slice(1) || "User"
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("userEmail")
-    router.push("/login")
-  }
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
 
   const getInitials = (name: string) => {
     return name

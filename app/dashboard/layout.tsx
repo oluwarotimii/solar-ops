@@ -1,34 +1,47 @@
-import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { verifyToken, getUserById } from "@/lib/auth";
-import DashboardClientLayout from "./client-layout";
+"use client";
 
-export default async function DashboardLayout({
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import DashboardClientLayout from './client-layout';
+import { Loader2 } from 'lucide-react';
+
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const token = cookieStore.get('token')?.value;
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  if (!token) {
-    redirect('/login');
-  }
-
-  let user = null;
-  try {
-    const decodedToken = verifyToken(token);
-    if (decodedToken) {
-      user = await getUserById(decodedToken.userId);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+        localStorage.removeItem('user'); // Clear corrupted data
+        router.push('/login');
+      }
+    } else {
+      router.push('/login');
     }
-  } catch (error) {
-    console.error("Server-side token verification failed:", error);
-    redirect('/login');
+    setLoading(false);
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   if (!user) {
-    redirect('/login');
+    // This will be briefly visible before the redirect in useEffect completes.
+    // The loading state should mostly prevent this from being seen.
+    return null;
   }
 
   return (

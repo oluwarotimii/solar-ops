@@ -9,48 +9,67 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  if (!user || !hasPermission(user, 'dashboard:read')) { // Assuming a general dashboard read permission
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const sql = getDbSql();
 
-    // Calculate the start and end dates for the previous month
+    // A spillover job is defined as a job created before the current month that is still not in a final state.
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const firstDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    let previousMonth = currentMonth - 1;
-    let previousMonthYear = currentYear;
+    let spilloverJobs;
 
-    if (previousMonth < 0) {
-      previousMonth = 11; // December
-      previousMonthYear--;
+    // Admins and supervisors with global read permission see all spillover jobs.
+    if (hasPermission(user, 'jobs:read:all')) {
+      spilloverJobs = await sql`
+        SELECT
+          j.id,
+          j.title,
+          j.status,
+          j.scheduled_date,
+          j.location_address,
+          jt.name as job_type_name,
+          jt.color as job_type_color
+        FROM jobs j
+        LEFT JOIN job_types jt ON j.job_type_id = jt.id
+        WHERE
+          j.created_at < ${firstDayOfCurrentMonth.toISOString().split('T')[0]} AND
+          j.status NOT IN ('completed', 'cancelled')
+        ORDER BY j.scheduled_date ASC;
+      `;
+    } else {
+      // Technicians only see spillover jobs assigned to them.
+      spilloverJobs = await sql`
+        SELECT
+          j.id,
+          j.title,
+          j.status,
+          j.scheduled_date,
+          j.location_address,
+          jt.name as job_type_name,
+          jt.color as job_type_color
+        FROM jobs j
+        INNER JOIN job_technicians jtech ON j.id = jtech.job_id
+        LEFT JOIN job_types jt ON j.job_type_id = jt.id
+        WHERE
+          jtech.technician_id = ${user.id} AND
+          j.created_at < ${firstDayOfCurrentMonth.toISOString().split('T')[0]} AND
+          j.status NOT IN ('completed', 'cancelled')
+        ORDER BY j.scheduled_date ASC;
+      `;
     }
 
-    const startDateOfPreviousMonth = new Date(previousMonthYear, previousMonth, 1);
-    const endDateOfPreviousMonth = new Date(previousMonthYear, previousMonth + 1, 0); // Last day of previous month
+    // Correctly format the date to avoid timezone issues
+    const jobsWithCorrectDates = spilloverJobs.map(job => ({
+      ...job,
+      scheduledDate: job.scheduled_date instanceof Date ? new Date(job.scheduled_date.getTime() - (job.scheduled_date.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : null,
+    }));
 
-    const spilloverJobs = await sql`
-      SELECT
-        j.id,
-        j.title,
-        j.status,
-        j.scheduled_date,
-        j.location_address,
-        jt.name as job_type_name,
-        jt.color as job_type_color
-      FROM jobs j
-      LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      WHERE
-        j.scheduled_date >= ${startDateOfPreviousMonth.toISOString().split('T')[0]} AND
-        j.scheduled_date <= ${endDateOfPreviousMonth.toISOString().split('T')[0]} AND
-        j.status NOT IN ('completed', 'cancelled')
-      ORDER BY j.scheduled_date ASC;
-    `;
+    return NextResponse.json(jobsWithCorrectDates.map(toCamelCase));
 
-    return NextResponse.json(spilloverJobs.map(toCamelCase));
   } catch (error) {
     console.error("Spillover jobs fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
