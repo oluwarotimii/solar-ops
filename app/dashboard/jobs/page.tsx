@@ -345,7 +345,6 @@ export default function JobsPage() {
                   <TableHeader className="hidden md:table-header-group">
                     <TableRow>
                       <TableHead>Job</TableHead>
-                      <TableHead>Users</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Priority</TableHead>
                       <TableHead>Scheduled</TableHead>
@@ -355,20 +354,20 @@ export default function JobsPage() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={5} className="text-center py-8">
                           <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
                     ) : error ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-red-500">
+                        <TableCell colSpan={5} className="text-center py-8 text-red-500">
                           <AlertCircle className="h-6 w-6 mx-auto" />
                           <p className="mt-2">Error: {error}</p>
                         </TableCell>
                       </TableRow>
                     ) : filteredJobs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={5} className="text-center py-8">
                           No jobs found.
                         </TableCell>
                       </TableRow>
@@ -395,20 +394,6 @@ export default function JobsPage() {
                                 {job.locationAddress}
                               </div>
                             </td>
-                            <td className="md:table-cell py-2" data-label="Users">
-                              {job.users?.map((user) => (
-                                <div key={user.userId} className="flex items-center gap-2 text-sm">
-                                  <User className="h-4 w-4" />
-                                  <span>
-                                    {user.firstName} {user.lastName}
-                                  </span>
-                                  {user.completedAt && (
-                                    <Badge variant="outline" className="bg-green-100 text-green-800">
-                                      Done
-                                    </Badge>
-                                  )}
-                                </div>
-                              ))}</td>
                             <td className="md:table-cell py-2" data-label="Status">
                               <Badge>{job.status}</Badge>
                             </td>

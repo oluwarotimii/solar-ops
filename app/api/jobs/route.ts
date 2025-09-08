@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     }))
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
-      scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+      scheduledDate: job.scheduledDate instanceof Date ? new Date(job.scheduledDate.getTime() - (job.scheduledDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : null,
       scheduledTime: job.scheduledTime || null,
     }));
     return NextResponse.json(jobsWithDate)
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
     }))
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
-      scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+      scheduledDate: job.scheduledDate instanceof Date ? new Date(job.scheduledDate.getTime() - (job.scheduledDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : null,
       scheduledTime: job.scheduledTime || null,
     }));
     return NextResponse.json(jobsWithDate)
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
     }))
     const jobsWithDate = jobs.map((job: any) => ({
       ...job,
-      scheduledDate: job.scheduledDate instanceof Date ? job.scheduledDate.toISOString().split('T')[0] : null,
+      scheduledDate: job.scheduledDate instanceof Date ? new Date(job.scheduledDate.getTime() - (job.scheduledDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : null,
       scheduledTime: job.scheduledTime || null,
     }));
     return NextResponse.json(jobsWithDate)
@@ -283,18 +283,18 @@ export async function POST(request: NextRequest) {
     const jobId = result[0].id;
 
     // Insert into job_technicians table for each assigned technician
-    if (jobData.assignedTechnicians && jobData.assignedTechnicians.length > 0) {
-      for (const assignedTech of jobData.assignedTechnicians) {
+    if (jobData.assignedUsers && jobData.assignedUsers.length > 0) {
+      for (const assignedTech of jobData.assignedUsers) {
         await sql`
           INSERT INTO job_technicians (job_id, technician_id, role)
-          VALUES (${jobId}, ${assignedTech.technicianId}, ${assignedTech.role})
+          VALUES (${jobId}, ${assignedTech.userId}, ${assignedTech.role})
         `;
 
         // Send notification to assigned technician
         await sql`
           INSERT INTO notifications (recipient_id, sender_id, title, message, type, related_job_id)
           VALUES (
-            ${assignedTech.technicianId},
+            ${assignedTech.userId},
             ${user.id},
             'New Job Assignment',
             ${`You have been assigned a new job: ${jobData.title}`},
@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
 
         // Send push notification
         const subscriptionsResult = await sql`
-          SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = ${assignedTech.technicianId}
+          SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = ${assignedTech.userId}
         `;
 
         const payload = { title: 'New Job Assignment', body: `You have been assigned a new job: ${jobData.title}` };
@@ -330,7 +330,7 @@ export async function POST(request: NextRequest) {
       targetId: jobId,
       details: {
         title: jobData.title,
-        assignedTechnicians: jobData.assignedTechnicians?.map((t: any) => t.technicianId),
+        assignedTechnicians: jobData.assignedUsers?.map((t: any) => t.userId),
       },
       request,
     });

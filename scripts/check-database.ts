@@ -22,14 +22,15 @@ async function checkDatabase() {
       ORDER BY table_name
     `
 
-    console.log(`\n📋 Found ${tables.length} tables:`)
+    console.log("\n📋 Found ${tables.length} tables:") 
     tables.forEach((table: any) => {
       console.log(`  - ${table.table_name}`)
     })
 
     // Check if we have any roles
     const roleCount = await sql`SELECT COUNT(*) as count FROM roles`
-    console.log(`\n👥 Roles in database: ${roleCount[0].count}`)
+    console.log(`
+👥 Roles in database: ${roleCount[0].count}`)
 
     // Check if we have any users
     const userCount = await sql`SELECT COUNT(*) as count FROM users`

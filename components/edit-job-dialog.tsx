@@ -32,7 +32,7 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
     jobTypeId: job.jobType?.id || "",
     priority: job.priority || "medium",
     locationAddress: job.locationAddress || "",
-    scheduledDate: job.scheduledDate ? new Date(job.scheduledDate).toISOString().split('T')[0] : "",
+    scheduledDate: job.scheduledDate ? String(job.scheduledDate).split('T')[0] : "",
     scheduledTime: job.scheduledTime ? String(job.scheduledTime) : "",
     estimatedDuration: job.estimatedDuration || "",
     jobValue: job.jobValue || "",
@@ -40,7 +40,11 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
   });
 
   const [assignedUsers, setAssignedUsers] = useState<JobUser[]>(
-    job.technicians?.map((t: any) => ({ ...t, clientId: Math.random() })) || []
+    job.technicians?.map((t: any) => ({ 
+      clientId: Math.random(), 
+      userId: t.technicianId, // Map technicianId to userId
+      role: t.role 
+    })) || []
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -198,7 +202,7 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
                 <Input id="scheduledTime" type="time" value={formData.scheduledTime} onChange={(e) => setFormData(prev => ({ ...prev, scheduledTime: e.target.value }))} />
               </div>
             </div>
-             {/* <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="estimatedDuration">Duration (minutes)</Label>
               <Input id="estimatedDuration" type="number" value={formData.estimatedDuration} onChange={(e) => setFormData(prev => ({ ...prev, estimatedDuration: e.target.value }))} />
             </div> */}
@@ -234,7 +238,7 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
                     <Select value={user.userId} onValueChange={(value) => updateUser(user.clientId, "userId", value)}>
                       <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
                       <SelectContent className="z-50">
-                        {getAvailableUsers(user.clientId).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                        {getAvailableUsers(user.userId).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
