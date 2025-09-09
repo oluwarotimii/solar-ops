@@ -109,6 +109,19 @@ export default function JobsPage() {
     }
   }
 
+  const fetchStats = async () => {
+    try {
+      const response = await fetch("/api/dashboard/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch stats.");
+      }
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
@@ -116,14 +129,17 @@ export default function JobsPage() {
     }
     fetchJobs()
     fetchJobTypes()
+    fetchStats()
   }, [])
 
   const handleJobCreated = () => {
     fetchJobs()
+    fetchStats()
     setShowCreateDialog(false)
   }
   const handleJobUpdated = () => {
     fetchJobs()
+    fetchStats()
     setShowEditDialog(false)
     setSelectedJob(null)
   }
@@ -135,6 +151,7 @@ export default function JobsPage() {
       if (!response.ok) throw new Error((await response.json()).error || "Failed to delete job.")
       toast({ title: "Success", description: "Job deleted successfully." })
       fetchJobs()
+      fetchStats()
     } catch (err: any) {
       setError(err.message)
     }
@@ -146,6 +163,7 @@ export default function JobsPage() {
       if (!response.ok) throw new Error((await response.json()).error || "Failed to mark as complete.")
       toast({ title: "Success", description: "Your work has been marked as complete." })
       fetchJobs()
+      fetchStats()
     } catch (err: any) {
       setError(err.message)
     }
@@ -165,6 +183,7 @@ export default function JobsPage() {
       if (!response.ok) throw new Error((await response.json()).error || "Failed to re-open job.")
       toast({ title: "Success", description: "Job has been re-opened." })
       fetchJobs()
+      fetchStats()
     } catch (err: any) {
       setError(err.message)
     }
@@ -374,8 +393,8 @@ export default function JobsPage() {
                     ) : (
                       filteredJobs.map((job) => {
                         const isUserAdmin = currentUser?.role?.isAdmin
-                        const isUserAssigned = job.users?.some((u) => u.userId === currentUser?.id)
-                        const userInfo = job.users?.find((u) => u.userId === currentUser?.id)
+                        const isUserAssigned = job.technicians?.some((u) => u.technicianId === currentUser?.id)
+                        const userInfo = job.technicians?.find((u) => u.technicianId === currentUser?.id)
                         const hasCompleted = !!userInfo?.completedAt
 
                         return (
