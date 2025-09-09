@@ -51,6 +51,16 @@ export default function DashboardPage() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Spillover Revenue</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">₦{(stats?.spilloverRevenue || 0).toLocaleString()}</div>
+          <p className="text-xs text-muted-foreground">From previous months</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
           <Briefcase className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -63,12 +73,12 @@ export default function DashboardPage() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Technicians</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Users</CardTitle>
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats?.activeTechnicians}</div>
-          <p className="text-xs text-muted-foreground">Currently in field</p>
+          <div className="text-2xl font-bold">{stats?.totalUsers}</div>
+          <p className="text-xs text-muted-foreground">Registered on platform</p>
         </CardContent>
       </Card>
       <Card>

@@ -23,8 +23,6 @@ export async function GET(req: Request) {
     const currentMonth = currentUtcDate.getUTCMonth() + 1; // getUTCMonth() is 0-indexed
     const currentYear = currentUtcDate.getUTCFullYear();
 
-    console.log(`[Stats API] Current UTC Month: ${currentMonth}, Year: ${currentYear}`);
-
     const completedJobsValueResult = await sql`
       SELECT SUM(job_value) as total_value 
       FROM jobs 
@@ -32,11 +30,28 @@ export async function GET(req: Request) {
       AND EXTRACT(MONTH FROM completed_at) = ${currentMonth} 
       AND EXTRACT(YEAR FROM completed_at) = ${currentYear}`;
 
-    console.log('[Stats API] completedJobsValueResult:', completedJobsValueResult);
+    const spilloverRevenueResult = await sql`
+      SELECT SUM(job_value) as spillover_value
+      FROM jobs
+      WHERE status = 'completed'
+      AND EXTRACT(MONTH FROM completed_at) = ${currentMonth}
+      AND EXTRACT(YEAR FROM completed_at) = ${currentYear}
+      AND (EXTRACT(MONTH FROM scheduled_date) < ${currentMonth} OR EXTRACT(YEAR FROM scheduled_date) < ${currentYear});
+    `;
+
+    const totalJobsResult = await sql`SELECT COUNT(*) as count FROM jobs`;
+    const activeJobsResult = await sql`SELECT COUNT(*) as count FROM jobs WHERE status = 'assigned' OR status = 'in_progress'`;
+    const completedJobsResult = await sql`SELECT COUNT(*) as count FROM jobs WHERE status = 'completed'`;
+    const totalUsersResult = await sql`SELECT COUNT(*) as count FROM users`;
 
     const stats = {
       totalJobsValue: totalJobsValueResult[0].total_value || 0,
       totalRevenue: completedJobsValueResult[0].total_value || 0,
+      spilloverRevenue: spilloverRevenueResult[0].spillover_value || 0,
+      totalJobs: totalJobsResult[0].count || 0,
+      activeJobs: activeJobsResult[0].count || 0,
+      completedJobs: completedJobsResult[0].count || 0,
+      totalUsers: totalUsersResult[0].count || 0,
     };
 
     return NextResponse.json(stats);
