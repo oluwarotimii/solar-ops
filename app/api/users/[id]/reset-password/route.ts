@@ -1,47 +1,30 @@
 import { NextResponse } from 'next/server';
-import { getDbSql } from '@/lib/db';
-import bcrypt from 'bcrypt';
-import { authenticateApiRequest } from "@/lib/api-auth";
-import { hasPermission } from "@/lib/auth";
-
-// Function to generate a random password
-const generateRandomPassword = (length: number = 12) => {
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    password += charset[randomIndex];
-  }
-  return password;
-};
+import { sql } from '@/lib/db';
+import { hash } from 'bcrypt';
+import { generate } from 'generate-password';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { user, response } = await authenticateApiRequest(req);
-  if (response) {
-    return response;
-  }
-
-  if (!user || !hasPermission(user, 'users:update')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const { id } = params;
-
   try {
-    const newPassword = generateRandomPassword();
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const userId = params.id;
 
-    const sql = getDbSql();
-    const result = await sql`
-      UPDATE users SET password_hash = ${hashedPassword} WHERE id = ${id} RETURNING id`;
+    // Generate a new random password
+    const newPassword = generate({
+      length: 12,
+      numbers: true,
+      symbols: true,
+      uppercase: true,
+      lowercase: true,
+    });
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    // Hash the new password
+    const hashedPassword = await hash(newPassword, 10);
+
+    // Update the user's password in the database
+    await sql.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, userId]);
 
     return NextResponse.json({ newPassword });
   } catch (error) {
     console.error('Error resetting password:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

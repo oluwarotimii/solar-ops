@@ -81,6 +81,14 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     }
   };
 
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(newPassword);
+    toast({
+      title: "Password Copied",
+      description: "The new password has been copied to your clipboard.",
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -182,7 +190,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
           <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
             <Label htmlFor="roleId" className="text-left sm:text-right">Role</Label>
             <Select value={String(formData.roleId)} onValueChange={(value) => handleSelectChange(value, "roleId")}>
-              <SelectTrigger className="col-span-1 sm:col-span-3">
+              <SelectTrigger className="col-.span-1 sm:col-span-3">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
@@ -198,14 +206,21 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
             <Label htmlFor="newPassword" className="text-left sm:text-right">New Password</Label>
             <div className="col-span-1 sm:col-span-3 flex items-center space-x-2">
               <Input
+                key={newPassword}
                 id="newPassword"
                 type="text"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="flex-grow"
+                className={`flex-grow ${newPassword ? 'text-green-600' : ''}`}
                 placeholder="Click 'Reset' to generate a new password"
-                readOnly
               />
+              {newPassword && (
+                <Button
+                  type="button"
+                  onClick={handleCopyPassword}
+                >
+                  Copy
+                </Button>
+              )}
               <Button
                 type="button"
                 onClick={handleResetPassword}
