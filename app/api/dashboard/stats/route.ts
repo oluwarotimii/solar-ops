@@ -43,6 +43,7 @@ export async function GET(req: Request) {
     const activeJobsResult = await sql`SELECT COUNT(*) as count FROM jobs WHERE status = 'assigned' OR status = 'in_progress'`;
     const completedJobsResult = await sql`SELECT COUNT(*) as count FROM jobs WHERE status = 'completed'`;
     const totalUsersResult = await sql`SELECT COUNT(*) as count FROM users`;
+    const pendingMaintenanceResult = await sql`SELECT COUNT(*) as count FROM maintenance_tasks WHERE status != 'completed' AND status != 'cancelled'`;
 
     const stats = {
       totalJobsValue: totalJobsValueResult[0].total_value || 0,
@@ -52,6 +53,7 @@ export async function GET(req: Request) {
       activeJobs: activeJobsResult[0].count || 0,
       completedJobs: completedJobsResult[0].count || 0,
       totalUsers: totalUsersResult[0].count || 0,
+      pendingMaintenance: pendingMaintenanceResult[0].count || 0,
     };
 
     return NextResponse.json(stats);
