@@ -9,14 +9,14 @@ export async function GET(request: NextRequest) {
     return response
   }
 
-  if (!user || !hasPermission(user, 'maintenance:read')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!user) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
     const sql = getDbSql();
+    const isManager = hasPermission(user, 'maintenance:read');
 
-    // TODO: Add filtering options (e.g., by status, date range)
     const result = await sql`
       SELECT 
         mo.*,
@@ -27,8 +27,9 @@ export async function GET(request: NextRequest) {
       FROM maintenance_occurrences mo
       JOIN maintenance_templates mt ON mo.template_id = mt.id
       LEFT JOIN users au ON mo.assigned_to = au.id
+      ${isManager ? sql`` : sql`WHERE mo.assigned_to = ${user.id}`}
       ORDER BY mo.scheduled_date ASC
-    `
+    `;
 
     const occurrences = result.map((row: any) => {
       const occurrence = toCamelCase(row)
