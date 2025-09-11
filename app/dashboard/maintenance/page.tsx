@@ -6,22 +6,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
-import { Plus, Search, MapPin, CalendarIcon, User, Clock, RefreshCw, AlertTriangle } from "lucide-react"
-import type { MaintenanceTask, User as UserType } from "@/types"
+import { Plus, Search, MapPin, CalendarIcon, User, Clock, RefreshCw, AlertTriangle, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import type { MaintenanceTemplate, MaintenanceOccurrence, User as UserType } from "@/types"
 import { formatDate } from "@/lib/date-utils"
 import CreateMaintenanceDialog from "@/components/create-maintenance-dialog"
+import EditMaintenanceTemplateDialog from "@/components/edit-maintenance-template-dialog"
 import MobileTableCard from "@/components/mobile-table-card"
 import BottomSheet from "@/components/bottom-sheet"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const statusColors = {
   scheduled: "bg-blue-100 text-blue-800",
   in_progress: "bg-yellow-100 text-yellow-800",
   completed: "bg-green-100 text-green-800",
-  overdue: "bg-red-100 text-red-800",
+  missed: "bg-red-100 text-red-800",
 }
 
 const priorityColors = {
@@ -31,48 +34,58 @@ const priorityColors = {
 }
 
 export default function MaintenancePage() {
-  const [tasks, setTasks] = useState<MaintenanceTask[]>([])
+  const [templates, setTemplates] = useState<MaintenanceTemplate[]>([])
+  const [occurrences, setOccurrences] = useState<MaintenanceOccurrence[]>([])
   const [users, setUsers] = useState<UserType[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<MaintenanceTemplate | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [deletingTemplate, setDeletingTemplate] = useState<MaintenanceTemplate | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [calendarTasks, setCalendarTasks] = useState<Record<string, MaintenanceTask[]>>({})
-  const [selectedTaskForSheet, setSelectedTaskForSheet] = useState<MaintenanceTask | null>(null)
+  const [calendarOccurrences, setCalendarOccurrences] = useState<Record<string, MaintenanceOccurrence[]>>({})
+  const [selectedOccurrence, setSelectedOccurrence] = useState<MaintenanceOccurrence | null>(null)
   const [showBottomSheet, setShowBottomSheet] = useState(false)
 
   useEffect(() => {
-    fetchTasks()
+    fetchData()
     fetchUsers()
   }, [])
 
-  const fetchTasks = async () => {
+  const fetchData = async () => {
+    setLoading(true)
     try {
-      const response = await fetch("/api/maintenance", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
+      const [templatesRes, occurrencesRes] = await Promise.all([
+        fetch("/api/maintenance/templates", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
+        fetch("/api/maintenance/occurrences", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+      ]);
 
-      if (response.ok) {
-        const data = await response.json()
-        setTasks(data)
-
-        // Group tasks by date for calendar view
-        const tasksByDate: Record<string, MaintenanceTask[]> = {}
-        data.forEach((task: MaintenanceTask) => {
-          const dateKey = task.scheduledDate.split("T")[0]
-          if (!tasksByDate[dateKey]) {
-            tasksByDate[dateKey] = []
-          }
-          tasksByDate[dateKey].push(task)
-        })
-        setCalendarTasks(tasksByDate)
+      if (templatesRes.ok) {
+        const data = await templatesRes.json();
+        setTemplates(data);
       }
+
+      if (occurrencesRes.ok) {
+        const data = await occurrencesRes.json();
+        setOccurrences(data);
+
+        const occurrencesByDate: Record<string, MaintenanceOccurrence[]> = {}
+        data.forEach((occ: MaintenanceOccurrence) => {
+          const dateKey = occ.scheduledDate.split("T")[0]
+          if (!occurrencesByDate[dateKey]) {
+            occurrencesByDate[dateKey] = []
+          }
+          occurrencesByDate[dateKey].push(occ)
+        })
+        setCalendarOccurrences(occurrencesByDate)
+      }
+
     } catch (error) {
-      console.error("Failed to fetch maintenance tasks:", error)
+      console.error("Failed to fetch maintenance data:", error)
     } finally {
       setLoading(false)
     }
@@ -95,44 +108,101 @@ export default function MaintenancePage() {
     }
   }
 
-  const handleTaskCreated = () => {
-    fetchTasks()
+  const handleTemplateCreated = () => {
+    fetchData()
     setShowCreateDialog(false)
   }
 
-  const handleTaskCardClick = (task: MaintenanceTask) => {
-    setSelectedTaskForSheet(task)
+  const handleEditTemplate = (template: MaintenanceTemplate) => {
+    setEditingTemplate(template);
+    setShowEditDialog(true);
+  };
+
+  const handleTemplateUpdated = () => {
+    setShowEditDialog(false);
+    fetchData();
+  };
+
+  const handleDeleteTemplate = (template: MaintenanceTemplate) => {
+    setDeletingTemplate(template);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingTemplate) return;
+
+    try {
+      const response = await fetch(`/api/maintenance/templates/${deletingTemplate.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.ok) {
+        fetchData();
+      } else {
+        console.error("Failed to delete template");
+      }
+    } catch (error) {
+      console.error("Error deleting template:", error);
+    } finally {
+      setShowDeleteDialog(false);
+      setDeletingTemplate(null);
+    }
+  };
+
+  const handleStatusUpdate = async (occurrenceId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/maintenance/occurrences/${occurrenceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        const updatedOccurrence = await response.json();
+        setOccurrences(prev => 
+          prev.map(occ => occ.id === occurrenceId ? { ...occ, ...updatedOccurrence } : occ)
+        );
+        
+        const dateKey = updatedOccurrence.scheduledDate.split("T")[0];
+        setCalendarOccurrences(prev => ({
+          ...prev,
+          [dateKey]: prev[dateKey]?.map(occ => occ.id === occurrenceId ? { ...occ, ...updatedOccurrence } : occ)
+        }));
+
+        setShowBottomSheet(false);
+      } else {
+        console.error("Failed to update occurrence status");
+      }
+    } catch (error) {
+      console.error("Error updating occurrence status:", error);
+    }
+  };
+
+  const handleOccurrenceClick = (occurrence: MaintenanceOccurrence) => {
+    setSelectedOccurrence(occurrence)
     setShowBottomSheet(true)
   }
 
-  const filteredTasks = tasks.filter((task) => {
+  const filteredOccurrences = occurrences.filter((occ) => {
     const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.siteLocation.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || task.status === statusFilter
-    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter
+      (occ.template?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      occ.template?.siteLocation?.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesStatus = statusFilter === "all" || occ.status === statusFilter
+    const matchesPriority = priorityFilter === "all" || occ.priority === priorityFilter
 
     return matchesSearch && matchesStatus && matchesPriority
   })
 
-  const selectedDateTasks = selectedDate ? calendarTasks[selectedDate.toISOString().split("T")[0]] || [] : []
+  const selectedDateOccurrences = selectedDate ? calendarOccurrences[selectedDate.toISOString().split("T")[0]] || [] : []
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Maintenance</h1>
-          <Button disabled>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Task
-          </Button>
-        </div>
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-muted rounded"></div>
-          <div className="h-64 bg-muted rounded"></div>
-        </div>
-      </div>
-    )
+    return <div>Loading...</div> // Replace with a proper skeleton loader
   }
 
   return (
@@ -140,60 +210,116 @@ export default function MaintenancePage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Maintenance</h1>
-          <p className="text-muted-foreground">Schedule and track maintenance tasks</p>
+          <p className="text-muted-foreground">Manage maintenance templates and scheduled jobs</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Create Task
+              Create Template
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <CreateMaintenanceDialog users={users} onTaskCreated={handleTaskCreated} />
+            <CreateMaintenanceDialog users={users} onTemplateCreated={handleTemplateCreated} />
           </DialogContent>
         </Dialog>
+
+        {editingTemplate && (
+          <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <DialogContent className="max-w-2xl">
+              <EditMaintenanceTemplateDialog
+                template={editingTemplate}
+                users={users}
+                onTemplateUpdated={handleTemplateUpdated}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the template "{deletingTemplate?.title}" and all of its scheduled occurrences. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Confirm</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
 
-      {/* Overdue Tasks Alert */}
-      {tasks.filter((task) => task.status === "overdue").length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-red-800">
-              <AlertTriangle className="h-5 w-5" />
-              Overdue Tasks ({tasks.filter((task) => task.status === "overdue").length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {tasks
-                .filter((task) => task.status === "overdue")
-                .map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                    <div>
-                      <p className="font-medium">{task.title}</p>
-                      <p className="text-sm text-muted-foreground">{task.siteLocation}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={statusColors.overdue}>Overdue</Badge>
-                      <span className="text-sm text-red-600">{formatDate(task.scheduledDate)}</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Tabs defaultValue="list">
+      <Tabs defaultValue="occurrences">
         <TabsList>
-          <TabsTrigger value="list">List View</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+          <TabsTrigger value="occurrences">Scheduled Jobs</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="space-y-4">
-          {/* Filters */}
+        <TabsContent value="templates" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle>Maintenance Templates</CardTitle>
+              <CardDescription>Reusable templates for recurring maintenance jobs.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Default Technician</TableHead>
+                    <TableHead>Recurrence</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {templates.map(template => (
+                    <TableRow key={template.id}>
+                      <TableCell className="font-medium">{template.title}</TableCell>
+                      <TableCell>{template.siteLocation}</TableCell>
+                      <TableCell>{template.assignedUser ? `${template.assignedUser.firstName} ${template.assignedUser.lastName}` : 'Unassigned'}</TableCell>
+                      <TableCell>{`Every ${template.recurrenceInterval} ${template.recurrenceType === 'daily' ? 'day' : template.recurrenceType === 'weekly' ? 'week' : template.recurrenceType === 'monthly' ? 'month' : 'year'}${template.recurrenceInterval > 1 ? 's' : ''}`}</TableCell>
+                      <TableCell>
+                        <Badge variant={template.isActive ? 'default' : 'outline'}>
+                          {template.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteTemplate(template)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="occurrences" className="space-y-4">
+           <Card>
             <CardHeader>
               <CardTitle>Filters</CardTitle>
             </CardHeader>
@@ -203,7 +329,7 @@ export default function MaintenancePage() {
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search tasks..."
+                      placeholder="Search by title or location..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-8"
@@ -220,7 +346,7 @@ export default function MaintenancePage() {
                     <SelectItem value="scheduled">Scheduled</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
+                    <SelectItem value="missed">Missed</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -239,150 +365,39 @@ export default function MaintenancePage() {
             </CardContent>
           </Card>
 
-          {/* Tasks Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Maintenance Tasks ({filteredTasks.length})</CardTitle>
-              <CardDescription>All scheduled maintenance tasks and their status</CardDescription>
+              <CardTitle>Scheduled Jobs ({filteredOccurrences.length})</CardTitle>
+              <CardDescription>All upcoming and past maintenance jobs.</CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Desktop Table */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
-                  <TableHeader className="hidden md:table-header-group">
-                    <TableRow>
-                      <TableHead>Task</TableHead>
-                      <TableHead>Technician</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Scheduled Date</TableHead>
-                      <TableHead>Recurrence</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTasks.map((task) => (
-                      <tr
-                        key={task.id}
-                        className="md:table-row block mb-4 md:mb-0 border-b last:border-b-0 md:border-none rounded-lg md:rounded-none p-4 md:p-0 shadow-md md:shadow-none"
-                      >
-                        <td className="md:table-cell py-2 font-medium" data-label="Task">
-                          <div>
-                            <p className="font-medium">{task.title}</p>
-                            {task.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-1">{task.description}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="md:table-cell py-2" data-label="Technician">
-                          {task.assignedUser ? (
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <span>
-                                {task.assignedUser.firstName} {task.assignedUser.lastName}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">Unassigned</span>
-                          )}
-                        </td>
-                        <td className="md:table-cell py-2" data-label="Status">
-                          <Badge className={statusColors[task.status]}>{task.status.replace("_", " ")}</Badge>
-                        </td>
-                        <td className="md:table-cell py-2" data-label="Priority">
-                          <Badge className={priorityColors[task.priority]} variant="outline">
-                            {task.priority}
-                          </Badge>
-                        </td>
-                        <td className="md:table-cell py-2" data-label="Location">
-                          <div className="flex items-center gap-1 max-w-[200px]">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate">{task.siteLocation}</span>
-                          </div>
-                        </td>
-                        <td className="md:table-cell py-2" data-label="Scheduled Date">
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                            <span>{formatDate(task.scheduledDate)}</span>
-                          </div>
-                        </td>
-                        <td className="md:table-cell py-2" data-label="Recurrence">
-                          {task.recurrenceType ? (
-                            <span>
-                              Every {task.recurrenceInterval} {task.recurrenceType}
-                              {task.recurrenceInterval > 1 ? "s" : ""}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">One-time</span>
-                          )}
-                        </td>
-                        <td className="md:table-cell py-2 text-right">
-                          <div className="flex justify-end gap-2 mt-2 md:mt-0">
-                            {task.status === "scheduled" && (
-                              <Button variant="outline" size="sm">
-                                Start
-                              </Button>
-                            )}
-                            {task.status === "in_progress" && (
-                              <Button variant="outline" size="sm">
-                                Complete
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="sm">
-                              Edit
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile Cards */}
-              <div className="md:hidden space-y-3">
-                {filteredTasks.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground">No maintenance tasks found matching your criteria.</p>
-                  </div>
-                ) : (
-                  filteredTasks.map((task) => (
-                    <MobileTableCard
-                      key={task.id}
-                      title={task.title}
-                      subtitle={task.siteLocation}
-                      status={task.status.replace("_", " ")}
-                      statusColor={statusColors[task.status]}
-                      badges={[{ label: task.priority, variant: "outline" }]}
-                      onClick={() => handleTaskCardClick(task)}
-                    >
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <CalendarIcon className="h-3 w-3" />
-                        <span>{formatDate(task.scheduledDate)}</span>
-                        {task.assignedUser && (
-                          <>
-                            <span>•</span>
-                            <User className="h-3 w-3" />
-                            <span>
-                              {task.assignedUser.firstName} {task.assignedUser.lastName}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      {task.recurrenceType && (
-                        <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-                          <RefreshCw className="h-3 w-3" />
-                          <span>
-                            Every {task.recurrenceInterval} {task.recurrenceType}
-                            {task.recurrenceInterval > 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      )}
-                    </MobileTableCard>
-                  ))
-                )}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Task</TableHead>
+                    <TableHead>Technician</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Scheduled Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOccurrences.map(occ => {
+                    return (
+                      <TableRow key={occ.id} onClick={() => handleOccurrenceClick(occ)} className="cursor-pointer">
+                        <TableCell>
+                          <div className="font-medium">{occ.template?.title}</div>
+                          <div className="text-sm text-muted-foreground">{occ.template?.siteLocation}</div>
+                        </TableCell>
+                        <TableCell>{occ.assignedUser ? `${occ.assignedUser.firstName} ${occ.assignedUser.lastName}` : 'Unassigned'}</TableCell>
+                        <TableCell><Badge className={statusColors[occ.status]}>{occ.status.replace("_", " ")}</Badge></TableCell>
+                        <TableCell><Badge className={priorityColors[occ.priority]} variant="outline">{occ.priority}</Badge></TableCell>
+                        <TableCell>{formatDate(occ.scheduledDate)}</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -401,71 +416,35 @@ export default function MaintenancePage() {
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     className="rounded-md border"
-                    modifiers={{
-                      hasTasks: (date) => {
-                        const dateKey = date.toISOString().split("T")[0]
-                        return !!calendarTasks[dateKey]
-                      },
-                      hasOverdue: (date) => {
-                        const dateKey = date.toISOString().split("T")[0]
-                        const tasks = calendarTasks[dateKey] || []
-                        return tasks.some((task) => task.status === "overdue")
-                      },
-                    }}
-                    modifiersClassNames={{
-                      hasTasks: "bg-blue-50 font-medium",
-                      hasOverdue: "bg-red-50 font-bold text-red-600",
-                    }}
+                    modifiers={{ hasTasks: Object.keys(calendarOccurrences).map(date => new Date(date)) }}
+                    modifiersClassNames={{ hasTasks: "bg-blue-50 font-medium" }}
                   />
                 </div>
-
                 <div>
                   <h3 className="font-medium mb-4">
-                    {selectedDate
-                      ? selectedDate.toLocaleDateString(undefined, {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })
-                      : "Select a date"}
+                    {selectedDate ? formatDate(selectedDate.toISOString()) : "Select a date"}
                   </h3>
-
-                  {selectedDateTasks.length > 0 ? (
+                  {selectedDateOccurrences.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedDateTasks.map((task) => (
-                        <div key={task.id} className="p-3 border rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium">{task.title}</p>
-                              <p className="text-sm text-muted-foreground">{task.siteLocation}</p>
+                      {selectedDateOccurrences.map(occ => {
+                        const template = templates.find(t => t.id === occ.templateId);
+                        return (
+                          <div key={occ.id} className="p-3 border rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{template?.title}</p>
+                                <p className="text-sm text-muted-foreground">{template?.siteLocation}</p>
+                              </div>
+                              <Badge className={statusColors[occ.status]}>{occ.status}</Badge>
                             </div>
-                            <Badge className={statusColors[task.status]}>{task.status}</Badge>
                           </div>
-                          {task.assignedUser && (
-                            <div className="flex items-center gap-1 mt-2 text-sm">
-                              <User className="h-3 w-3" />
-                              <span>
-                                {task.assignedUser.firstName} {task.assignedUser.lastName}
-                              </span>
-                            </div>
-                          )}
-                          {task.recurrenceType && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                              <RefreshCw className="h-3 w-3" />
-                              <span>
-                                Repeats every {task.recurrenceInterval} {task.recurrenceType}
-                                {task.recurrenceInterval > 1 ? "s" : ""}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-8 border rounded-lg">
                       <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">No tasks scheduled for this date</p>
+                      <p className="text-muted-foreground">No jobs scheduled for this date</p>
                     </div>
                   )}
                 </div>
@@ -478,85 +457,51 @@ export default function MaintenancePage() {
       <BottomSheet
         isOpen={showBottomSheet}
         onClose={() => setShowBottomSheet(false)}
-        title={selectedTaskForSheet?.title || "Task Details"}
-        actions={
-          selectedTaskForSheet && (
-            <div className="flex gap-2">
-              {selectedTaskForSheet.status === "scheduled" && (
-                <Button size="sm" variant="outline">
-                  Start Task
-                </Button>
-              )}
-              {selectedTaskForSheet.status === "in_progress" && <Button size="sm">Complete Task</Button>}
-              <Button size="sm" variant="outline">
-                Edit Task
-              </Button>
-            </div>
-          )
-        }
+        title={selectedOccurrence?.template?.title || "Job Details"}
       >
-        {selectedTaskForSheet && (
-          <div className="space-y-4">
-            {selectedTaskForSheet.description && (
+        {selectedOccurrence && (
+          <div className="p-4">
+            <div className="space-y-4">
               <div>
-                <h3 className="font-medium text-sm text-muted-foreground">Description</h3>
-                <p className="text-sm mt-1">{selectedTaskForSheet.description}</p>
+                <h3 className="font-semibold">{selectedOccurrence.template?.siteLocation}</h3>
+                <p className="text-sm text-muted-foreground">Scheduled for {formatDate(selectedOccurrence.scheduledDate)}</p>
               </div>
-            )}
 
-            <div>
-              <h3 className="font-medium text-sm text-muted-foreground">Location</h3>
-              <p className="text-sm mt-1 flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {selectedTaskForSheet.siteLocation}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-medium text-sm text-muted-foreground">Priority</h3>
-                <Badge className={`mt-1 ${priorityColors[selectedTaskForSheet.priority]}`}>
-                  {selectedTaskForSheet.priority}
-                </Badge>
-              </div>
-              <div>
-                <h3 className="font-medium text-sm text-muted-foreground">Status</h3>
-                <Badge className={`mt-1 ${statusColors[selectedTaskForSheet.status]}`}>
-                  {selectedTaskForSheet.status.replace("_", " ")}
-                </Badge>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium text-sm text-muted-foreground">Scheduled Date</h3>
-              <p className="text-sm mt-1 flex items-center gap-1">
-                <CalendarIcon className="h-3 w-3" />
-                {formatDate(selectedTaskForSheet.scheduledDate)}
-              </p>
-            </div>
-
-            {selectedTaskForSheet.assignedUser && (
-              <div>
-                <h3 className="font-medium text-sm text-muted-foreground">Assigned Technician</h3>
-                <div className="mt-2 p-2 bg-muted rounded-lg flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm">
-                    {selectedTaskForSheet.assignedUser.firstName} {selectedTaskForSheet.assignedUser.lastName}
-                  </span>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Assigned Technician</p>
+                  <p>{selectedOccurrence.assignedUser ? `${selectedOccurrence.assignedUser.firstName} ${selectedOccurrence.assignedUser.lastName}` : 'Unassigned'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Priority</p>
+                  <Badge className={priorityColors[selectedOccurrence.priority]} variant="outline">{selectedOccurrence.priority}</Badge>
                 </div>
               </div>
-            )}
 
-            {selectedTaskForSheet.recurrenceType && (
               <div>
-                <h3 className="font-medium text-sm text-muted-foreground">Recurrence</h3>
-                <p className="text-sm mt-1 flex items-center gap-1">
-                  <RefreshCw className="h-3 w-3" />
-                  Every {selectedTaskForSheet.recurrenceInterval} {selectedTaskForSheet.recurrenceType}
-                  {selectedTaskForSheet.recurrenceInterval > 1 ? "s" : ""}
+                <p className="text-sm font-medium">Description</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedOccurrence.template?.description || "No description provided."}
                 </p>
               </div>
-            )}
+
+              <div>
+                <label htmlFor="status-update" className="text-sm font-medium">Update Status</label>
+                <Select
+                  defaultValue={selectedOccurrence.status}
+                  onValueChange={(newStatus) => handleStatusUpdate(selectedOccurrence.id, newStatus)}
+                >
+                  <SelectTrigger id="status-update">
+                    <SelectValue placeholder="Change status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         )}
       </BottomSheet>

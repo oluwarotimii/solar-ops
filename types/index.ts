@@ -107,21 +107,32 @@ export interface JobMedia {
   uploadedAt: string
 }
 
-export interface MaintenanceTask {
+export interface MaintenanceTemplate {
   id: string
   title: string
   description?: string
-  siteLocation: string
+  siteLocation?: string
   assignedTo?: string
-  createdBy: string
-  status: "scheduled" | "in_progress" | "completed" | "overdue"
-  priority: "low" | "medium" | "high"
-  scheduledDate: string
-  recurrenceType?: "daily" | "weekly" | "monthly" | "yearly"
+  createdBy?: string
+  recurrenceType: "daily" | "weekly" | "monthly" | "yearly"
   recurrenceInterval: number
-  lastCompleted?: string
-  assignedUser?: User
+  isActive: boolean
   createdAt: string
+  assignedUser?: User
+  createdUser?: User
+}
+
+export interface MaintenanceOccurrence {
+  id: string
+  templateId: string
+  scheduledDate: string
+  assignedTo?: string
+  status: "scheduled" | "in_progress" | "completed" | "missed"
+  priority: "low" | "medium" | "high"
+  completedAt?: string
+  createdAt: string
+  template?: MaintenanceTemplate
+  assignedUser?: User
 }
 
 export interface AccruedValue {

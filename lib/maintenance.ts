@@ -1,89 +1,48 @@
-import { sql, toCamelCase } from "./db"
+import { getDbSql } from './db';
 
-export async function checkForOverdueTasks() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+// Generate occurrences for the next 12 months by default
+const OCCURRENCES_TO_GENERATE = 12;
 
-  // Update status of overdue tasks
-  const result = await sql`
-    UPDATE maintenance_tasks
-    SET status = 'overdue'
-    WHERE status = 'scheduled'
-    AND scheduled_date < ${today.toISOString().split("T")[0]}
-    RETURNING id, title, assigned_to
-  `
+export async function generateOccurrences(template) {
+  const sql = getDbSql();
+  const occurrences = [];
+  const startDate = new Date();
 
-  // Send notifications for overdue tasks
-  for (const task of result) {
-    if (task.assigned_to) {
-      await sql`
-        INSERT INTO notifications (recipient_id, title, message, type)
-        VALUES (
-          ${task.assigned_to},
-          'Maintenance Task Overdue',
-          ${`Task "${task.title}" is now overdue and requires attention.`},
-          'maintenance_reminder'
-        )
-      `
+  for (let i = 0; i < OCCURRENCES_TO_GENERATE; i++) {
+    const scheduledDate = new Date(startDate);
+
+    switch (template.recurrence_type) {
+      case 'daily':
+        scheduledDate.setDate(startDate.getDate() + i * template.recurrence_interval);
+        break;
+      case 'weekly':
+        scheduledDate.setDate(startDate.getDate() + i * template.recurrence_interval * 7);
+        break;
+      case 'monthly':
+        scheduledDate.setMonth(startDate.getMonth() + i * template.recurrence_interval);
+        break;
+      case 'yearly':
+        scheduledDate.setFullYear(startDate.getFullYear() + i * template.recurrence_interval);
+        break;
     }
+
+    occurrences.push({
+      templateId: template.id,
+      scheduledDate: scheduledDate.toISOString().split('T')[0],
+      assignedTo: template.assigned_to,
+      status: 'scheduled',
+      priority: 'medium',
+    });
   }
 
-  return result.length
-}
-
-export async function createRecurringTask(taskId: string) {
-  // Get the task details
-  const taskResult = await sql`
-    SELECT * FROM maintenance_tasks WHERE id = ${taskId}
-  `
-
-  if (taskResult.length === 0) {
-    throw new Error("Task not found")
+  if (occurrences.length > 0) {
+    // The @neondatabase/serverless driver does not support interactive transactions.
+    // The most reliable way to insert multiple rows is to send all queries concurrently.
+    const insertQueries = occurrences.map(o => sql`
+      INSERT INTO maintenance_occurrences (template_id, scheduled_date, assigned_to, status, priority)
+      VALUES (${o.templateId}, ${o.scheduledDate}, ${o.assignedTo}, ${o.status}, ${o.priority})
+    `);
+    
+    await Promise.all(insertQueries);
   }
-
-  const task = taskResult[0]
-
-  if (!task.recurrence_type) {
-    return null // Not a recurring task
-  }
-
-  const scheduledDate = new Date(task.scheduled_date)
-  const nextDate = new Date(scheduledDate)
-
-  switch (task.recurrence_type) {
-    case "daily":
-      nextDate.setDate(scheduledDate.getDate() + task.recurrence_interval)
-      break
-    case "weekly":
-      nextDate.setDate(scheduledDate.getDate() + task.recurrence_interval * 7)
-      break
-    case "monthly":
-      nextDate.setMonth(scheduledDate.getMonth() + task.recurrence_interval)
-      break
-    case "yearly":
-      nextDate.setFullYear(scheduledDate.getFullYear() + task.recurrence_interval)
-      break
-  }
-
-  // Create the next occurrence
-  const result = await sql`
-    INSERT INTO maintenance_tasks (
-      title, description, site_location, assigned_to, created_by,
-      status, priority, scheduled_date, recurrence_type, recurrence_interval
-    ) VALUES (
-      ${task.title},
-      ${task.description},
-      ${task.site_location},
-      ${task.assigned_to},
-      ${task.created_by},
-      'scheduled',
-      ${task.priority},
-      ${nextDate.toISOString().split("T")[0]},
-      ${task.recurrence_type},
-      ${task.recurrence_interval}
-    )
-    RETURNING id
-  `
-
-  return toCamelCase(result[0])
 }

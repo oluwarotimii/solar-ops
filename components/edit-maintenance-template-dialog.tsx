@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,14 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
-import type { User } from "@/types"
+import type { User, MaintenanceTemplate } from "@/types"
 
-interface CreateMaintenanceDialogProps {
-  users: User[]
-  onTemplateCreated: () => void
+interface EditMaintenanceTemplateDialogProps {
+  template: MaintenanceTemplate;
+  users: User[];
+  onTemplateUpdated: () => void;
 }
 
-export default function CreateMaintenanceDialog({ users, onTemplateCreated }: CreateMaintenanceDialogProps) {
+export default function EditMaintenanceTemplateDialog({ template, users, onTemplateUpdated }: EditMaintenanceTemplateDialogProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -27,48 +28,62 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
     recurrenceType: "monthly",
     recurrenceInterval: "1",
     isActive: true,
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (template) {
+      setFormData({
+        title: template.title,
+        description: template.description || "",
+        siteLocation: template.siteLocation || "",
+        assignedTo: template.assignedTo || "",
+        recurrenceType: template.recurrenceType,
+        recurrenceInterval: String(template.recurrenceInterval),
+        isActive: template.isActive,
+      });
+    }
+  }, [template]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
       const payload = {
         ...formData,
         recurrenceInterval: Number(formData.recurrenceInterval),
         assignedTo: formData.assignedTo || null,
-      }
+      };
 
-      const response = await fetch("/api/maintenance/templates", {
-        method: "POST",
+      const response = await fetch(`/api/maintenance/templates/${template.id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (response.ok) {
-        onTemplateCreated()
+        onTemplateUpdated();
       } else {
-        const data = await response.json()
-        setError(data.error || "Failed to create maintenance template")
+        const data = await response.json();
+        setError(data.error || "Failed to update maintenance template");
       }
     } catch (error) {
-      setError("Network error. Please try again.")
+      setError("Network error. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Create Maintenance Template</DialogTitle>
+        <DialogTitle>Edit Maintenance Template</DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
@@ -172,7 +187,7 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Template
+            Update Template
           </Button>
         </div>
       </form>

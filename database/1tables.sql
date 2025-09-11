@@ -106,20 +106,29 @@ CREATE TABLE IF NOT EXISTS job_media (
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create maintenance tasks
-CREATE TABLE IF NOT EXISTS maintenance_tasks (
+-- Create maintenance templates (the rule)
+CREATE TABLE IF NOT EXISTS maintenance_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    site_location TEXT NOT NULL,
+    site_location TEXT,
     assigned_to UUID REFERENCES users(id),
     created_by UUID REFERENCES users(id),
-    status VARCHAR(20) DEFAULT 'scheduled',
-    priority VARCHAR(10) DEFAULT 'medium',
-    scheduled_date DATE NOT NULL,
-    recurrence_type VARCHAR(20),
+    recurrence_type VARCHAR(20) NOT NULL, -- daily, weekly, monthly, yearly
     recurrence_interval INTEGER DEFAULT 1,
-    last_completed TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create maintenance occurrences (the actual jobs)
+CREATE TABLE IF NOT EXISTS maintenance_occurrences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID REFERENCES maintenance_templates(id) ON DELETE CASCADE,
+    scheduled_date DATE NOT NULL,
+    assigned_to UUID REFERENCES users(id),
+    status VARCHAR(20) DEFAULT 'scheduled', -- scheduled, in_progress, completed, missed
+    priority VARCHAR(10) DEFAULT 'medium',
+    completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -191,8 +200,11 @@ CREATE INDEX IF NOT EXISTS idx_job_technicians_job_id ON job_technicians(job_id)
 CREATE INDEX IF NOT EXISTS idx_job_technicians_technician_id ON job_technicians(technician_id);
 CREATE INDEX IF NOT EXISTS idx_gps_logs_user_id ON gps_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_gps_logs_timestamp ON gps_logs(timestamp);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_assigned_to ON maintenance_tasks(assigned_to);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_scheduled_date ON maintenance_tasks(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_maintenance_templates_assigned_to ON maintenance_templates(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_maintenance_occurrences_template_id ON maintenance_occurrences(template_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_occurrences_assigned_to ON maintenance_occurrences(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_maintenance_occurrences_scheduled_date ON maintenance_occurrences(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_maintenance_occurrences_status ON maintenance_occurrences(status);
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id);
 CREATE INDEX IF NOT EXISTS idx_accrued_values_user_id ON accrued_values(user_id);
 CREATE INDEX IF NOT EXISTS idx_accrued_values_month_year ON accrued_values(month, year);
