@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react";
@@ -17,11 +18,12 @@ interface MaintenanceOccurrenceDetailsProps {
 
 export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpdate }: MaintenanceOccurrenceDetailsProps) {
   const [assignedTo, setAssignedTo] = useState(occurrence.assignedTo || "");
+  const [status, setStatus] = useState(occurrence.status || "scheduled");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = () => {
     setIsSaving(true);
-    onUpdate(occurrence.id, { assignedTo });
+    onUpdate(occurrence.id, { assignedTo, status });
     setIsSaving(false);
   };
 
@@ -44,9 +46,19 @@ export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpda
             <p className="font-medium">Scheduled Date</p>
             <p>{formatDate(occurrence.scheduledDate)}</p>
           </div>
-          <div>
-            <p className="font-medium">Status</p>
-            <Badge className={statusColors[occurrence.status]}>{occurrence.status ? occurrence.status.replace("_", " ") : ''}</Badge>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="missed">Missed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="assignedTo">Assigned Technician</Label>
