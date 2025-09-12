@@ -17,6 +17,7 @@ import type { MaintenanceTemplate, MaintenanceOccurrence, User as UserType } fro
 import { formatDate } from "@/lib/date-utils"
 import CreateMaintenanceDialog from "@/components/create-maintenance-dialog"
 import EditMaintenanceTemplateDialog from "@/components/edit-maintenance-template-dialog"
+import MaintenanceOccurrenceDetails from "@/components/maintenance-occurrence-details"
 import MobileTableCard from "@/components/mobile-table-card"
 import BottomSheet from "@/components/bottom-sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -211,11 +212,13 @@ export default function MaintenancePage() {
 
   const selectedDateOccurrences = selectedDate ? calendarOccurrences[selectedDate.toISOString().split("T")[0]] || [] : []
 
-  const DetailsContent = (
-    <div className="p-4">
-      <p>Details about the maintenance job will be shown here.</p>
-    </div>
-  );
+  const DetailsContent = selectedOccurrence ? (
+    <MaintenanceOccurrenceDetails 
+      occurrence={selectedOccurrence} 
+      users={users} 
+      onUpdate={handleOccurrenceUpdate} 
+    />
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -402,7 +405,7 @@ export default function MaintenancePage() {
                           <div className="text-sm text-muted-foreground">{occ.template?.siteLocation}</div>
                         </TableCell>
                         <TableCell>{occ.assignedUser ? `${occ.assignedUser.firstName} ${occ.assignedUser.lastName}` : 'Unassigned'}</TableCell>
-                        <TableCell><Badge className={statusColors[occ.status]}>{occ.status.replace("_", " ")}</Badge></TableCell>
+                        <TableCell><Badge className={statusColors[occ.status]}>{occ.status ? occ.status.replace("_", " ") : ''}</Badge></TableCell>
                         <TableCell><Badge className={priorityColors[occ.priority]} variant="outline">{occ.priority}</Badge></TableCell>
                         <TableCell>{formatDate(occ.scheduledDate)}</TableCell>
                       </TableRow>

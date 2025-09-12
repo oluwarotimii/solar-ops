@@ -28,6 +28,7 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
     assignedTo: "",
     recurrenceType: "monthly",
     recurrenceInterval: "1",
+    dayOfMonth: "11", // Default to 11th as requested
     isActive: true,
   })
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,7 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
         recurrenceInterval: Number(formData.recurrenceInterval),
         jobValue: Number(formData.jobValue) || 0,
         assignedTo: formData.assignedTo || null,
+        day_of_month: formData.recurrenceType === 'monthly' ? Number(formData.dayOfMonth) : null,
       }
 
       const response = await fetch("/api/maintenance/templates", {
@@ -74,7 +76,7 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
         <DialogTitle>Create Maintenance Template</DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto p-4">
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -182,6 +184,21 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
               </div>
             </div>
           </div>
+
+        {formData.recurrenceType === 'monthly' && (
+            <div className="space-y-2 border-t pt-4">
+              <Label htmlFor="dayOfMonth">Day of Month</Label>
+              <Input
+                id="dayOfMonth"
+                type="number"
+                min="1"
+                max="31"
+                value={formData.dayOfMonth}
+                onChange={(e) => setFormData((prev) => ({ ...prev, dayOfMonth: e.target.value }))}
+                className="w-24"
+              />
+            </div>
+        )}
 
         <div className="flex items-center space-x-2 border-t pt-4">
           <Switch

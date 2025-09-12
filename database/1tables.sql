@@ -117,6 +117,9 @@ CREATE TABLE IF NOT EXISTS maintenance_templates (
     created_by UUID REFERENCES users(id),
     recurrence_type VARCHAR(20) NOT NULL, -- daily, weekly, monthly, yearly
     recurrence_interval INTEGER DEFAULT 1,
+    day_of_week INTEGER, -- For weekly recurrence (0-6, Sunday-Saturday)
+    day_of_month INTEGER, -- For monthly recurrence (1-31)
+    month_of_year INTEGER, -- For yearly recurrence (1-12)
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
