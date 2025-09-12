@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS maintenance_templates (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     site_location TEXT,
+    job_value DECIMAL(12,2) DEFAULT 0,
     assigned_to UUID REFERENCES users(id),
     created_by UUID REFERENCES users(id),
     recurrence_type VARCHAR(20) NOT NULL, -- daily, weekly, monthly, yearly

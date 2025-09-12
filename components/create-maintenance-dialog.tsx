@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -23,6 +24,7 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
     title: "",
     description: "",
     siteLocation: "",
+    jobValue: "",
     assignedTo: "",
     recurrenceType: "monthly",
     recurrenceInterval: "1",
@@ -40,6 +42,7 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
       const payload = {
         ...formData,
         recurrenceInterval: Number(formData.recurrenceInterval),
+        jobValue: Number(formData.jobValue) || 0,
         assignedTo: formData.assignedTo || null,
       }
 
@@ -109,6 +112,17 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="jobValue">Job Value</Label>
+          <Input
+            id="jobValue"
+            type="number"
+            value={formData.jobValue}
+            onChange={(e) => setFormData((prev) => ({ ...prev, jobValue: e.target.value }))}
+            placeholder="e.g., 75000"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="assignedTo">Default User</Label>
           <Select
             value={formData.assignedTo}
@@ -168,6 +182,15 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
               </div>
             </div>
           </div>
+
+        <div className="flex items-center space-x-2 border-t pt-4">
+          <Switch
+            id="isActive"
+            checked={formData.isActive}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
+          />
+          <Label htmlFor="isActive">Template is Active</Label>
+        </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={loading}>

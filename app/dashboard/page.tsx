@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2, Briefcase } from "lucide-react"
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const { stats, activity, completionRate, spilloverJobs, loading, error, user } = useDashboardData()
 

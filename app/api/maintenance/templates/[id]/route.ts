@@ -52,6 +52,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         title = ${templateData.title},
         description = ${templateData.description},
         site_location = ${templateData.siteLocation},
+        job_value = ${templateData.jobValue},
         assigned_to = ${templateData.assignedTo},
         recurrence_type = ${templateData.recurrenceType},
         recurrence_interval = ${templateData.recurrenceInterval},

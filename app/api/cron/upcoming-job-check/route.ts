@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDbSql } from "@/lib/db";
 
+export const dynamic = 'force-dynamic';
+
 // This endpoint should be called by a cron job (e.g., every hour)
 export async function GET(request: Request) {
   try {

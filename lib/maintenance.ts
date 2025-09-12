@@ -4,7 +4,6 @@ import { getDbSql } from './db';
 const OCCURRENCES_TO_GENERATE = 12;
 
 export async function generateOccurrences(template) {
-  console.log("[DEBUG] Template object received in generateOccurrences:", JSON.stringify(template, null, 2));
   const sql = getDbSql();
   const occurrences = [];
   const startDate = new Date();

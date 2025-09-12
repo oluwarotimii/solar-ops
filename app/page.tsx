@@ -2,21 +2,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+
+export const dynamic = 'force-dynamic';
 
 export default function LandingPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    // Check for a token in localStorage or cookies
-    const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
-    // You might also check for a cookie here if your auth system uses cookies
-    if (token) {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(false);
-    }
-  }, []);
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans">
       {/* Header */}
@@ -47,7 +36,7 @@ export default function LandingPage() {
           <p className="text-lg md:text-xl text-gray-600 mb-8">
             Real-time job tracking, technician coordination, and smart maintenance — simplified.
           </p>
-          <Link href={isLoggedIn ? "/dashboard" : "/login"} className="inline-block px-8 py-3 bg-yellow-500 text-gray-900 font-semibold rounded-md hover:bg-yellow-600 transition-colors duration-200 shadow-lg">
+          <Link href="/login" className="inline-block px-8 py-3 bg-yellow-500 text-gray-900 font-semibold rounded-md hover:bg-yellow-600 transition-colors duration-200 shadow-lg">
             Launch Dashboard
           </Link>
         </div>
@@ -57,7 +46,6 @@ export default function LandingPage() {
             alt="Solar Field Operations Illustration"
             width={600}
             height={400}
-            layout="responsive"
             objectFit="contain"
             className="rounded-lg shadow-xl"
           />

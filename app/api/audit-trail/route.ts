@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await authenticateApiRequest(request);

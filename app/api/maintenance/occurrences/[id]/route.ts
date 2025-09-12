@@ -69,6 +69,42 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       RETURNING *
     `;
 
+    // If the new status is 'completed' and there's an assigned user, create an accrued value entry.
+    if (updatedOccurrence.status === 'completed' && updatedOccurrence.assigned_to) {
+      
+      // Get the job value from the parent template
+      const [template] = await sql`
+        SELECT mt.job_value 
+        FROM maintenance_templates mt
+        JOIN maintenance_occurrences mo ON mo.template_id = mt.id
+        WHERE mo.id = ${params.id}
+      `;
+
+      if (template && template.job_value > 0) {
+        const completionDate = new Date();
+        
+        await sql`
+          INSERT INTO accrued_values (
+            user_id, 
+            maintenance_occurrence_id, 
+            job_value, 
+            earned_amount, 
+            month, 
+            year,
+            created_at
+          ) VALUES (
+            ${updatedOccurrence.assigned_to},
+            ${updatedOccurrence.id},
+            ${template.job_value},
+            ${template.job_value}, -- For maintenance, earned_amount is the full job_value
+            ${completionDate.getMonth() + 1},
+            ${completionDate.getFullYear()},
+            ${completionDate}
+          )
+        `;
+      }
+    }
+
     return NextResponse.json(toCamelCase(updatedOccurrence));
   } catch (error) {
     console.error("Maintenance occurrence update error:", error);

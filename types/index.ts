@@ -112,6 +112,7 @@ export interface MaintenanceTemplate {
   title: string
   description?: string
   siteLocation?: string
+  jobValue?: number
   assignedTo?: string
   createdBy?: string
   recurrenceType: "daily" | "weekly" | "monthly" | "yearly"

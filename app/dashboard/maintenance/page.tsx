@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
@@ -19,6 +20,8 @@ import EditMaintenanceTemplateDialog from "@/components/edit-maintenance-templat
 import MobileTableCard from "@/components/mobile-table-card"
 import BottomSheet from "@/components/bottom-sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+export const dynamic = 'force-dynamic';
 
 const statusColors = {
   scheduled: "bg-blue-100 text-blue-800",
@@ -34,6 +37,7 @@ const priorityColors = {
 }
 
 export default function MaintenancePage() {
+  const isMobile = useIsMobile();
   const [templates, setTemplates] = useState<MaintenanceTemplate[]>([])
   const [occurrences, setOccurrences] = useState<MaintenanceOccurrence[]>([])
   const [users, setUsers] = useState<UserType[]>([])
@@ -49,7 +53,7 @@ export default function MaintenancePage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [calendarOccurrences, setCalendarOccurrences] = useState<Record<string, MaintenanceOccurrence[]>>({})
   const [selectedOccurrence, setSelectedOccurrence] = useState<MaintenanceOccurrence | null>(null)
-  const [showBottomSheet, setShowBottomSheet] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -152,7 +156,7 @@ export default function MaintenancePage() {
     }
   };
 
-  const handleStatusUpdate = async (occurrenceId: string, newStatus: string) => {
+  const handleOccurrenceUpdate = async (occurrenceId: string, dataToUpdate: Partial<MaintenanceOccurrence>) => {
     try {
       const response = await fetch(`/api/maintenance/occurrences/${occurrenceId}`, {
         method: 'PUT',
@@ -160,7 +164,7 @@ export default function MaintenancePage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(dataToUpdate),
       });
 
       if (response.ok) {
@@ -175,7 +179,13 @@ export default function MaintenancePage() {
           [dateKey]: prev[dateKey]?.map(occ => occ.id === occurrenceId ? { ...occ, ...updatedOccurrence } : occ)
         }));
 
-        setShowBottomSheet(false);
+        // If status is changed, close the sheet. Otherwise, just update the data inside.
+        if (dataToUpdate.status) {
+          setIsDetailsOpen(false);
+        } else {
+          setSelectedOccurrence(updatedOccurrence);
+        }
+
       } else {
         console.error("Failed to update occurrence status");
       }
@@ -186,7 +196,7 @@ export default function MaintenancePage() {
 
   const handleOccurrenceClick = (occurrence: MaintenanceOccurrence) => {
     setSelectedOccurrence(occurrence)
-    setShowBottomSheet(true)
+    setIsDetailsOpen(true)
   }
 
   const filteredOccurrences = occurrences.filter((occ) => {
@@ -201,9 +211,11 @@ export default function MaintenancePage() {
 
   const selectedDateOccurrences = selectedDate ? calendarOccurrences[selectedDate.toISOString().split("T")[0]] || [] : []
 
-  if (loading) {
-    return <div>Loading...</div> // Replace with a proper skeleton loader
-  }
+  const DetailsContent = (
+    <div className="p-4">
+      <p>Details about the maintenance job will be shown here.</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -454,57 +466,24 @@ export default function MaintenancePage() {
         </TabsContent>
       </Tabs>
 
-      <BottomSheet
-        isOpen={showBottomSheet}
-        onClose={() => setShowBottomSheet(false)}
-        title={selectedOccurrence?.template?.title || "Job Details"}
-      >
-        {selectedOccurrence && (
-          <div className="p-4">
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold">{selectedOccurrence.template?.siteLocation}</h3>
-                <p className="text-sm text-muted-foreground">Scheduled for {formatDate(selectedOccurrence.scheduledDate)}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium">Assigned Technician</p>
-                  <p>{selectedOccurrence.assignedUser ? `${selectedOccurrence.assignedUser.firstName} ${selectedOccurrence.assignedUser.lastName}` : 'Unassigned'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Priority</p>
-                  <Badge className={priorityColors[selectedOccurrence.priority]} variant="outline">{selectedOccurrence.priority}</Badge>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium">Description</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedOccurrence.template?.description || "No description provided."}
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="status-update" className="text-sm font-medium">Update Status</label>
-                <Select
-                  defaultValue={selectedOccurrence.status}
-                  onValueChange={(newStatus) => handleStatusUpdate(selectedOccurrence.id, newStatus)}
-                >
-                  <SelectTrigger id="status-update">
-                    <SelectValue placeholder="Change status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        )}
-      </BottomSheet>
+      {isMobile ? (
+        <BottomSheet
+          isOpen={isDetailsOpen}
+          onClose={() => setIsDetailsOpen(false)}
+          title={selectedOccurrence?.template?.title || "Job Details"}
+        >
+          <div className="p-4">{DetailsContent}</div>
+        </BottomSheet>
+      ) : (
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{selectedOccurrence?.template?.title || "Job Details"}</DialogTitle>
+            </DialogHeader>
+            {DetailsContent}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
