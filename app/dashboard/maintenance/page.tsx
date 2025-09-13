@@ -42,6 +42,7 @@ export default function MaintenancePage() {
   const [templates, setTemplates] = useState<MaintenanceTemplate[]>([])
   const [occurrences, setOccurrences] = useState<MaintenanceOccurrence[]>([])
   const [users, setUsers] = useState<UserType[]>([])
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -57,11 +58,15 @@ export default function MaintenancePage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   useEffect(() => {
-    fetchData()
-    fetchUsers()
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    setCurrentUser(user);
+    fetchData(user)
+    if (user?.role?.isAdmin) {
+      fetchUsers()
+    }
   }, [])
 
-  const fetchData = async () => {
+  const fetchData = async (user: UserType | null) => {
     setLoading(true)
     try {
       const [templatesRes, occurrencesRes] = await Promise.all([
@@ -75,7 +80,10 @@ export default function MaintenancePage() {
       }
 
       if (occurrencesRes.ok) {
-        const data = await occurrencesRes.json();
+        let data = await occurrencesRes.json();
+        if (user && !user.role.isAdmin) {
+          data = data.filter(occ => occ.assignedTo === user.id);
+        }
         setOccurrences(data);
 
         const occurrencesByDate: Record<string, MaintenanceOccurrence[]> = {}
@@ -114,7 +122,7 @@ export default function MaintenancePage() {
   }
 
   const handleTemplateCreated = () => {
-    fetchData()
+    fetchData(currentUser)
     setShowCreateDialog(false)
   }
 
@@ -125,7 +133,7 @@ export default function MaintenancePage() {
 
   const handleTemplateUpdated = () => {
     setShowEditDialog(false);
-    fetchData();
+    fetchData(currentUser);
   };
 
   const handleDeleteTemplate = (template: MaintenanceTemplate) => {
@@ -145,7 +153,7 @@ export default function MaintenancePage() {
       });
 
       if (response.ok) {
-        fetchData();
+        fetchData(currentUser);
       } else {
         console.error("Failed to delete template");
       }
@@ -217,8 +225,18 @@ export default function MaintenancePage() {
       occurrence={selectedOccurrence} 
       users={users} 
       onUpdate={handleOccurrenceUpdate} 
+      currentUser={currentUser}
     />
   ) : null;
+
+  if (currentUser && !currentUser.role.isAdmin && occurrences.length === 0 && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <h1 className="text-2xl font-bold">No Maintenance Jobs</h1>
+        <p className="text-muted-foreground">You have not been assigned any maintenance jobs.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -227,17 +245,19 @@ export default function MaintenancePage() {
           <h1 className="text-3xl font-bold">Maintenance</h1>
           <p className="text-muted-foreground">Manage maintenance templates and scheduled jobs</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <CreateMaintenanceDialog users={users} onTemplateCreated={handleTemplateCreated} />
-          </DialogContent>
-        </Dialog>
+        {currentUser?.role.isAdmin && (
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <CreateMaintenanceDialog users={users} onTemplateCreated={handleTemplateCreated} />
+            </DialogContent>
+          </Dialog>
+        )}
 
         {editingTemplate && (
           <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -271,67 +291,69 @@ export default function MaintenancePage() {
       <Tabs defaultValue="occurrences">
         <TabsList>
           <TabsTrigger value="occurrences">Scheduled Jobs</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
+          {currentUser?.role.isAdmin && <TabsTrigger value="templates">Templates</TabsTrigger>}
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Maintenance Templates</CardTitle>
-              <CardDescription>Reusable templates for recurring maintenance jobs.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Default Technician</TableHead>
-                    <TableHead>Recurrence</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templates.map(template => (
-                    <TableRow key={template.id}>
-                      <TableCell className="font-medium">{template.title}</TableCell>
-                      <TableCell>{template.siteLocation}</TableCell>
-                      <TableCell>{template.assignedUser ? `${template.assignedUser.firstName} ${template.assignedUser.lastName}` : 'Unassigned'}</TableCell>
-                      <TableCell>{`Every ${template.recurrenceInterval} ${template.recurrenceType === 'daily' ? 'day' : template.recurrenceType === 'weekly' ? 'week' : template.recurrenceType === 'monthly' ? 'month' : 'year'}${template.recurrenceInterval > 1 ? 's' : ''}`}</TableCell>
-                      <TableCell>
-                        <Badge variant={template.isActive ? 'default' : 'outline'}>
-                          {template.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteTemplate(template)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Delete</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+        {currentUser?.role.isAdmin && (
+          <TabsContent value="templates" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Maintenance Templates</CardTitle>
+                <CardDescription>Reusable templates for recurring maintenance jobs.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Default Technician</TableHead>
+                      <TableHead>Recurrence</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  </TableHeader>
+                  <TableBody>
+                    {templates.map(template => (
+                      <TableRow key={template.id}>
+                        <TableCell className="font-medium">{template.title}</TableCell>
+                        <TableCell>{template.siteLocation}</TableCell>
+                        <TableCell>{template.assignedUser ? `${template.assignedUser.firstName} ${template.assignedUser.lastName}` : 'Unassigned'}</TableCell>
+                        <TableCell>{`Every ${template.recurrenceInterval} ${template.recurrenceType === 'daily' ? 'day' : template.recurrenceType === 'weekly' ? 'week' : template.recurrenceType === 'monthly' ? 'month' : 'year'}${template.recurrenceInterval > 1 ? 's' : ''}`}</TableCell>
+                        <TableCell>
+                          <Badge variant={template.isActive ? 'default' : 'outline'}>
+                            {template.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditTemplate(template)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteTemplate(template)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="occurrences" className="space-y-4">
            <Card>

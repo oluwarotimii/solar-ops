@@ -38,30 +38,42 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return response;
   }
 
-  const canUpdate = hasPermission(user, 'maintenance:update');
+  const isAdmin = hasPermission(user, 'maintenance:update');
 
   try {
     const sql = getDbSql();
     const occurrenceData = await request.json();
 
     const [currentOccurrence] = await sql`
-      SELECT assigned_to, status FROM maintenance_occurrences WHERE id = ${params.id}
+      SELECT assigned_to, status, scheduled_date FROM maintenance_occurrences WHERE id = ${params.id}
     `;
 
     if (!currentOccurrence) {
       return NextResponse.json({ error: "Occurrence not found" }, { status: 404 });
     }
 
-    if (!canUpdate && currentOccurrence.assigned_to !== user.id) {
+    if (!isAdmin) {
+      if (currentOccurrence.assigned_to !== user.id) {
         return NextResponse.json({ error: 'Forbidden: You are not assigned to this task' }, { status: 403 });
+      }
+
+      const today = new Date();
+      const scheduledDate = new Date(currentOccurrence.scheduled_date);
+      if (scheduledDate.getMonth() !== today.getMonth() || scheduledDate.getFullYear() !== today.getFullYear()) {
+        return NextResponse.json({ error: 'Forbidden: You can only complete tasks scheduled for the current month' }, { status: 403 });
+      }
+
+      if (Object.keys(occurrenceData).length > 1 || !occurrenceData.status || occurrenceData.status !== 'completed') {
+        return NextResponse.json({ error: 'Forbidden: You can only mark tasks as completed' }, { status: 403 });
+      }
     }
 
     const [updatedOccurrence] = await sql`
       UPDATE maintenance_occurrences
       SET
         status = ${occurrenceData.status || currentOccurrence.status},
-        assigned_to = ${occurrenceData.assignedTo || currentOccurrence.assigned_to},
-        priority = ${occurrenceData.priority || 'medium'},
+        assigned_to = ${isAdmin ? occurrenceData.assignedTo || currentOccurrence.assigned_to : currentOccurrence.assigned_to},
+        priority = ${isAdmin ? occurrenceData.priority || 'medium' : 'medium'},
         completed_at = ${occurrenceData.status === 'completed' ? new Date() : null}
       WHERE id = ${params.id}
       RETURNING *
