@@ -30,6 +30,13 @@ export async function GET(req: Request) {
       AND EXTRACT(MONTH FROM completed_at) = ${currentMonth} 
       AND EXTRACT(YEAR FROM completed_at) = ${currentYear}`;
 
+    const maintenanceRevenueResult = await sql`
+      SELECT SUM(earned_amount) as total_value
+      FROM accrued_values
+      WHERE maintenance_occurrence_id IS NOT NULL
+      AND month = ${currentMonth}
+      AND year = ${currentYear}`;
+
     const spilloverRevenueResult = await sql`
       SELECT SUM(job_value) as spillover_value
       FROM jobs
@@ -48,6 +55,7 @@ export async function GET(req: Request) {
     const stats = {
       totalJobsValue: totalJobsValueResult[0].total_value || 0,
       totalRevenue: completedJobsValueResult[0].total_value || 0,
+      maintenanceRevenueThisMonth: maintenanceRevenueResult[0].total_value || 0,
       spilloverRevenue: spilloverRevenueResult[0].spillover_value || 0,
       totalJobs: totalJobsResult[0].count || 0,
       activeJobs: activeJobsResult[0].count || 0,
