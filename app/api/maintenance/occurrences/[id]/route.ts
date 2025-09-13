@@ -83,12 +83,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const completionDate = new Date();
         const [existingAccrued] = await sql`SELECT id FROM accrued_values WHERE maintenance_occurrence_id = ${updatedOccurrence.id}`;
 
+        const monthlyValue = template.job_value / 12;
+
         if (existingAccrued) {
           await sql`
             UPDATE accrued_values
             SET 
               job_value = ${template.job_value},
-              earned_amount = ${template.job_value},
+              earned_amount = ${monthlyValue},
               user_id = ${updatedOccurrence.assigned_to},
               month = ${completionDate.getMonth() + 1},
               year = ${completionDate.getFullYear()}
@@ -101,7 +103,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
               ${updatedOccurrence.assigned_to},
               ${updatedOccurrence.id},
               ${template.job_value},
-              ${template.job_value},
+              ${monthlyValue},
               ${completionDate.getMonth() + 1},
               ${completionDate.getFullYear()},
               ${completionDate}

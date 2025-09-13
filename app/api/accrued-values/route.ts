@@ -135,41 +135,77 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const { userId, jobId, rating, month, year } = await req.json();
+    const { userId, jobId, jobType, rating, month, year } = await req.json();
 
-    if (!userId || !jobId || !month || !year) {
+    if (!userId || !jobId || !jobType || !month || !year) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const sql = getDbSql();
-
-    // Fetch job_value from the jobs table
-    const jobResult = await sql`
-      SELECT job_value FROM jobs WHERE id = ${jobId}
-    `;
-
-    if (jobResult.length === 0) {
-      return NextResponse.json({ error: "Job not found" }, { status: 404 });
-    }
-
-    const jobValue = jobResult[0].job_value;
-
-    // Count assigned technicians for the job
-    const techniciansCountResult = await sql`
-      SELECT COUNT(*) FROM job_technicians WHERE job_id = ${jobId}
-    `;
-    const numberOfTechnicians = parseInt(techniciansCountResult[0].count, 10);
-
+    let jobValue;
     let earnedAmount = 0;
-    if (numberOfTechnicians > 0) {
-      earnedAmount = jobValue / numberOfTechnicians;
-    }
+    let result;
 
-    const result = await sql`
-      INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, rating, month, year)
-      VALUES (${userId}, ${jobId}, ${jobValue}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
-      RETURNING *
-    `;
+    if (jobType === 'job') {
+      const jobResult = await sql`
+        SELECT job_value FROM jobs WHERE id = ${jobId}
+      `;
+
+      if (jobResult.length === 0) {
+        return NextResponse.json({ error: "Job not found" }, { status: 404 });
+      }
+      jobValue = jobResult[0].job_value;
+
+      const techniciansCountResult = await sql`
+        SELECT COUNT(*) FROM job_technicians WHERE job_id = ${jobId}
+      `;
+      const numberOfTechnicians = parseInt(techniciansCountResult[0].count, 10);
+
+      if (numberOfTechnicians > 0) {
+        earnedAmount = jobValue / numberOfTechnicians;
+      }
+
+      result = await sql`
+        INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, rating, month, year)
+        VALUES (${userId}, ${jobId}, ${jobValue}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
+        RETURNING *
+      `;
+    } else if (jobType === 'maintenance') {
+      const occurrenceResult = await sql`
+        SELECT template_id FROM maintenance_occurrences WHERE id = ${jobId}
+      `;
+
+      if (occurrenceResult.length === 0) {
+        return NextResponse.json({ error: "Maintenance occurrence not found" }, { status: 404 });
+      }
+      const templateId = occurrenceResult[0].template_id;
+
+      const templateResult = await sql`
+        SELECT job_value, recurrence_type FROM maintenance_templates WHERE id = ${templateId}
+      `;
+
+      if (templateResult.length === 0) {
+        return NextResponse.json({ error: "Maintenance template not found" }, { status: 404 });
+      }
+      
+      jobValue = templateResult[0].job_value;
+      const recurrenceType = templateResult[0].recurrence_type;
+
+      // Assuming 12 occurrences for yearly contracts
+      const occurrencesPerYear = 12;
+      let monthlyValue = jobValue / occurrencesPerYear;
+
+      // For now, we assume one technician per maintenance job
+      earnedAmount = monthlyValue;
+
+      result = await sql`
+        INSERT INTO accrued_values (user_id, maintenance_occurrence_id, job_value, earned_amount, rating, month, year)
+        VALUES (${userId}, ${jobId}, ${jobValue}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
+        RETURNING *
+      `;
+    } else {
+      return NextResponse.json({ error: "Invalid job type" }, { status: 400 });
+    }
 
     return NextResponse.json(toCamelCase(result[0]), { status: 201 });
   } catch (error) {
