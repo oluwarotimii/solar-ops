@@ -408,33 +408,51 @@ export default function MaintenancePage() {
               <CardDescription>All upcoming and past maintenance jobs.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Technician</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Scheduled Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOccurrences.map(occ => {
-                    return (
-                      <TableRow key={occ.id} onClick={() => handleOccurrenceClick(occ)} className="cursor-pointer">
-                        <TableCell>
-                          <div className="font-medium">{occ.template?.title}</div>
-                          <div className="text-sm text-muted-foreground">{occ.template?.siteLocation}</div>
-                        </TableCell>
-                        <TableCell>{occ.assignedUser ? `${occ.assignedUser.firstName} ${occ.assignedUser.lastName}` : 'Unassigned'}</TableCell>
-                        <TableCell><Badge className={statusColors[occ.status]}>{occ.status ? occ.status.replace("_", " ") : ''}</Badge></TableCell>
-                        <TableCell><Badge className={priorityColors[occ.priority]} variant="outline">{occ.priority}</Badge></TableCell>
-                        <TableCell>{formatDate(occ.scheduledDate)}</TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Task</TableHead>
+                      <TableHead>Technician</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Scheduled Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOccurrences.map(occ => {
+                      return (
+                        <TableRow key={occ.id} onClick={() => handleOccurrenceClick(occ)} className="cursor-pointer">
+                          <TableCell>
+                            <div className="font-medium">{occ.template?.title}</div>
+                            <div className="text-sm text-muted-foreground">{occ.template?.siteLocation}</div>
+                          </TableCell>
+                          <TableCell>{occ.assignedUser ? `${occ.assignedUser.firstName} ${occ.assignedUser.lastName}` : 'Unassigned'}</TableCell>
+                          <TableCell><Badge className={statusColors[occ.status]}>{occ.status ? occ.status.replace("_", " ") : ''}</Badge></TableCell>
+                          <TableCell><Badge className={priorityColors[occ.priority]} variant="outline">{occ.priority}</Badge></TableCell>
+                          <TableCell>{formatDate(occ.scheduledDate)}</TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="md:hidden space-y-3">
+                {filteredOccurrences.map(occ => (
+                  <MobileTableCard
+                    key={occ.id}
+                    title={occ.template?.title || ''}
+                    subtitle={occ.template?.siteLocation || ''}
+                    status={occ.status}
+                    statusColor={statusColors[occ.status]}
+                    badges={[
+                      { label: occ.priority, variant: "outline" },
+                      { label: formatDate(occ.scheduledDate), variant: "secondary" },
+                    ]}
+                    onClick={() => handleOccurrenceClick(occ)}
+                  />
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
