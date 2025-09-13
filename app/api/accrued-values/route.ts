@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const month = searchParams.get('month');
     const year = searchParams.get('year');
+    const userId = searchParams.get('userId');
     const mode = searchParams.get('mode'); // 'detailed' or null
 
     const conditions = [];
@@ -31,6 +32,9 @@ export async function GET(request: NextRequest) {
     if (year && year !== 'all') {
       conditions.push(sql`av.year = ${parseInt(year, 10)}`);
     }
+    if (userId) {
+      conditions.push(sql`av.user_id = ${userId}`);
+    }
 
     let whereClause = sql``;
     if (conditions.length > 0) {
@@ -39,19 +43,20 @@ export async function GET(request: NextRequest) {
 
     let accruedValues;
     if (mode === 'detailed') {
-      // Return detailed, non-aggregated data for export
       const result = await sql`
         SELECT
           av.*,
           u.first_name as technician_first_name,
           u.last_name as technician_last_name,
           u.email as technician_email,
-          j.title as job_title,
+          COALESCE(j.title, mt.title) as job_title,
           jt.name as job_type_name
         FROM accrued_values av
         JOIN users u ON av.user_id = u.id
-        JOIN jobs j ON av.job_id = j.id
-        JOIN job_types jt ON j.job_type_id = jt.id
+        LEFT JOIN jobs j ON av.job_id = j.id
+        LEFT JOIN job_types jt ON j.job_type_id = jt.id
+        LEFT JOIN maintenance_occurrences mo ON av.maintenance_occurrence_id = mo.id
+        LEFT JOIN maintenance_templates mt ON mo.template_id = mt.id
         ${whereClause}
         ORDER BY av.created_at DESC
       `;
@@ -66,9 +71,9 @@ export async function GET(request: NextRequest) {
             email: value.technicianEmail,
           },
           job: {
-            id: value.jobId,
+            id: value.jobId || value.maintenanceOccurrenceId,
             title: value.jobTitle,
-            type: value.jobTypeName,
+            type: value.jobTypeName || 'Maintenance',
           },
           earnedAmount: value.earnedAmount,
           rating: value.rating,

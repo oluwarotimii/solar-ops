@@ -38,7 +38,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return response;
   }
 
-  // Any authenticated user can update a maintenance task they are assigned to, or managers can update any.
   const canUpdate = hasPermission(user, 'maintenance:update');
 
   try {
@@ -46,14 +45,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const occurrenceData = await request.json();
 
     const [currentOccurrence] = await sql`
-      SELECT assigned_to FROM maintenance_occurrences WHERE id = ${params.id}
+      SELECT assigned_to, status FROM maintenance_occurrences WHERE id = ${params.id}
     `;
 
     if (!currentOccurrence) {
       return NextResponse.json({ error: "Occurrence not found" }, { status: 404 });
     }
 
-    // A technician can only update a task assigned to them. A manager can update any.
     if (!canUpdate && currentOccurrence.assigned_to !== user.id) {
         return NextResponse.json({ error: 'Forbidden: You are not assigned to this task' }, { status: 403 });
     }
@@ -61,18 +59,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const [updatedOccurrence] = await sql`
       UPDATE maintenance_occurrences
       SET
-        status = ${occurrenceData.status},
-        assigned_to = ${occurrenceData.assignedTo},
-        priority = ${occurrenceData.priority},
+        status = ${occurrenceData.status || currentOccurrence.status},
+        assigned_to = ${occurrenceData.assignedTo || currentOccurrence.assigned_to},
+        priority = ${occurrenceData.priority || 'medium'},
         completed_at = ${occurrenceData.status === 'completed' ? new Date() : null}
       WHERE id = ${params.id}
       RETURNING *
     `;
 
-    // If the new status is 'completed' and there's an assigned user, create an accrued value entry.
-    if (updatedOccurrence.status === 'completed' && updatedOccurrence.assigned_to) {
-      
-      // Get the job value from the parent template
+    const previousStatus = currentOccurrence.status;
+    const newStatus = updatedOccurrence.status;
+
+    // Case 1: Job marked as completed
+    if (newStatus === 'completed' && previousStatus !== 'completed') {
       const [template] = await sql`
         SELECT mt.job_value 
         FROM maintenance_templates mt
@@ -82,27 +81,40 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       if (template && template.job_value > 0) {
         const completionDate = new Date();
-        
-        await sql`
-          INSERT INTO accrued_values (
-            user_id, 
-            maintenance_occurrence_id, 
-            job_value, 
-            earned_amount, 
-            month, 
-            year,
-            created_at
-          ) VALUES (
-            ${updatedOccurrence.assigned_to},
-            ${updatedOccurrence.id},
-            ${template.job_value},
-            ${template.job_value}, -- For maintenance, earned_amount is the full job_value
-            ${completionDate.getMonth() + 1},
-            ${completionDate.getFullYear()},
-            ${completionDate}
-          )
-        `;
+        const [existingAccrued] = await sql`SELECT id FROM accrued_values WHERE maintenance_occurrence_id = ${updatedOccurrence.id}`;
+
+        if (existingAccrued) {
+          await sql`
+            UPDATE accrued_values
+            SET 
+              job_value = ${template.job_value},
+              earned_amount = ${template.job_value},
+              user_id = ${updatedOccurrence.assigned_to},
+              month = ${completionDate.getMonth() + 1},
+              year = ${completionDate.getFullYear()}
+            WHERE id = ${existingAccrued.id};
+          `;
+        } else {
+          await sql`
+            INSERT INTO accrued_values (user_id, maintenance_occurrence_id, job_value, earned_amount, month, year, created_at)
+            VALUES (
+              ${updatedOccurrence.assigned_to},
+              ${updatedOccurrence.id},
+              ${template.job_value},
+              ${template.job_value},
+              ${completionDate.getMonth() + 1},
+              ${completionDate.getFullYear()},
+              ${completionDate}
+            );
+          `;
+        }
       }
+    }
+    // Case 2: Job no longer completed
+    else if (newStatus !== 'completed' && previousStatus === 'completed') {
+      await sql`
+        DELETE FROM accrued_values WHERE maintenance_occurrence_id = ${params.id}
+      `;
     }
 
     return NextResponse.json(toCamelCase(updatedOccurrence));

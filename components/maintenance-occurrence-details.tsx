@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react";
@@ -9,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/date-utils";
 import type { MaintenanceOccurrence, User } from "@/types";
+import { Loader2 } from "lucide-react";
 
 interface MaintenanceOccurrenceDetailsProps {
   occurrence: MaintenanceOccurrence;
   users: User[];
-  onUpdate: (id: string, data: Partial<MaintenanceOccurrence>) => void;
+  onUpdate: (id: string, data: Partial<MaintenanceOccurrence>) => Promise<void>;
 }
 
 export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpdate }: MaintenanceOccurrenceDetailsProps) {
@@ -21,10 +21,13 @@ export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpda
   const [status, setStatus] = useState(occurrence.status || "scheduled");
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    onUpdate(occurrence.id, { assignedTo, status });
-    setIsSaving(false);
+    try {
+      await onUpdate(occurrence.id, { assignedTo, status });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const statusColors = {
@@ -36,50 +39,53 @@ export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpda
 
   return (
     <div className="p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>{occurrence.template?.title}</CardTitle>
-          <CardDescription>{occurrence.template?.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="font-medium">Scheduled Date</p>
-            <p>{formatDate(occurrence.scheduledDate)}</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="missed">Missed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="assignedTo">Assigned Technician</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select technician" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
-        </CardContent>
-      </Card>
+      <fieldset disabled={isSaving} className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>{occurrence.template?.title}</CardTitle>
+            <CardDescription>{occurrence.template?.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="font-medium">Scheduled Date</p>
+              <p>{formatDate(occurrence.scheduledDate)}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="missed">Missed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignedTo">Assigned Technician</Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </CardContent>
+        </Card>
+      </fieldset>
     </div>
   );
 }

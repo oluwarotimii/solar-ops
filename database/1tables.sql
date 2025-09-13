@@ -141,12 +141,15 @@ CREATE TABLE IF NOT EXISTS accrued_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
     job_id UUID REFERENCES jobs(id),
+    maintenance_occurrence_id UUID REFERENCES maintenance_occurrences(id),
     job_value DECIMAL(12,2) NOT NULL,
     earned_amount DECIMAL(12,2) NOT NULL,
     rating DECIMAL(3,2),
     month INTEGER NOT NULL,
     year INTEGER NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (job_id, user_id),
+    UNIQUE (maintenance_occurrence_id, user_id)
 );
 
 -- Create notifications table

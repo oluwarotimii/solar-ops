@@ -11,43 +11,13 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Plus, Search, DollarSign, Users, Calendar, Star, FileText } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-
-interface AccruedValueDisplay {
-  user: {
-    id: string
-    name: string
-    email: string
-  }
-  totalEarnedAmount: number
-}
-
-interface AccruedValueDetailed {
-  id: string
-  user: {
-    id: string
-    name: string
-    email: string
-  }
-  job: {
-    id: string
-    title: string
-    type: string
-  }
-  earnedAmount: number
-  rating: number
-  month: number
-  year: number
-  createdAt: string
-}
+import UserAccruedDetailsDialog from "@/components/user-accrued-details-dialog";
+import type { AccruedValueDisplay, AccruedValueDetailed, User } from "@/types";
 
 export default function AccruedValuesPage() {
   const { toast } = useToast();
   const [accruedValues, setAccruedValues] = useState<AccruedValueDisplay[]>([])
-  const [allUsers, setAllUsers] = useState<{
-    id: string;
-    name: string;
-    email: string;
-  }[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [userFilter, setUserFilter] = useState("all")
@@ -55,6 +25,10 @@ export default function AccruedValuesPage() {
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString())
   const [minAccruedYear, setMinAccruedYear] = useState(new Date().getFullYear());
   const [maxAccruedYear, setMaxAccruedYear] = useState(new Date().getFullYear());
+
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserDetails, setSelectedUserDetails] = useState<AccruedValueDetailed[]>([]);
 
   useEffect(() => {
     const fetchAccruedValues = async () => {
@@ -97,7 +71,7 @@ export default function AccruedValuesPage() {
         });
         if (response.ok) {
           const data = await response.json();
-          setAllUsers(data.map((user: any) => ({ id: user.id, name: `${user.firstName} ${user.lastName}`, email: user.email })));
+          setAllUsers(data);
         } else {
           console.error("Failed to fetch users");
         }
@@ -110,6 +84,23 @@ export default function AccruedValuesPage() {
     fetchAllUsers()
   }
   , [monthFilter, yearFilter])
+
+  const handleUserClick = async (user: User) => {
+    setSelectedUser(user);
+    try {
+      const response = await fetch(`/api/accrued-values?userId=${user.id}&mode=detailed`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const { accruedValues: detailedValues } = await response.json();
+      setSelectedUserDetails(detailedValues);
+      setIsDetailsDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      toast({ title: "Error", description: "Failed to fetch user details.", variant: "destructive" });
+    }
+  };
 
   const filteredValues = accruedValues.filter((value) => {
     if (!value.user) {
@@ -325,7 +316,7 @@ export default function AccruedValuesPage() {
                 <SelectItem value="all">All Users</SelectItem>
                 {allUsers.map((user) => (
                   <SelectItem key={user?.id} value={user?.id || ""}>
-                    {user?.name}
+                    {user?.firstName} {user?.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -377,7 +368,7 @@ export default function AccruedValuesPage() {
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {filteredValues.map((value) => (
-                  <Card key={value.user.id}>
+                  <Card key={value.user.id} onClick={() => handleUserClick(value.user)} className="cursor-pointer">
                     <CardHeader>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
@@ -411,7 +402,7 @@ export default function AccruedValuesPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredValues.map((value) => (
-                      <TableRow key={value.user.id}>
+                      <TableRow key={value.user.id} onClick={() => handleUserClick(value.user)} className="cursor-pointer">
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -427,7 +418,7 @@ export default function AccruedValuesPage() {
                           <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
                         </TableCell>
                         <TableCell className="text-right">
-                          {/* Actions can go here */}
+                          <Button variant="outline" size="sm">View Details</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -444,6 +435,15 @@ export default function AccruedValuesPage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedUser && (
+        <UserAccruedDetailsDialog 
+          isOpen={isDetailsDialogOpen} 
+          onClose={() => setIsDetailsDialogOpen(false)} 
+          userName={selectedUser.name} 
+          details={selectedUserDetails} 
+        />
+      )}
     </div>
   )
 }
