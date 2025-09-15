@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getDbSql, toCamelCase, sql } from "@/lib/db";
+import { getDbSql, toCamelCase } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission, hashPassword } from "@/lib/auth";
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const camelCaseRow = toCamelCase(rows[0]);
-    const fetchedUser: User = {
+    const fetchedUser: any = {
       id: camelCaseRow.id,
       email: camelCaseRow.email,
       firstName: camelCaseRow.firstName,
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         description: camelCaseRow.roleDescription,
         isAdmin: camelCaseRow.roleIsAdmin,
         permissions: camelCaseRow.rolePermissions,
-        createdAt: camelCaseRow.createdAt, // Assuming role createdAt is also needed, or adjust as per Role interface
+        createdAt: camelCaseRow.createdAt,
       };
     }
 
@@ -74,54 +74,63 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { email, firstName, lastName, phone, roleId, status, password } = await request.json();
     const db = getDbSql();
 
-    // Fetch current user data to retain existing values if not provided in the request
-    const currentUser = await db`
-      SELECT email, first_name, last_name, status FROM users WHERE id = ${params.id}
-    `;
+    const setClauses = [];
+    const values = [];
+    let valueIndex = 1;
 
-    if (currentUser.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (email) {
+      setClauses.push(`email = $${valueIndex++}`);
+      values.push(email);
+    }
+    if (firstName) {
+      setClauses.push(`first_name = $${valueIndex++}`);
+      values.push(firstName);
+    }
+    if (lastName) {
+      setClauses.push(`last_name = $${valueIndex++}`);
+      values.push(lastName);
+    }
+    if (phone) {
+      setClauses.push(`phone = $${valueIndex++}`);
+      values.push(phone);
+    }
+    if (roleId) {
+      setClauses.push(`role_id = $${valueIndex++}`);
+      values.push(roleId);
+    }
+    if (status) {
+      const allowedStatuses = ['active', 'inactive', 'pending'];
+      if (!allowedStatuses.includes(status)) {
+        return NextResponse.json({ error: "Invalid user status provided" }, { status: 400 });
+      }
+      setClauses.push(`status = $${valueIndex++}`);
+      values.push(status);
     }
 
-    const currentEmail = currentUser[0].email;
-    const newEmail = email || currentEmail; // Use new email if provided, otherwise retain current
-
-    const currentFirstName = currentUser[0].first_name;
-    const newFirstName = firstName || currentFirstName; // Use new first name if provided, otherwise retain current
-
-    const currentLastName = currentUser[0].last_name;
-    const newLastName = lastName || currentLastName; // Use new last name if provided, otherwise retain current
-
-    const currentStatus = currentUser[0].status;
-    const newStatus = status || currentStatus; // Use new status if provided, otherwise retain current
-
-    // Validate status
-    const allowedStatuses = ['active', 'inactive', 'pending'];
-    if (newStatus && !allowedStatuses.includes(newStatus)) {
-      return NextResponse.json({ error: "Invalid user status provided" }, { status: 400 });
-    }
-
-    let passwordHash = undefined;
     if (password) {
-      passwordHash = await hashPassword(password);
+      const hashedPassword = await hashPassword(password);
+      setClauses.push(`password_hash = $${valueIndex++}`);
+      values.push(hashedPassword);
     }
 
-    const result = await db`
+    if (setClauses.length === 0) {
+      return NextResponse.json({ message: 'No changes to update' }, { status: 200 });
+    }
+
+    setClauses.push(`updated_at = NOW()`);
+
+    const query = `
       UPDATE users
-      SET
-        email = ${newEmail},
-        first_name = ${newFirstName},
-        last_name = ${newLastName},
-        phone = ${phone || null},
-        role_id = ${roleId},
-        status = ${newStatus},
-        ${passwordHash ? sql`password_hash = ${passwordHash},` : sql``}
-        updated_at = NOW()
-      WHERE id = ${params.id}
+      SET ${setClauses.join(', ')}
+      WHERE id = $${valueIndex++}
       RETURNING id;
     `;
+    values.push(params.id);
 
-    if (result.length === 0) {
+    // @ts-ignore
+    const result = await db.query(query, values);
+
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: "User not found or no changes made" }, { status: 404 });
     }
 

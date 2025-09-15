@@ -50,6 +50,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
   };
 
   const handleResetPassword = async () => {
+    console.log("[Debug] handleResetPassword called");
     setLoading(true);
     try {
       const response = await fetch(`/api/users/${user.id}/reset-password`, {
@@ -65,12 +66,14 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
       }
 
       const data = await response.json();
+      console.log("[Debug] New password received:", data.newPassword);
       setNewPassword(data.newPassword);
       toast({
         title: "Password Reset",
         description: `New password for ${user.firstName} ${user.lastName} generated.`,
       });
     } catch (error: any) {
+      console.error("[Debug] Error in handleResetPassword:", error);
       toast({
         title: "Error",
         description: error.message || "An error occurred while resetting the password.",
@@ -91,6 +94,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[Debug] handleSubmit called");
     setLoading(true);
 
     try {
@@ -102,6 +106,12 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
         roleId: formData.roleId,
         status: formData.status,
       };
+
+      if (newPassword) {
+        payload.password = newPassword;
+      }
+
+      console.log("[Debug] Submitting payload:", payload);
 
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
@@ -122,6 +132,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
       });
       onUserUpdated({ ...user, ...payload });
     } catch (error: any) {
+      console.error("[Debug] Error in handleSubmit:", error);
       toast({
         title: "Error",
         description: error.message || "An error occurred while updating the user.",
