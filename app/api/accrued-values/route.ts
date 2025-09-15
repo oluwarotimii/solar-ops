@@ -14,16 +14,20 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user || !hasPermission(user, 'accrued_values:read')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const sql = getDbSql();
     const { searchParams } = request.nextUrl;
     const month = searchParams.get('month');
     const year = searchParams.get('year');
-    const userId = searchParams.get('userId');
+    let userId = searchParams.get('userId');
     const mode = searchParams.get('mode'); // 'detailed' or null
+
+    if (!user.role.isAdmin) {
+      userId = user.id;
+    }
 
     const conditions = [];
     if (month && month !== 'all') {
@@ -131,11 +135,15 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user || !hasPermission(user, 'accrued_values:create')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { userId, jobId, jobType, rating, month, year } = await req.json();
+
+    if (!user.role.isAdmin && userId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     if (!userId || !jobId || !jobType || !month || !year) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
