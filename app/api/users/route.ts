@@ -21,14 +21,11 @@ export async function GET(request: NextRequest) {
       SELECT 
         u.id, u.email, u.first_name, u.last_name, u.phone, u.role_id, u.status, u.created_at, u.updated_at,
         r.name as role_name, r.description as role_description, r.is_admin as role_is_admin, r.permissions as role_permissions,
-        COUNT(j.id) AS total_jobs,
-        COUNT(CASE WHEN j.status = 'completed' THEN j.id END) AS completed_jobs,
-        AVG(jt.rating) AS avg_rating
+        (SELECT COUNT(*) FROM job_technicians WHERE technician_id = u.id) AS total_jobs,
+        (SELECT COUNT(*) FROM job_technicians jt JOIN jobs j ON jt.job_id = j.id WHERE jt.technician_id = u.id AND j.status = 'completed') AS completed_jobs,
+        (SELECT AVG(rating) FROM job_technicians WHERE technician_id = u.id) AS avg_rating
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN job_technicians jt ON u.id = jt.technician_id
-      LEFT JOIN jobs j ON jt.job_id = j.id
-      LEFT JOIN accrued_values av ON u.id = av.user_id
       GROUP BY u.id, r.id
     `;
     console.log('[API] Raw user rows from DB:', rows);

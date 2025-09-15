@@ -42,9 +42,17 @@ const pwaConfig = {
     {
       urlPattern: /^\/api\/.*/,
       handler: 'NetworkOnly',
-      options: {
-        cacheName: 'api-calls',
-      },
+      method: 'POST',
+    },
+    {
+      urlPattern: /^\/api\/.*/,
+      handler: 'NetworkOnly',
+      method: 'PUT',
+    },
+    {
+      urlPattern: /^\/api\/.*/,
+      handler: 'NetworkOnly',
+      method: 'DELETE',
     },
   ],
 };

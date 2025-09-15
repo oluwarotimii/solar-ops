@@ -298,7 +298,7 @@ export default function UsersPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Total Jobs</TableHead>
                     <TableHead>Completed</TableHead>
-                    <TableHead>Avg. Rating</TableHead>
+                    {/* <TableHead>Avg. Rating</TableHead> */}
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -315,7 +315,7 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>{user.stats?.totalJobs || 0}</TableCell>
                       <TableCell>{user.stats?.completedJobs || 0}</TableCell>
-                      <TableCell>{user.stats?.avgRating?.toFixed(1) || 'N/A'}</TableCell>
+                      {/* <TableCell>{user.stats?.avgRating?.toFixed(1) || 'N/A'}</TableCell> */}
                       <TableCell className="text-right">
                         <Button
                           variant="outline"
