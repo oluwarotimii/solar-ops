@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2, Briefcase } from "lucide-react"
+import { formatNaira, formatNumberWithCommas } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ export default function DashboardPage() {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">₦{(stats?.totalRevenue || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold">{formatNaira(stats?.totalRevenue || 0)}</div>
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
@@ -57,7 +58,7 @@ export default function DashboardPage() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">₦{(stats?.maintenanceRevenueThisMonth || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold">{formatNaira(stats?.maintenanceRevenueThisMonth || 0)}</div>
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
@@ -67,7 +68,7 @@ export default function DashboardPage() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">₦{(stats?.spilloverRevenue || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold">{formatNaira(stats?.spilloverRevenue || 0)}</div>
           <p className="text-xs text-muted-foreground">From previous months</p>
         </CardContent>
       </Card>

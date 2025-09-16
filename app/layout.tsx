@@ -40,7 +40,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="SolarOps" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="icon" href="/iconn.png" />
       </head>
       <body className={`${inter.className} bg-gray-100 dark:bg-gray-900 overflow-x-hidden`}>
         {children}

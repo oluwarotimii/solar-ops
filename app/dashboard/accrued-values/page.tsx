@@ -13,6 +13,7 @@ import { Plus, Search, DollarSign, Users, Calendar, Star, FileText } from "lucid
 import { useToast } from "@/components/ui/use-toast"
 import UserAccruedDetailsDialog from "@/components/user-accrued-details-dialog";
 import type { AccruedValueDisplay, AccruedValueDetailed, User } from "@/types";
+import { formatNaira, formatNumberWithCommas } from "@/lib/utils";
 
 export default function AccruedValuesPage() {
   const { toast } = useToast();
@@ -44,6 +45,7 @@ export default function AccruedValuesPage() {
           },
         });
         const { accruedValues, minYear, maxYear } = await response.json();
+        console.log("API Response Data:", accruedValues, minYear, maxYear);
         if (Array.isArray(accruedValues)) {
           setAccruedValues(accruedValues);
           if (maxYear) {
@@ -117,13 +119,7 @@ export default function AccruedValuesPage() {
   const totalEarned = filteredValues.reduce((sum, value) => sum + parseFloat(value.totalEarnedAmount.toString()), 0)
   const uniqueUsers = new Set(filteredValues.map((v) => v.user.id)).size
 
-  const formatNaira = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
+  
 
   const getInitials = (name: string) => {
     return name
@@ -175,9 +171,9 @@ export default function AccruedValuesPage() {
 
       for (const userId in userData) {
         const data = userData[userId];
-        let row = `"${data.name}","${data.email}",${data.totalEarned},${data.totalJobs}`;
+        let row = `"${data.name}","${data.email}","${formatNaira(data.totalEarned)}","${formatNumberWithCommas(data.totalJobs)}"`;
         allMonthsYears.forEach(my => {
-          row += `,${data.jobsPerMonth[my] || 0}`;
+          row += `,"${formatNumberWithCommas(data.jobsPerMonth[my] || 0)}"`;
         });
         csvContent += row + "\n";
       }
@@ -268,7 +264,7 @@ export default function AccruedValuesPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Unique Users with Earnings</p>
-                <p className="text-2xl font-bold">{uniqueUsers}</p>
+                <p className="text-2xl font-bold">{formatNumberWithCommas(uniqueUsers)}</p>
               </div>
             </div>
           </CardContent>
@@ -282,7 +278,7 @@ export default function AccruedValuesPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Total Records (Users)</p>
-                <p className="text-2xl font-bold">{filteredValues.length}</p>
+                <p className="text-2xl font-bold">{formatNumberWithCommas(filteredValues.length)}</p>
               </div>
             </div>
           </CardContent>
@@ -355,7 +351,7 @@ export default function AccruedValuesPage() {
       {/* Accrued Values Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Accrued Values ({filteredValues.length})</CardTitle>
+          <CardTitle>Accrued Values ({formatNumberWithCommas(filteredValues.length)})</CardTitle>
           <CardDescription>Total earnings per user</CardDescription>
         </CardHeader>
         <CardContent>

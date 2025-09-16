@@ -1,8 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbSql, toCamelCase } from '@/lib/db';
-import { verifyToken, getUserById } from '@/lib/auth';
-
 import { authenticateApiRequest } from '@/lib/api-auth';
+import { hasPermission } from '@/lib/auth';
 
 console.log('[ACCRUED_VALUES_GET] Loading route module');
 
@@ -86,6 +85,7 @@ export async function GET(request: NextRequest) {
           createdAt: value.createdAt,
         };
       });
+      console.log("Detailed Accrued Values (after map):", accruedValues);
     } else {
       // Return aggregated data for display in the UI
       const result = await sql`
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
         GROUP BY u.id, u.first_name, u.last_name, u.email
         ORDER BY total_earned_amount DESC
       `;
-
+      console.log("Aggregated Query Result:", result);
       accruedValues = result.map((row: any) => {
         const value = toCamelCase(row);
         return {
@@ -113,18 +113,21 @@ export async function GET(request: NextRequest) {
           totalEarnedAmount: value.totalEarnedAmount,
         };
       });
+      console.log("Aggregated Accrued Values (after map):", accruedValues);
     }
 
     const yearRangeResult = await sql`
       SELECT MIN(year) as min_year, MAX(year) as max_year FROM accrued_values
     `;
+    console.log("Year Range Result:", yearRangeResult);
     const minYear = yearRangeResult[0]?.min_year || new Date().getFullYear();
     const maxYear = yearRangeResult[0]?.max_year || new Date().getFullYear();
+    console.log("Final minYear, maxYear:", minYear, maxYear);
 
     return NextResponse.json({ accruedValues, minYear, maxYear });
   } catch (error) {
     console.error('[ACCRUED_VALUES_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -218,6 +221,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(toCamelCase(result[0]), { status: 201 });
   } catch (error) {
     console.error('[ACCRUED_VALUES_POST]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -15,3 +15,10 @@ export const formatNaira = (amount: number | null | undefined) => {
     minimumFractionDigits: 0,
   }).format(amount);
 };
+
+export const formatNumberWithCommas = (value: number | null | undefined) => {
+  if (value === null || value === undefined) {
+    return "N/A";
+  }
+  return new Intl.NumberFormat("en-US").format(value);
+};
