@@ -43,10 +43,14 @@ export default function AuditTrailPage() {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to fetch audit logs.');
         }
-        const data = await response.json();
-        setLogs(data.logs);
-        setCurrentPage(data.currentPage);
-        setTotalPages(data.totalPages);
+        const responseData = await response.json();
+        if (Array.isArray(responseData.logs)) {
+          setLogs(responseData.logs);
+        } else {
+          setLogs([]); // Ensure logs is always an array
+        }
+        setCurrentPage(responseData.currentPage);
+        setTotalPages(responseData.totalPages);
       } catch (err: any) {
         setError(err.message);
       } finally {
