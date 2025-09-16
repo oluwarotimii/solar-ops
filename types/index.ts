@@ -95,6 +95,17 @@ export interface CheckinLog {
   job?: Job
 }
 
+export interface TimeEntry {
+  id: string;
+  userId: string;
+  clockIn: string;
+  clockOut?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: User; // To include user details from the join
+}
+
 export interface JobMedia {
   id: string
   jobId: string

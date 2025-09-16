@@ -11,6 +11,8 @@ import { formatAction, getTargetLink } from '@/lib/audit-helpers';
 import AuditLogDetails from '@/components/audit-log-details';
 import AuditLogCard from '@/components/audit-log-card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TimeEntriesTable from '@/components/time-entries-table';
 
 interface AuditLog {
   id: string;
@@ -72,87 +74,98 @@ export default function AuditTrailPage() {
         <p className="text-muted-foreground">Track all user and system activities across the platform.</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity Logs</CardTitle>
-          <CardDescription>A chronological record of all actions performed.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Event</TableHead>
-                  <TableHead className="w-[60%]">Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      <Tabs defaultValue="activity-logs" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="activity-logs">Activity Logs</TabsTrigger>
+          <TabsTrigger value="time-entries">Time Entries</TabsTrigger>
+        </TabsList>
+        <TabsContent value="activity-logs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity Logs</CardTitle>
+              <CardDescription>A chronological record of all actions performed.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40%]">Event</TableHead>
+                      <TableHead className="w-[60%]">Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow><TableCell colSpan={2} className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : error ? (
+                      <TableRow><TableCell colSpan={2} className="text-center py-12 text-red-500"><AlertCircle className="h-8 w-8 mx-auto" /><p className="mt-2">Error: {error}</p></TableCell></TableRow>
+                    ) : logs.length === 0 ? (
+                      <TableRow><TableCell colSpan={2} className="text-center py-12">No audit logs found.</TableCell></TableRow>
+                    ) : (
+                      logs.map((log) => {
+                        const targetLink = getTargetLink(log);
+                        const userName = log.first_name ? `${log.first_name} ${log.last_name}` : 'System';
+                        return (
+                          <TableRow key={log.id}>
+                            <TableCell className="py-2 font-medium">
+                              <div className="flex items-start gap-4">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback>{getInitials(log)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">
+                                    {userName} <span className="font-normal text-muted-foreground">{formatAction(log)}</span>
+                                  </p>
+                                  {targetLink ? (
+                                    <Link href={targetLink} className="text-sm text-blue-500 hover:underline">{log.target_type} #{log.target_id.substring(0, 8)}</Link>
+                                  ) : log.target_type && (
+                                    <p className="text-sm text-muted-foreground">{log.target_type} #{log.target_id?.substring(0, 8)}</p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1" title={format(new Date(log.created_at), 'PPpp')}>
+                                    {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-2 align-top">
+                              <AuditLogDetails log={log} />
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
                 {loading ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                  <div className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                 ) : error ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-12 text-red-500"><AlertCircle className="h-8 w-8 mx-auto" /><p className="mt-2">Error: {error}</p></TableCell></TableRow>
+                  <div className="text-center py-12 text-red-500"><AlertCircle className="h-8 w-8 mx-auto" /><p className="mt-2">Error: {error}</p></div>
                 ) : logs.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-12">No audit logs found.</TableCell></TableRow>
+                  <div className="text-center py-12">No audit logs found.</div>
                 ) : (
-                  logs.map((log) => {
-                    const targetLink = getTargetLink(log);
-                    const userName = log.first_name ? `${log.first_name} ${log.last_name}` : 'System';
-                    return (
-                      <TableRow key={log.id}>
-                        <TableCell className="py-2 font-medium">
-                          <div className="flex items-start gap-4">
-                            <Avatar className="h-10 w-10">
-                              <AvatarFallback>{getInitials(log)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">
-                                {userName} <span className="font-normal text-muted-foreground">{formatAction(log)}</span>
-                              </p>
-                              {targetLink ? (
-                                <Link href={targetLink} className="text-sm text-blue-500 hover:underline">{log.target_type} #{log.target_id.substring(0, 8)}</Link>
-                              ) : log.target_type && (
-                                <p className="text-sm text-muted-foreground">{log.target_type} #{log.target_id?.substring(0, 8)}</p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-1" title={format(new Date(log.created_at), 'PPpp')}>
-                                {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-2 align-top">
-                          <AuditLogDetails log={log} />
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
+                  logs.map((log) => <AuditLogCard key={log.id} log={log} />)
                 )}
-              </TableBody>
-            </Table>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
-            {loading ? (
-              <div className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
-            ) : error ? (
-              <div className="text-center py-12 text-red-500"><AlertCircle className="h-8 w-8 mx-auto" /><p className="mt-2">Error: {error}</p></div>
-            ) : logs.length === 0 ? (
-              <div className="text-center py-12">No audit logs found.</div>
-            ) : (
-              logs.map((log) => <AuditLogCard key={log.id} log={log} />)
-            )}
+          <div className="flex justify-end items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || loading}>First</Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || loading}>Previous</Button>
+            <span className="text-sm">Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || loading}>Next</Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || loading}>Last</Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || loading}>First</Button>
-        <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || loading}>Previous</Button>
-        <span className="text-sm">Page {currentPage} of {totalPages}</span>
-        <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || loading}>Next</Button>
-        <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || loading}>Last</Button>
-      </div>
+        </TabsContent>
+        <TabsContent value="time-entries">
+          <TimeEntriesTable />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
