@@ -251,7 +251,17 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create Job
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating Job...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Job
+              </>
+            )}
           </Button>
         </div>
       </form>

@@ -398,7 +398,10 @@ export default function JobsPage() {
                     {loading ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                          <div className="flex flex-col items-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+                            <p className="text-sm text-muted-foreground">Loading jobs...</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : error ? (

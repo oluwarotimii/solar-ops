@@ -76,18 +76,20 @@ export function DashboardProvider({ children, user }: { children: ReactNode; use
         if (!completionRes.ok) throw new Error("Failed to fetch completion rate.");
         if (!spilloverRes.ok) throw new Error("Failed to fetch spillover jobs.");
 
-        const statsData = await statsRes.json();
-        const activityData = await activityRes.json();
-        const completionData = await completionRes.json();
-        const spilloverData = await spilloverRes.json();
+        const [statsData, activityData, completionData, spilloverData] = await Promise.all([
+          statsRes.json(),
+          activityRes.json(),
+          completionRes.json(),
+          spilloverRes.json(),
+        ]);
 
         setStats(statsData);
         setActivity(activityData);
         setCompletionRate(completionData);
         setSpilloverJobs(spilloverData);
-      } catch (err: any) {
-        console.error("Error fetching dashboard data:", err);
-        setError(err.message || "An unexpected error occurred while fetching dashboard data.");
+      } catch (err) {
+        console.error("[Dashboard Context] Error fetching data:", err);
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
       } finally {
         setLoading(false);
       }

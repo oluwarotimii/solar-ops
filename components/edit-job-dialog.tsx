@@ -261,7 +261,14 @@ export default function EditJobDialog({ job, onJobUpdated, currentUser }: EditJo
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving Changes...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </form>

@@ -39,6 +39,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
+        console.log("[Login Debug] Login successful, storing user and redirecting...");
         localStorage.setItem("user", JSON.stringify(data.user)); // Store the full user object
         router.push("/dashboard")
       } else {
