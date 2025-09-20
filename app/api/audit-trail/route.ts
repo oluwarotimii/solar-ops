@@ -20,8 +20,25 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = (page - 1) * limit;
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     const sql = getDbSql();
+
+    // Build date filter conditions
+    let dateConditions = sql``;
+    if (startDate || endDate) {
+      const conditions = [];
+      if (startDate) {
+        conditions.push(sql`al.created_at >= ${startDate}`);
+      }
+      if (endDate) {
+        conditions.push(sql`al.created_at <= ${endDate} 23:59:59`);
+      }
+      if (conditions.length > 0) {
+        dateConditions = sql`AND ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
+      }
+    }
 
     const logs = await sql`
       SELECT
@@ -38,12 +55,24 @@ export async function GET(request: NextRequest) {
         u.email
       FROM audit_logs al
       LEFT JOIN users u ON al.user_id = u.id
+      WHERE 1=1 ${dateConditions}
       ORDER BY al.created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
 
-    const [{ count }] = await sql`SELECT COUNT(*) FROM audit_logs`;
+    // Count query with same filters
+    let countQuery = sql`SELECT COUNT(*) FROM audit_logs al WHERE 1=1`;
+    if (startDate) {
+      countQuery = sql`${countQuery} AND al.created_at >= ${startDate}`;
+    }
+    if (endDate) {
+      countQuery = sql`${countQuery} AND al.created_at <= ${endDate} 23:59:59`;
+    }
+    
+    const [{ count }] = await sql`${countQuery}`;
+
+    console.log("Audit logs count:", count); // Debug log
 
     return NextResponse.json({
       logs,

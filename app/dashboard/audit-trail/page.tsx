@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, User, Server } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { formatAction, getTargetLink } from '@/lib/audit-helpers';
@@ -34,13 +36,23 @@ export default function AuditTrailPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   useEffect(() => {
     const fetchLogs = async (page = 1) => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/audit-trail?page=${page}&limit=15`);
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: '15'
+        });
+        
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        const response = await fetch(`/api/audit-trail?${params.toString()}`);
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to fetch audit logs.');
@@ -60,7 +72,7 @@ export default function AuditTrailPage() {
       }
     };
     fetchLogs(currentPage);
-  }, [currentPage]);
+  }, [currentPage, startDate, endDate]);
 
   const getInitials = (log: AuditLog) => {
     if (!log.first_name) return <Server className="h-4 w-4" />;
@@ -86,6 +98,44 @@ export default function AuditTrailPage() {
               <CardDescription>A chronological record of all actions performed.</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Date Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <Label htmlFor="start-date">Start Date</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end-date">End Date</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="md:col-span-2 flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Results Info */}
+              <div className="mb-4 text-sm text-muted-foreground">
+                Showing {logs.length} of {totalPages * 15} entries (Page {currentPage} of {totalPages})
+              </div>
+
               {/* Desktop Table View */}
               <div className="hidden md:block">
                 <Table>
