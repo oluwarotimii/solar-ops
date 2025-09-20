@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { getDbSql } from "@/lib/db"
 import { hasPermission } from "@/lib/auth"
+import { logAuditEvent } from "@/lib/audit"
 
 export async function POST(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -21,6 +22,20 @@ export async function POST(request: NextRequest) {
       INSERT INTO gps_logs (user_id, job_id, latitude, longitude, journey_type, status)
       VALUES (${user.id}, ${jobId}, ${latitude}, ${longitude}, 'start', 'active')
     `;
+
+    // Log the start journey event
+    await logAuditEvent({
+      userId: user.id,
+      action: "journey_started",
+      targetType: "gps_log",
+      details: {
+        jobId,
+        latitude,
+        longitude,
+        journeyType: 'start'
+      },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

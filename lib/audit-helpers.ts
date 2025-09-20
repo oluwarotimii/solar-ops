@@ -33,6 +33,22 @@ export function formatAction(log: AuditLog): string {
       return `marked their work as complete on a job.`;
     case 'job_status_update_system':
       return `updated the status of a job.`;
+    case 'job_delete':
+      return `deleted a job.`;
+    case 'gps_location_logged':
+      return `logged a GPS location.`;
+    case 'journey_started':
+      return `started a journey.`;
+    case 'journey_ended':
+      return `ended a journey.`;
+    case 'job_checkin':
+      return `checked in at a job site.`;
+    case 'job_checkout':
+      return `checked out from a job site.`;
+    case 'user_clock_in':
+      return `clocked in.`;
+    case 'user_clock_out':
+      return `clocked out.`;
     default:
       return actionText;
   }

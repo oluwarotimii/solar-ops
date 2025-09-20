@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2, Briefcase } from "lucide-react"
 import { formatNaira, formatNumberWithCommas } from "@/lib/utils"
+import ClockInOut from "@/components/ClockInOut"
 
 export const dynamic = 'force-dynamic';
 
@@ -129,6 +130,9 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground">Total jobs you have completed</p>
         </CardContent>
       </Card>
+      <div className="md:col-span-2">
+        <ClockInOut />
+      </div>
     </div>
   );
 

@@ -63,6 +63,31 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
         </div>
       );
 
+    case 'gps_location_logged':
+    case 'journey_started':
+    case 'journey_ended':
+      return (
+        <div className="space-y-1">
+          <p>Job ID: <span className="font-medium">{log.details.jobId}</span></p>
+          <p>Location: <span className="font-medium">{log.details.latitude}, {log.details.longitude}</span></p>
+          {log.details.accuracy && <p>Accuracy: <span className="font-medium">{log.details.accuracy}m</span></p>}
+          {log.details.journeyType && <p>Journey Type: <span className="font-medium capitalize">{log.details.journeyType}</span></p>}
+        </div>
+      );
+
+    case 'job_checkin':
+    case 'job_checkout':
+      return (
+        <div className="space-y-1">
+          <p>Job ID: <span className="font-medium">{log.details.jobId}</span></p>
+          <p>Type: <span className="font-medium capitalize">{log.details.type}</span></p>
+          {log.details.latitude && log.details.longitude && (
+            <p>Location: <span className="font-medium">{log.details.latitude}, {log.details.longitude}</span></p>
+          )}
+          {log.details.notes && <p>Notes: <span className="font-medium">{log.details.notes}</span></p>}
+        </div>
+      );
+
     default:
       return (
         <pre className="text-xs bg-gray-100 p-2 rounded-md overflow-auto max-w-xs md:max-w-sm">

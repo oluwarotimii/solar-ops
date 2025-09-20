@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { getDbSql } from "@/lib/db"
 import { hasPermission } from "@/lib/auth"
+import { logAuditEvent } from "@/lib/audit"
 
 export async function POST(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -21,6 +22,21 @@ export async function POST(request: NextRequest) {
       INSERT INTO checkin_logs (user_id, job_id, type, latitude, longitude, notes)
       VALUES (${user.id}, ${jobId}, ${type}, ${latitude}, ${longitude}, ${notes})
     `;
+
+    // Log the check-in/out event
+    await logAuditEvent({
+      userId: user.id,
+      action: type === "checkin" ? "job_checkin" : "job_checkout",
+      targetType: "checkin_log",
+      details: {
+        jobId,
+        type,
+        latitude,
+        longitude,
+        notes
+      },
+      request,
+    });
 
     return NextResponse.json({
       success: true,
