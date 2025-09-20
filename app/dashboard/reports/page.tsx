@@ -82,42 +82,237 @@ export default function ReportsPage() {
       return
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,"
+    let csvContent = ""
     let headers: string[] = []
     let rows: string[][] = []
     let filename = `report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`
 
-    if (reportType === 'jobs' && reportData.jobsByType) {
-      headers = ["Job Type", "Count"]
-      rows = reportData.jobsByType.map((d: any) => [d.name, d.count])
-      csvContent += headers.join(",") + "\n"
-      rows.forEach(row => { csvContent += row.join(",") + "\n" })
+    if (reportType === 'overview' && reportData.overviewStats) {
+      headers = ["Metric", "Value"]
+      rows = [
+        ["Total Jobs", reportData.overviewStats.totalJobs],
+        ["Completed Jobs", reportData.overviewStats.completedJobs],
+        ["Customer Satisfaction", reportData.overviewStats.customerSatisfaction],
+        ["Technician Utilization", reportData.overviewStats.technicianUtilization],
+        ["Total Revenue", formatNaira(reportData.overviewStats.totalRevenue)],
+        ["Completed Revenue", formatNaira(reportData.overviewStats.completedRevenue)],
+        ["Average Job Value", formatNaira(reportData.overviewStats.averageJobValue)]
+      ]
 
-    } else if (reportType === 'technicians' && reportData.technicianPerformance) {
-      headers = ["Name", "Email", "Completed Jobs", "Total Earned (NGN)", "Average Rating"]
-      rows = reportData.technicianPerformance.map((d: any) => [
-        d.name,
-        d.email,
-        d.completedJobs,
-        d.totalEarned,
-        parseFloat(d.averageRating).toFixed(2)
-      ])
-      csvContent += headers.join(",") + "\n"
-      rows.forEach(row => { csvContent += `"${row.join('","')}"\n` })
+    } else if (reportType === 'jobs' && (reportData.jobsByType || reportData.jobsByStatus || reportData.jobsByPriority || reportData.revenueByJobType)) {
+      // Jobs by Type
+      if (reportData.jobsByType) {
+        headers = ["Job Type", "Count"]
+        rows = reportData.jobsByType.map((d: any) => [d.name, d.count])
+        csvContent += "Jobs by Type\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+        csvContent += "\n"
+      }
 
+      // Jobs by Status
+      if (reportData.jobsByStatus) {
+        headers = ["Status", "Count"]
+        rows = reportData.jobsByStatus.map((d: any) => [d.status, d.count])
+        csvContent += "Jobs by Status\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+        csvContent += "\n"
+      }
+
+      // Jobs by Priority
+      if (reportData.jobsByPriority) {
+        headers = ["Priority", "Count"]
+        rows = reportData.jobsByPriority.map((d: any) => [d.priority, d.count])
+        csvContent += "Jobs by Priority\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+        csvContent += "\n"
+      }
+
+      // Revenue by Job Type
+      if (reportData.revenueByJobType) {
+        headers = ["Job Type", "Job Count", "Total Value"]
+        rows = reportData.revenueByJobType.map((d: any) => [d.name, d.jobCount, formatNaira(d.totalValue)])
+        csvContent += "Revenue by Job Type\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+      }
+
+      // Reset for file naming
+      headers = []
+      rows = []
+
+    } else if (reportType === 'technicians' && (reportData.technicianPerformance || reportData.userJobStats)) {
+      // Technician Performance Summary
+      if (reportData.technicianPerformance) {
+        headers = ["Name", "Email", "Completed Jobs", "Total Earned (NGN)", "Average Rating"]
+        rows = reportData.technicianPerformance.map((d: any) => [
+          d.name,
+          d.email,
+          d.completedJobs,
+          formatNaira(d.totalEarned),
+          parseFloat(d.averageRating).toFixed(2)
+        ])
+        csvContent += "Technician Performance Summary\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+        csvContent += "\n"
+      }
+
+      // User Job Statistics
+      if (reportData.userJobStats) {
+        headers = [
+          "Name", "Email", "Total Jobs", "Completed Jobs", "In Progress Jobs", 
+          "Assigned Jobs", "Cancelled Jobs", "Total Value (NGN)", "Completed Value (NGN)", "Total Earned (NGN)"
+        ]
+        rows = reportData.userJobStats.map((d: any) => [
+          d.name,
+          d.email,
+          d.totalJobs,
+          d.completedJobs,
+          d.inProgressJobs,
+          d.assignedJobs,
+          d.cancelledJobs,
+          formatNaira(d.totalValue),
+          formatNaira(d.completedValue),
+          formatNaira(d.totalEarned)
+        ])
+        csvContent += "User Job Statistics\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+      }
+
+      // Reset for file naming
+      headers = []
+      rows = []
+
+    } else if (reportType === 'maintenance' && (reportData.maintenanceStats || reportData.maintenanceByTechnician)) {
+      // Maintenance Statistics
+      if (reportData.maintenanceStats) {
+        headers = ["Metric", "Value"]
+        rows = [
+          ["Total Tasks", reportData.maintenanceStats.totalTasks],
+          ["Completed Tasks", reportData.maintenanceStats.completedTasks],
+          ["In Progress Tasks", reportData.maintenanceStats.inProgressTasks],
+          ["Scheduled Tasks", reportData.maintenanceStats.scheduledTasks],
+          ["Overdue Tasks", reportData.maintenanceStats.overdueTasks]
+        ]
+        csvContent += "Maintenance Statistics\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+        csvContent += "\n"
+      }
+
+      // Maintenance by Technician
+      if (reportData.maintenanceByTechnician) {
+        headers = [
+          "Name", "Email", "Total Tasks", "Completed Tasks", "In Progress Tasks", 
+          "Scheduled Tasks", "Overdue Tasks"
+        ]
+        rows = reportData.maintenanceByTechnician.map((d: any) => [
+          d.name,
+          d.email,
+          d.totalTasks,
+          d.completedTasks,
+          d.inProgressTasks,
+          d.scheduledTasks,
+          d.overdueTasks
+        ])
+        csvContent += "Maintenance by Technician\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+      }
+
+      // Reset for file naming
+      headers = []
+      rows = []
+
+    } else if (reportType === 'trends') {
+      toast({ 
+        title: "Export not available", 
+        description: "Trend data is not yet available for export." 
+      })
+      return
     } else {
-      toast({ title: "Export not available for this view." })
+      toast({ 
+        title: "Export not available", 
+        description: "No data available for export in this view." 
+      })
       return
     }
 
-    const encodedUri = encodeURI(csvContent)
+    // If we have headers/rows (for simple exports), create CSV content
+    if (headers.length > 0 && rows.length > 0) {
+      csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+      rows.forEach(row => {
+        const escapedRow = row.map(field => {
+          if (field === null || field === undefined) return '""'
+          return `"${String(field).replace(/"/g, '""')}"`
+        })
+        csvContent += escapedRow.join(",") + "\n"
+      })
+    }
+
+    // Create blob and download link
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
     link.setAttribute("download", filename)
+    link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-
+    
     toast({ title: "Export Successful", description: `Downloaded ${filename}` })
   }
 
@@ -146,6 +341,7 @@ export default function ReportsPage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="jobs">Job Analysis</TabsTrigger>
           <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
+          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
         </TabsList>
 
@@ -193,6 +389,39 @@ export default function ReportsPage() {
             </Card>
           </div>
 
+          {/* Revenue Metrics */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.totalRevenue || 0)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.completedRevenue || 0)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Job Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.averageJobValue || 0)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Completion Rate */}
           <Card>
             <CardHeader>
@@ -214,63 +443,104 @@ export default function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="jobs" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Analysis</CardTitle>
-              <CardDescription>Breakdown of jobs by type and status for the selected period.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-              <div>
-                <h3 className="font-semibold mb-4">Jobs by Type</h3>
-                <div className="space-y-3">
-                  {reportData?.jobsByType?.map((job: any, index: number) => (
-                    <div key={index} className="space-y-1">
-                      <div className="flex justify-between text-sm font-medium">
-                        <span>{job.name}</span>
-                        <span>{job.count}</span>
-                      </div>
-                                            <Progress value={
-                        (reportData?.overviewStats?.totalJobs ?? 0) > 0
-                          ? (job.count / reportData.overviewStats.totalJobs) * 100
-                          : 0
-                      } className="h-2" />
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Jobs by Type */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Jobs by Type</CardTitle>
+                <CardDescription>Breakdown of jobs by type for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {reportData?.jobsByType?.map((job: any, index: number) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>{job.name}</span>
+                      <span>{job.count}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-4">Jobs by Status</h3>
-                <div className="space-y-2">
-                  {reportData?.jobsByStatus?.map((job: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
-                      <span className="capitalize text-sm font-medium">{job.status.replace('_', ' ')}</span>
-                      <Badge variant="secondary">{job.count}</Badge>
+                    <Progress value={
+                      (reportData?.overviewStats?.totalJobs ?? 0) > 0
+                        ? (job.count / reportData.overviewStats.totalJobs) * 100
+                        : 0
+                    } className="h-2" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Jobs by Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Jobs by Status</CardTitle>
+                <CardDescription>Breakdown of jobs by status for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {reportData?.jobsByStatus?.map((job: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                    <span className="capitalize text-sm font-medium">{job.status.replace('_', ' ')}</span>
+                    <Badge variant="secondary">{job.count}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Jobs by Priority */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Jobs by Priority</CardTitle>
+                <CardDescription>Breakdown of jobs by priority level for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {reportData?.jobsByPriority?.map((job: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                    <span className="capitalize text-sm font-medium">{job.priority}</span>
+                    <Badge variant="secondary">{job.count}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Revenue by Job Type */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Job Type</CardTitle>
+                <CardDescription>Total revenue generated by each job type for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {reportData?.revenueByJobType?.map((job: any, index: number) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>{job.name}</span>
+                      <span>{formatNaira(job.totalValue)}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{job.jobCount} jobs</span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="technicians" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Technician Performance</CardTitle>
-              <CardDescription>Performance metrics for each technician for the selected period.</CardDescription>
+              <CardDescription>Performance metrics for technicians for the selected period.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <div className="border rounded-lg">
-                  <div className="hidden md:grid md:grid-cols-4 font-semibold p-4 bg-gray-50 dark:bg-gray-700">
+                  <div className="hidden md:grid md:grid-cols-5 font-semibold p-4 bg-gray-50 dark:bg-gray-700">
                     <div>Name</div>
                     <div className="text-right">Completed Jobs</div>
                     <div className="text-right">Total Earned</div>
                     <div className="text-right">Avg. Rating</div>
+                    <div className="text-right">Job Details</div>
                   </div>
                   <div className="divide-y divide-gray-200 dark:divide-gray-700">
                     {reportData?.technicianPerformance?.map((tech: any) => (
-                      <div key={tech.id} className="grid grid-cols-2 md:grid-cols-4 p-4 gap-4 items-center">
+                      <div key={tech.id} className="grid grid-cols-2 md:grid-cols-5 p-4 gap-4 items-center">
                         <div className="md:col-span-1 col-span-2">
                           <p className="font-medium text-gray-900 dark:text-white">{tech.name}</p>
                           <p className="text-xs text-muted-foreground">{tech.email}</p>
@@ -287,6 +557,9 @@ export default function ReportsPage() {
                           <span className="md:hidden font-semibold">Avg. Rating: </span>
                           {parseFloat(tech.averageRating).toFixed(1)} ★
                         </div>
+                        <div className="text-left md:text-right">
+                          <Button variant="outline" size="sm">View Jobs</Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -294,6 +567,124 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* User Job Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>User Job Statistics</CardTitle>
+              <CardDescription>Job statistics for all users for the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <div className="border rounded-lg">
+                  <div className="hidden md:grid md:grid-cols-8 font-semibold p-4 bg-gray-50 dark:bg-gray-700 text-sm">
+                    <div>Name</div>
+                    <div className="text-right">Total Jobs</div>
+                    <div className="text-right">Completed</div>
+                    <div className="text-right">In Progress</div>
+                    <div className="text-right">Assigned</div>
+                    <div className="text-right">Cancelled</div>
+                    <div className="text-right">Total Value</div>
+                    <div className="text-right">Total Earned</div>
+                  </div>
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {reportData?.userJobStats?.map((user: any) => (
+                      <div key={user.id} className="grid grid-cols-2 md:grid-cols-8 p-4 gap-4 items-center text-sm">
+                        <div className="md:col-span-1 col-span-2">
+                          <p className="font-medium text-gray-900 dark:text-white">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Total Jobs: </span>
+                          {user.totalJobs}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Completed: </span>
+                          {user.completedJobs}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">In Progress: </span>
+                          {user.inProgressJobs}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Assigned: </span>
+                          {user.assignedJobs}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Cancelled: </span>
+                          {user.cancelledJobs}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Total Value: </span>
+                          {formatNaira(user.totalValue)}
+                        </div>
+                        <div className="text-left md:text-right">
+                          <span className="md:hidden font-semibold">Total Earned: </span>
+                          {formatNaira(user.totalEarned)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="maintenance" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Maintenance Stats Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Maintenance Overview</CardTitle>
+                <CardDescription>Summary of maintenance tasks for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Total Tasks</p>
+                    <p className="text-2xl font-bold">{reportData?.maintenanceStats?.totalTasks || 0}</p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Completed</p>
+                    <p className="text-2xl font-bold">{reportData?.maintenanceStats?.completedTasks || 0}</p>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">In Progress</p>
+                    <p className="text-2xl font-bold">{reportData?.maintenanceStats?.inProgressTasks || 0}</p>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Overdue</p>
+                    <p className="text-2xl font-bold">{reportData?.maintenanceStats?.overdueTasks || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Maintenance by Technician */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Maintenance by Technician</CardTitle>
+                <CardDescription>Breakdown of maintenance tasks by technician.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {reportData?.maintenanceByTechnician?.map((tech: any) => (
+                    <div key={tech.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                      <div>
+                        <p className="font-medium">{tech.name}</p>
+                        <p className="text-sm text-muted-foreground">{tech.email}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{tech.completedTasks}/{tech.totalTasks}</p>
+                        <p className="text-sm text-muted-foreground">Completed</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="trends">

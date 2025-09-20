@@ -23,7 +23,7 @@ export default function AccruedValuesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [userFilter, setUserFilter] = useState("all")
   const [monthFilter, setMonthFilter] = useState("all")
-  const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString())
+  const [yearFilter, setYearFilter] = useState("all")
   const [minAccruedYear, setMinAccruedYear] = useState(new Date().getFullYear());
   const [maxAccruedYear, setMaxAccruedYear] = useState(new Date().getFullYear());
 
@@ -48,9 +48,6 @@ export default function AccruedValuesPage() {
         console.log("API Response Data:", accruedValues, minYear, maxYear);
         if (Array.isArray(accruedValues)) {
           setAccruedValues(accruedValues);
-          if (maxYear) {
-            setYearFilter(maxYear.toString());
-          }
         } else {
           console.error("Fetched data is not an array:", accruedValues);
           setAccruedValues([]); // Ensure it's always an array
@@ -132,7 +129,12 @@ export default function AccruedValuesPage() {
   const handleExport = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/accrued-values?mode=detailed', {
+      const queryParams = new URLSearchParams();
+      if (monthFilter !== "all") queryParams.append("month", monthFilter);
+      if (yearFilter !== "all") queryParams.append("year", yearFilter);
+      queryParams.append("mode", "detailed");
+
+      const response = await fetch(`/api/accrued-values?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -178,12 +180,12 @@ export default function AccruedValuesPage() {
         csvContent += row + "\n";
       }
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       if (link.download !== undefined) { // feature detection
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", "accrued_values_report.csv");
+        link.setAttribute("download", `accrued_values_report_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -337,6 +339,7 @@ export default function AccruedValuesPage() {
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
                 {Array.from({ length: maxAccruedYear - minAccruedYear + 1 }, (_, i) => minAccruedYear + i).map((year) => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
