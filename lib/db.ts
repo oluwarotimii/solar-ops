@@ -9,7 +9,15 @@ export function getDbSql() {
     console.error("[DB Debug] DATABASE_URL environment variable is not set!");
     throw new Error("DATABASE_URL environment variable is required");
   }
-  return sql;
+  
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+    console.log("[DB Debug] Database connection successfully created");
+    return sql;
+  } catch (error) {
+    console.error("[DB Debug] Failed to create database connection:", error);
+    throw new Error("Failed to initialize database connection");
+  }
 }
 
 // Helper function to convert snake_case to camelCase

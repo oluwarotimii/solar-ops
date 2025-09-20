@@ -39,38 +39,44 @@ export default function AuditTrailPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  useEffect(() => {
-    const fetchLogs = async (page = 1) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams({
-          page: page.toString(),
-          limit: '15'
-        });
-        
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
-        
-        const response = await fetch(`/api/audit-trail?${params.toString()}`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch audit logs.');
-        }
-        const responseData = await response.json();
-        if (Array.isArray(responseData.logs)) {
-          setLogs(responseData.logs);
-        } else {
-          setLogs([]); // Ensure logs is always an array
-        }
-        setCurrentPage(responseData.currentPage);
-        setTotalPages(responseData.totalPages);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchLogs = async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '15'
+      });
+      
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      
+      const response = await fetch(`/api/audit-trail?${params.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch audit logs.');
       }
-    };
+      const responseData = await response.json();
+      if (Array.isArray(responseData.logs)) {
+        setLogs(responseData.logs);
+      } else {
+        setLogs([]); // Ensure logs is always an array
+      }
+      setCurrentPage(responseData.currentPage);
+      setTotalPages(responseData.totalPages);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add refresh function
+  const handleRefresh = () => {
+    fetchLogs(currentPage);
+  };
+
+  useEffect(() => {
     fetchLogs(currentPage);
   }, [currentPage, startDate, endDate]);
 
@@ -128,12 +134,12 @@ export default function AuditTrailPage() {
                   >
                     Clear Filters
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => fetchLogs(currentPage)}
-                  >
-                    Refresh
-                  </Button>
+                                <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+              >
+                Refresh
+              </Button>
                 </div>
               </div>
               
