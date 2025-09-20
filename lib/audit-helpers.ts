@@ -49,6 +49,8 @@ export function formatAction(log: AuditLog): string {
       return `clocked in.`;
     case 'user_clock_out':
       return `clocked out.`;
+    case 'user_password_reset':
+      return `reset a user's password.`;
     default:
       return actionText;
   }

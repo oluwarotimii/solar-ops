@@ -103,6 +103,14 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
         </div>
       );
 
+    case 'user_password_reset':
+      return (
+        <div>
+          <p>User ID: <span className="font-medium">{log.details.resetUserId}</span></p>
+          {log.details.resetBy && <p>Reset by: <span className="font-medium">{log.details.resetBy}</span></p>}
+        </div>
+      );
+
     default:
       // For any other action types, show a simplified view or JSON if needed
       if (log.details && Object.keys(log.details).length > 0) {

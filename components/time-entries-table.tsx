@@ -85,7 +85,7 @@ export default function TimeEntriesTable() {
       </CardHeader>
       <CardContent>
         {/* Date Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <div>
             <Label htmlFor="time-start-date">Start Date</Label>
             <Input
@@ -104,7 +104,7 @@ export default function TimeEntriesTable() {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
-          <div className="md:col-span-2 flex items-end">
+          <div className="md:col-span-2 flex items-end gap-2">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -113,6 +113,12 @@ export default function TimeEntriesTable() {
               }}
             >
               Clear Filters
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => fetchTimeEntries(currentPage)}
+            >
+              Refresh
             </Button>
           </div>
         </div>
