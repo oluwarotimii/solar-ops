@@ -6,32 +6,35 @@ const OCCURRENCES_TO_GENERATE = 12;
 export async function generateOccurrences(template) {
   const sql = getDbSql();
   const occurrences = [];
-  const startDate = new Date();
-  startDate.setHours(0, 0, 0, 0); // Normalize start date
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize current date
 
   for (let i = 0; i < OCCURRENCES_TO_GENERATE; i++) {
-    const scheduledDate = new Date(startDate);
+    const scheduledDate = new Date(now);
 
     switch (template.recurrence_type) {
       case 'daily':
-        scheduledDate.setDate(startDate.getDate() + i * template.recurrence_interval);
+        scheduledDate.setDate(now.getDate() + i * template.recurrence_interval);
         break;
       case 'weekly':
         // Start from the next occurrence of the specified day_of_week
-        const currentDay = startDate.getDay();
+        const currentDay = now.getDay();
         const desiredDay = template.day_of_week; // 0-6
         let dayDifference = desiredDay - currentDay;
         if (dayDifference < 0) {
           dayDifference += 7;
         }
-        scheduledDate.setDate(startDate.getDate() + dayDifference + (i * template.recurrence_interval * 7));
+        scheduledDate.setDate(now.getDate() + dayDifference + (i * template.recurrence_interval * 7));
         break;
       case 'monthly':
-        // Set the month for the current iteration
-        scheduledDate.setMonth(startDate.getMonth() + i * template.recurrence_interval, template.day_of_month);
+        // For monthly recurrence, we want to start from the current month
+        // Set the day of the month from the template
+        scheduledDate.setDate(template.day_of_month);
+        // Add the appropriate number of months
+        scheduledDate.setMonth(now.getMonth() + i * template.recurrence_interval);
         break;
       case 'yearly':
-        scheduledDate.setFullYear(startDate.getFullYear() + i * template.recurrence_interval, template.month_of_year - 1, template.day_of_month);
+        scheduledDate.setFullYear(now.getFullYear() + i * template.recurrence_interval, template.month_of_year - 1, template.day_of_month);
         break;
     }
 
@@ -48,7 +51,7 @@ export async function generateOccurrences(template) {
     // Clear existing future occurrences to prevent duplicates
     await sql`
       DELETE FROM maintenance_occurrences
-      WHERE template_id = ${template.id} AND scheduled_date >= ${startDate.toISOString().split('T')[0]}
+      WHERE template_id = ${template.id} AND scheduled_date >= ${now.toISOString().split('T')[0]}
     `;
 
     const insertQueries = occurrences.map(o => sql`
