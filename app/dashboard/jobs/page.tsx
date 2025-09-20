@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
+  Archive,
 } from "lucide-react"
 import { formatDate } from "@/lib/date-utils"
 import CreateJobDialog from "@/components/create-job-dialog"
@@ -52,6 +53,7 @@ interface Job {
   jobValue: number
   estimatedDuration?: number
   users?: UserJobAssignment[]
+  isArchived?: boolean
 }
 
 interface JobType {
@@ -78,19 +80,25 @@ export default function JobsPage() {
   const [stats, setStats] = useState({ totalJobsValue: 0, completedJobsValue: 0 });
   const [showTotalValue, setShowTotalValue] = useState(false);
   const [showCompletedValue, setShowCompletedValue] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalJobs, setTotalJobs] = useState(0)
+  const [jobsPerPage] = useState(12)
   const { toast } = useToast()
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (page = 1) => {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch("/api/jobs")
+      const response = await fetch(`/api/jobs?page=${page}&limit=12`)
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || "Failed to fetch jobs.")
       }
       const data = await response.json()
-      setJobs(data)
+      // Handle both paginated (admin) and non-paginated (technician) responses
+      const jobsData = Array.isArray(data) ? data : data.jobs || []
+      setJobs(jobsData)
+      // Save pagination data if needed
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred while fetching jobs.")
     } finally {
@@ -127,10 +135,10 @@ export default function JobsPage() {
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser))
     }
-    fetchJobs()
+    fetchJobs(currentPage)
     fetchJobTypes()
     fetchStats()
-  }, [])
+  }, [currentPage])
 
   const handleJobCreated = () => {
     fetchJobs()
@@ -189,6 +197,22 @@ export default function JobsPage() {
     }
   }
 
+  const handleArchiveJob = async (jobId: string) => {
+    if (!confirm("Are you sure you want to archive this job? This will hide it from the main jobs list.")) return
+    try {
+      const response = await fetch(`/api/jobs/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      })
+      if (!response.ok) throw new Error((await response.json()).error || "Failed to archive job.")
+      toast({ title: "Success", description: "Job has been archived." })
+      fetchJobs()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
   const handleJobCardClick = (job: Job) => {
     setSelectedJobForSheet(job)
     setShowBottomSheet(true)
@@ -224,7 +248,7 @@ export default function JobsPage() {
     }
   }
 
-  const filteredJobs = jobs.filter(
+  const filteredJobs = (jobs || []).filter(
     (job) =>
       (job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.locationAddress.toLowerCase().includes(searchTerm.toLowerCase())) &&
@@ -232,7 +256,7 @@ export default function JobsPage() {
       (typeFilter === "all" || job.jobType.name === typeFilter),
   )
 
-  const totalJobsValue = jobs.reduce((acc, job) => acc + job.jobValue, 0)
+  const totalJobsValue = (jobs || []).reduce((acc, job) => acc + job.jobValue, 0)
 
   const isUserAssigned = selectedJobForSheet?.technicians?.some((t) => t.technicianId === currentUser?.id)
   const technicianInfo = selectedJobForSheet?.technicians?.find((t) => t.technicianId === currentUser?.id)
@@ -441,6 +465,11 @@ export default function JobsPage() {
                                     <RotateCcw className="h-4 w-4 mr-2" /> Re-open
                                   </Button>
                                 )}
+                                {isUserAdmin && job.status === "completed" && !job.isArchived && (
+                                  <Button variant="outline" size="sm" onClick={() => handleArchiveJob(job.id)}>
+                                    <Archive className="h-4 w-4 mr-2" /> Archive
+                                  </Button>
+                                )}
                                 {isUserAdmin && (
                                   <Button variant="destructive" size="sm" onClick={() => handleJobDelete(job.id)}>
                                     <Trash2 className="h-4 w-4" />
@@ -465,6 +494,27 @@ export default function JobsPage() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage}
+                </span>
+                <Button
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={jobs.length < jobsPerPage}
+                  variant="outline"
+                >
+                  Next
+                </Button>
               </div>
 
               {/* Mobile Cards */}

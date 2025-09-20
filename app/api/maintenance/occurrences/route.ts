@@ -15,6 +15,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const sql = getDbSql();
+    const { searchParams } = request.nextUrl
+    const page = parseInt(searchParams.get("page") || "1", 10)
+    const limit = parseInt(searchParams.get("limit") || "12", 10)
+    const offset = (page - 1) * limit
+    
     const isManager = hasPermission(user, 'maintenance:read');
 
     const result = await sql`
@@ -29,6 +34,15 @@ export async function GET(request: NextRequest) {
       LEFT JOIN users au ON mo.assigned_to = au.id
       ${isManager ? sql`` : sql`WHERE mo.assigned_to = ${user.id}`}
       ORDER BY mo.scheduled_date ASC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+
+    const [{ count }] = await sql`
+      SELECT COUNT(*) as count
+      FROM maintenance_occurrences mo
+      JOIN maintenance_templates mt ON mo.template_id = mt.id
+      ${isManager ? sql`` : sql`WHERE mo.assigned_to = ${user.id}`}
     `;
 
     const occurrences = result.map((row: any) => {
@@ -63,7 +77,12 @@ export async function GET(request: NextRequest) {
       return occurrence
     })
 
-    return NextResponse.json(occurrences)
+    return NextResponse.json({
+      occurrences,
+      total: parseInt(count, 10),
+      page,
+      limit,
+    })
   } catch (error) {
     console.error("Maintenance occurrences fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

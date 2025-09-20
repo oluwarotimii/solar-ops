@@ -33,7 +33,8 @@ import {
   User,
   DollarSign,
   Shield,
-  History
+  History,
+  Archive
 } from "lucide-react"
 import type { User as UserType } from "@/types"
 
@@ -58,17 +59,12 @@ const data = {
           url: "/dashboard/jobs",
           icon: Briefcase,
         },
-        // {
-        //   title: "Technicians",
-        //   url: "/dashboard/technicians",
-        //   icon: Users,
-        //   adminOnly: true,
-        // },
-        // {
-        //   title: "Live Tracking",
-        //   url: "/dashboard/tracking",
-        //   icon: MapPin,
-        // },
+        {
+          title: "Archived Jobs",
+          url: "/dashboard/archived-jobs",
+          icon: Archive,
+          adminOnly: true,
+        },
         {
           title: "Maintenance",
           url: "/dashboard/maintenance",

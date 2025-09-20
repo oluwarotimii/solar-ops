@@ -131,13 +131,18 @@ export async function GET(request: NextRequest) {
           u.first_name || ' ' || u.last_name as name,
           u.email,
           COUNT(j.id) as completed_jobs,
-          COALESCE(SUM(av.earned_amount), 0) as total_earned,
-          COALESCE(AVG(av.rating), 0) as average_rating
+          COALESCE(SUM(av_user.earned_amount), 0) as total_earned,
+          COALESCE(AVG(av_user.rating), 0) as average_rating
         FROM users u
         LEFT JOIN jobs j ON j.status = 'completed' AND j.completed_at >= ${startDate} AND EXISTS (
           SELECT 1 FROM job_technicians jt WHERE jt.job_id = j.id AND jt.technician_id = u.id
         )
-        LEFT JOIN accrued_values av ON av.user_id = u.id AND av.created_at >= ${startDate}
+        LEFT JOIN (
+          SELECT user_id, SUM(earned_amount) as earned_amount, AVG(rating) as rating
+          FROM accrued_values
+          WHERE created_at >= ${startDate}
+          GROUP BY user_id
+        ) av_user ON av_user.user_id = u.id
         WHERE u.role_id = (SELECT id FROM roles WHERE name = 'Technician')
         GROUP BY u.id, u.first_name, u.last_name, u.email
         ORDER BY total_earned DESC
@@ -156,11 +161,16 @@ export async function GET(request: NextRequest) {
           COUNT(CASE WHEN j.status = 'cancelled' THEN 1 END) as cancelled_jobs,
           COALESCE(SUM(j.job_value), 0) as total_value,
           COALESCE(SUM(CASE WHEN j.status = 'completed' THEN j.job_value ELSE 0 END), 0) as completed_value,
-          COALESCE(SUM(av.earned_amount), 0) as total_earned
+          COALESCE(SUM(av_user.earned_amount), 0) as total_earned
         FROM users u
         LEFT JOIN job_technicians jt ON jt.technician_id = u.id
         LEFT JOIN jobs j ON jt.job_id = j.id AND j.created_at >= ${startDate}
-        LEFT JOIN accrued_values av ON av.user_id = u.id AND av.created_at >= ${startDate}
+        LEFT JOIN (
+          SELECT user_id, SUM(earned_amount) as earned_amount
+          FROM accrued_values
+          WHERE created_at >= ${startDate}
+          GROUP BY user_id
+        ) av_user ON av_user.user_id = u.id
         GROUP BY u.id, u.first_name, u.last_name, u.email
         ORDER BY total_earned DESC
       `;

@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
 
     // Admins can see all jobs
     if (hasPermission(user, "jobs:read:all")) {
+      const { searchParams } = request.nextUrl
+      const page = parseInt(searchParams.get("page") || "1", 10)
+      const limit = parseInt(searchParams.get("limit") || "12", 10)
+      const offset = (page - 1) * limit
+
       const result = await sql`
         SELECT 
           j.*,
@@ -28,7 +33,16 @@ export async function GET(request: NextRequest) {
         FROM jobs j
         LEFT JOIN job_types jt ON j.job_type_id = jt.id
         LEFT JOIN users cu ON j.created_by = cu.id
+        WHERE j.is_archived = FALSE
         ORDER BY j.created_at DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      `
+
+      const [{ count }] = await sql`
+        SELECT COUNT(*) as count
+        FROM jobs j
+        WHERE j.is_archived = FALSE
       `
 
       const jobs = await Promise.all(
@@ -95,7 +109,12 @@ export async function GET(request: NextRequest) {
             : null,
         scheduledTime: job.scheduledTime || null,
       }))
-      return NextResponse.json(jobsWithDate)
+      return NextResponse.json({
+        jobs: jobsWithDate,
+        total: parseInt(count, 10),
+        page,
+        limit,
+      })
     }
 
     // Supervisors can see jobs for their team
@@ -117,6 +136,7 @@ export async function GET(request: NextRequest) {
         WHERE jtech.technician_id IN (
           SELECT technician_id FROM supervisor_technicians WHERE supervisor_id = ${user.id}
         )
+        AND j.is_archived = FALSE
         ORDER BY j.created_at DESC
         LIMIT ${limit}
         OFFSET ${offset}
@@ -129,6 +149,7 @@ export async function GET(request: NextRequest) {
         WHERE jtech.technician_id IN (
           SELECT technician_id FROM supervisor_technicians WHERE supervisor_id = ${user.id}
         )
+        AND j.is_archived = FALSE
       `
 
       const jobs = await Promise.all(
@@ -213,6 +234,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN users cu ON j.created_by = cu.id
       JOIN job_technicians jtech ON j.id = jtech.job_id
       WHERE jtech.technician_id = ${user.id}
+      AND j.is_archived = FALSE
       ORDER BY j.created_at DESC
     `
 

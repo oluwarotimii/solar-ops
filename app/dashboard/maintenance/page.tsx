@@ -56,22 +56,25 @@ export default function MaintenancePage() {
   const [calendarOccurrences, setCalendarOccurrences] = useState<Record<string, MaintenanceOccurrence[]>>({})
   const [selectedOccurrence, setSelectedOccurrence] = useState<MaintenanceOccurrence | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalOccurrences, setTotalOccurrences] = useState(0)
+  const [occurrencesPerPage] = useState(12)
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
     setCurrentUser(user);
-    fetchData(user)
+    fetchData(user, currentPage)
     if (user?.role?.isAdmin) {
       fetchUsers()
     }
-  }, [])
+  }, [currentPage])
 
-  const fetchData = async (user: UserType | null) => {
+  const fetchData = async (user: UserType | null, page = 1) => {
     setLoading(true)
     try {
       const [templatesRes, occurrencesRes] = await Promise.all([
         fetch("/api/maintenance/templates", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }),
-        fetch("/api/maintenance/occurrences", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+        fetch(`/api/maintenance/occurrences?page=${page}&limit=${occurrencesPerPage}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
       ]);
 
       if (templatesRes.ok) {
@@ -80,14 +83,16 @@ export default function MaintenancePage() {
       }
 
       if (occurrencesRes.ok) {
-        let data = await occurrencesRes.json();
+        const data = await occurrencesRes.json();
+        let occurrencesData = data.occurrences;
         if (user && !user.role.isAdmin) {
-          data = data.filter(occ => occ.assignedTo === user.id);
+          occurrencesData = occurrencesData.filter(occ => occ.assignedTo === user.id);
         }
-        setOccurrences(data);
+        setOccurrences(occurrencesData);
+        setTotalOccurrences(data.total || 0);
 
         const occurrencesByDate: Record<string, MaintenanceOccurrence[]> = {}
-        data.forEach((occ: MaintenanceOccurrence) => {
+        occurrencesData.forEach((occ: MaintenanceOccurrence) => {
           const dateKey = occ.scheduledDate.split("T")[0]
           if (!occurrencesByDate[dateKey]) {
             occurrencesByDate[dateKey] = []
@@ -122,7 +127,7 @@ export default function MaintenancePage() {
   }
 
   const handleTemplateCreated = () => {
-    fetchData(currentUser)
+    fetchData(currentUser, currentPage)
     setShowCreateDialog(false)
   }
 
@@ -133,7 +138,7 @@ export default function MaintenancePage() {
 
   const handleTemplateUpdated = () => {
     setShowEditDialog(false);
-    fetchData(currentUser);
+    fetchData(currentUser, currentPage);
   };
 
   const handleDeleteTemplate = (template: MaintenanceTemplate) => {
@@ -452,6 +457,27 @@ export default function MaintenancePage() {
                     onClick={() => handleOccurrenceClick(occ)}
                   />
                 ))}
+              </div>
+              
+              {/* Pagination Controls */}
+              <div className="flex justify-between items-center mt-4">
+                <Button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {Math.ceil(totalOccurrences / occurrencesPerPage)}
+                </span>
+                <Button
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={currentPage * occurrencesPerPage >= totalOccurrences}
+                  variant="outline"
+                >
+                  Next
+                </Button>
               </div>
             </CardContent>
           </Card>

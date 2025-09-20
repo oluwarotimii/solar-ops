@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
 
       if (status === 'completed') {
-        const [job] = await sql`UPDATE jobs SET status = 'completed', completed_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;`;
+        const [job] = await sql`UPDATE jobs SET status = 'completed', completed_at = NOW(), is_archived = TRUE, archived_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;`;
         
         if (job) {
           const techniciansResult = await sql`SELECT technician_id FROM job_technicians WHERE job_id = ${jobId}`;
@@ -57,10 +57,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
         let query;
         if (status === 'assigned') {
-          query = sql`UPDATE jobs SET status = ${status}, completed_at = NULL WHERE id = ${jobId} RETURNING id;`;
+          query = sql`UPDATE jobs SET status = ${status}, completed_at = NULL, is_archived = FALSE, archived_at = NULL WHERE id = ${jobId} RETURNING id;`;
           await sql`UPDATE job_technicians SET completed_at = NULL WHERE job_id = ${jobId}`;
         } else {
-          query = sql`UPDATE jobs SET status = ${status}, completed_at = NULL WHERE id = ${jobId} RETURNING id;`;
+          query = sql`UPDATE jobs SET status = ${status}, completed_at = NULL, is_archived = FALSE, archived_at = NULL WHERE id = ${jobId} RETURNING id;`;
         }
         await query;
       }
@@ -106,39 +106,39 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     `;
 
     if (total_technicians > 0 && total_technicians === completed_technicians) {
-      const [job] = await sql`
-        UPDATE jobs SET status = 'completed', completed_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;
-      `;
+        const [job] = await sql`
+          UPDATE jobs SET status = 'completed', completed_at = NOW(), is_archived = TRUE, archived_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;
+        `;
 
-      if (job) {
-        const techniciansResult = await sql`SELECT technician_id FROM job_technicians WHERE job_id = ${jobId}`;
-        const technicianIds = techniciansResult.map((row) => row.technician_id);
-        const numberOfTechnicians = technicianIds.length;
+        if (job) {
+          const techniciansResult = await sql`SELECT technician_id FROM job_technicians WHERE job_id = ${jobId}`;
+          const technicianIds = techniciansResult.map((row) => row.technician_id);
+          const numberOfTechnicians = technicianIds.length;
 
-        if (numberOfTechnicians > 0) {
-          const earnedAmount = job.job_value / numberOfTechnicians;
-          const now = new Date();
-          const month = now.getMonth() + 1;
-          const year = now.getFullYear();
+          if (numberOfTechnicians > 0) {
+            const earnedAmount = job.job_value / numberOfTechnicians;
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
 
-          for (const techId of technicianIds) {
-            await sql`
-              INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, month, year, created_at)
-              VALUES (${techId}, ${jobId}, ${job.job_value}, ${earnedAmount}, ${month}, ${year}, NOW())
-              ;
-            `;
+            for (const techId of technicianIds) {
+              await sql`
+                INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, month, year, created_at)
+                VALUES (${techId}, ${jobId}, ${job.job_value}, ${earnedAmount}, ${month}, ${year}, NOW())
+                ;
+              `;
+            }
           }
         }
-      }
 
-      await logAuditEvent({
-        userId: null, // System action
-        action: "job_status_update_system",
-        targetType: "job",
-        targetId: jobId,
-        details: { status: "completed", reason: "All technicians marked as complete" },
-      });
-    }
+        await logAuditEvent({
+          userId: null, // System action
+          action: "job_status_update_system",
+          targetType: "job",
+          targetId: jobId,
+          details: { status: "completed", reason: "All technicians marked as complete" },
+        });
+      }
 
     return NextResponse.json({ message: "Your status has been marked as complete." });
 
