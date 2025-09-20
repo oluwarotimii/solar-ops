@@ -1,6 +1,15 @@
-# Solar Field Operations System
+# SolarOps
 
-A complete field operations management system for Nigerian solar installations, maintenance, and technician tracking.
+Solar Field Operations Management Platform
+
+## PWA (Progressive Web App) Setup
+
+This application is configured as a PWA. To update the app icons:
+
+1. Replace `public/icon.png` with your new icon (should be at least 512x512 pixels)
+2. Run `npm run generate-icons` to automatically generate all required icon sizes
+
+The PWA should now properly install as a standalone app with the correct icons on both mobile and desktop platforms.
 
 ## 🚀 Quick Setup
 

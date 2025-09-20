@@ -20,12 +20,17 @@ const InstallPwaPrompt: React.FC<InstallPwaPromptProps> = ({
 
   useEffect(() => {
     const handler = (e: Event) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault()
+      // Stash the event so it can be triggered later
       setDeferredPrompt(e)
       setShowPrompt(true)
     }
 
-    window.addEventListener("beforeinstallprompt", handler)
+    // Check if the browser supports the beforeinstallprompt event
+    if ('serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window) {
+      window.addEventListener("beforeinstallprompt", handler)
+    }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler)
@@ -34,7 +39,9 @@ const InstallPwaPrompt: React.FC<InstallPwaPromptProps> = ({
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
+      // Show the install prompt
       deferredPrompt.prompt()
+      // Wait for the user to respond to the prompt
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === "accepted") {
         console.log("User accepted the A2HS prompt")
@@ -43,6 +50,7 @@ const InstallPwaPrompt: React.FC<InstallPwaPromptProps> = ({
         console.log("User dismissed the A2HS prompt")
         onInstallDismissed?.()
       }
+      // Clear the saved prompt since it can't be used again
       setDeferredPrompt(null)
       setShowPrompt(false)
     }
@@ -53,31 +61,52 @@ const InstallPwaPrompt: React.FC<InstallPwaPromptProps> = ({
     onInstallDismissed?.()
   }
 
-  if (!isMobile || !showPrompt) {
+  // Always render the component, but only show the prompt when appropriate
+  if (!showPrompt) {
     return null
   }
 
+  // For mobile devices, show the bottom sheet
+  if (isMobile) {
+    return (
+      <BottomSheet
+        isOpen={showPrompt}
+        onClose={handleLaterClick}
+        title="Install SolarOps App"
+        actions={
+          <div className="flex gap-2">
+            <Button onClick={handleInstallClick} className="flex-1">
+              Install App
+            </Button>
+            <Button variant="outline" onClick={handleLaterClick} className="flex-1">
+              Later
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Get the full experience. Install SolarOps as an app for faster access and offline support.
+        </p>
+      </BottomSheet>
+    )
+  }
+
+  // For desktop devices, show a toast notification or similar UI
   return (
-    <BottomSheet
-      isOpen={showPrompt}
-      onClose={handleLaterClick}
-      title="Install SolarOps App"
-      actions={
-        <div className="flex gap-2">
-          <Button onClick={handleInstallClick} className="flex-1">
-            Install App
-          </Button>
-          <Button variant="outline" onClick={handleLaterClick} className="flex-1">
-            Later
-          </Button>
-        </div>
-      }
-    >
-      <p className="text-sm text-muted-foreground">
-        Get the full experience. Add SolarOps to your home screen for faster access and offline
-        support.
+    <div className="fixed bottom-4 right-4 z-50 bg-background border rounded-lg shadow-lg p-4 max-w-xs">
+      <h3 className="font-semibold mb-2">Install SolarOps App</h3>
+      <p className="text-sm text-muted-foreground mb-3">
+        Get the full experience. Install SolarOps as an app for faster access and offline support.
       </p>
-    </BottomSheet>
+      <div className="flex gap-2">
+        <Button onClick={handleInstallClick} size="sm">
+          Install
+        </Button>
+        <Button variant="outline" onClick={handleLaterClick} size="sm">
+          Later
+        </Button>
+      </div>
+    </div>
   )
 }
 
