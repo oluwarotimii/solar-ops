@@ -26,6 +26,21 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
       if (!changes || Object.keys(changes).length === 0) {
         return <span className="text-muted-foreground">No fields changed</span>;
       }
+      
+      // Filter out unchanged fields
+      const changedFields = Object.entries(changes).filter(([key, value]: [string, any]) => {
+        // Show the field if there's an actual change
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'object' && value.old === undefined && value.new === undefined) return false;
+        if (typeof value === 'object' && value.old === value.new) return false;
+        if (typeof value !== 'object' && value.old === value.new) return false;
+        return true;
+      });
+      
+      if (changedFields.length === 0) {
+        return <span className="text-muted-foreground">No fields changed</span>;
+      }
+      
       return (
         <Table className="text-xs">
           <TableHeader>
@@ -36,7 +51,7 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(changes).map(([key, value]: [string, any]) => (
+            {changedFields.map(([key, value]: [string, any]) => (
               <TableRow key={key}>
                 <TableCell className="font-medium capitalize">{key.replace(/_/g, ' ')}</TableCell>
                 <TableCell>{renderValue(value.old)}</TableCell>
@@ -89,10 +104,25 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
       );
 
     default:
-      return (
-        <pre className="text-xs bg-gray-100 p-2 rounded-md overflow-auto max-w-xs md:max-w-sm">
-          {JSON.stringify(log.details, null, 2)}
-        </pre>
-      );
+      // For any other action types, show a simplified view or JSON if needed
+      if (log.details && Object.keys(log.details).length > 0) {
+        // Show only non-empty details
+        const nonEmptyDetails = Object.entries(log.details).filter(([key, value]) => 
+          value !== null && value !== undefined && value !== ''
+        );
+        
+        if (nonEmptyDetails.length === 0) {
+          return <span className="text-muted-foreground">No details</span>;
+        }
+        
+        return (
+          <div className="space-y-1">
+            {nonEmptyDetails.map(([key, value]) => (
+              <p key={key}><span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span> {renderValue(value)}</p>
+            ))}
+          </div>
+        );
+      }
+      return <span className="text-muted-foreground">No details</span>;
   }
 }

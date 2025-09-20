@@ -1,8 +1,43 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getDbSql, toCamelCase } from "@/lib/db";
-import { authenticateApiRequest } from "@/lib/api-auth";
-import { hasPermission } from "@/lib/auth";
-import { logAuditEvent } from "@/lib/audit";
+import { type NextRequest, NextResponse } from "next/server"
+import { toCamelCase, getDbSql } from "@/lib/db"
+import { authenticateApiRequest } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/auth"
+import { logAuditEvent } from "@/lib/audit"
+
+// Helper function to compare job data and return only changed fields
+function getJobChanges(originalJob: any, newJobData: any) {
+  const changes: Record<string, { old: any; new: any }> = {};
+  
+  // Compare simple fields
+  const simpleFields = [
+    'title', 'description', 'priority', 'location_address', 
+    'location_lat', 'location_lng', 'scheduled_date', 'scheduled_time',
+    'estimated_duration', 'job_value', 'instructions', 'status'
+  ];
+  
+  for (const field of simpleFields) {
+    const originalValue = originalJob[field];
+    const newValue = newJobData[field];
+    
+    // Only log if there's an actual change
+    if (newValue !== undefined && newValue !== originalValue) {
+      changes[field] = {
+        old: originalValue,
+        new: newValue
+      };
+    }
+  }
+  
+  // Compare job_type_id specifically
+  if (newJobData.jobTypeId !== undefined && newJobData.jobTypeId !== originalJob.job_type_id) {
+    changes.job_type_id = {
+      old: originalJob.job_type_id,
+      new: newJobData.jobTypeId
+    };
+  }
+  
+  return changes;
+}
 
 export async function GET(
   request: NextRequest,
@@ -188,7 +223,7 @@ export async function PUT(
       targetType: "job",
       targetId: jobId,
       details: {
-        changes: jobData, // This could be more granular
+        changes: getJobChanges(originalJob, jobData),
         originalTechnicians: originalTechnicianIds,
         newTechnicians: jobData.assignedUsers?.map((t: any) => t.userId),
       },
