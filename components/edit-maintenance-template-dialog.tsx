@@ -38,23 +38,35 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
   const [error, setError] = useState("");
 
   useEffect(() => {
+    console.log('Users available in edit dialog:', users);
     if (template) {
       console.log('Template data in edit dialog:', template);
-      setFormData({
-        title: template.title || "",
-        description: template.description || "",
-        siteLocation: template.siteLocation || "",
-        jobValue: String(template.jobValue || ""),
-        assignedTo: template.assignedTo || (template.assignedUser ? template.assignedUser.id : undefined),
-        recurrenceType: template.recurrenceType || "monthly",
-        recurrenceInterval: String(template.recurrenceInterval || "1"),
-        dayOfWeek: String(template.dayOfWeek !== null && template.dayOfWeek !== undefined ? template.dayOfWeek : "1"),
-        dayOfMonth: String(template.dayOfMonth !== null && template.dayOfMonth !== undefined ? template.dayOfMonth : "1"),
-        monthOfYear: String(template.monthOfYear !== null && template.monthOfYear !== undefined ? template.monthOfYear : "1"),
-        isActive: template.isActive !== undefined ? template.isActive : true,
-      });
+      // Ensure assignedTo is properly set from either assignedTo or assignedUser.id
+      const assignedToValue = template.assignedTo || (template.assignedUser ? template.assignedUser.id : "");
+      console.log('Assigned to value being set:', assignedToValue);
+      
+      // Check if the assigned user exists in the users array
+      const assignedUserExists = users.some(user => user.id === assignedToValue);
+      console.log('Assigned user exists in users array:', assignedUserExists);
+      
+      // Use a small delay to ensure the form data is properly set
+      setTimeout(() => {
+        setFormData({
+          title: template.title || "",
+          description: template.description || "",
+          siteLocation: template.siteLocation || "",
+          jobValue: String(template.jobValue || ""),
+          assignedTo: assignedToValue,
+          recurrenceType: template.recurrenceType || "monthly",
+          recurrenceInterval: String(template.recurrenceInterval || "1"),
+          dayOfWeek: String(template.dayOfWeek !== null && template.dayOfWeek !== undefined ? template.dayOfWeek : "1"),
+          dayOfMonth: String(template.dayOfMonth !== null && template.dayOfMonth !== undefined ? template.dayOfMonth : "1"),
+          monthOfYear: String(template.monthOfYear !== null && template.monthOfYear !== undefined ? template.monthOfYear : "1"),
+          isActive: template.isActive !== undefined ? template.isActive : true,
+        });
+      }, 0);
     }
-  }, [template]);
+  }, [template, users]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,12 +78,14 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
         ...formData,
         recurrenceInterval: Number(formData.recurrenceInterval),
         jobValue: Number(formData.jobValue) || 0,
-        assignedTo: formData.assignedTo || null, // This should work correctly now
+        assignedTo: formData.assignedTo || null,
         day_of_week: formData.recurrenceType === 'weekly' ? Number(formData.dayOfWeek) : null,
         day_of_month: formData.recurrenceType === 'monthly' ? Number(formData.dayOfMonth) : 
                      formData.recurrenceType === 'yearly' ? Number(formData.dayOfMonth) : null,
         month_of_year: formData.recurrenceType === 'yearly' ? Number(formData.monthOfYear) : null,
       };
+
+      console.log('Submitting payload:', payload);
 
       const response = await fetch(`/api/maintenance/templates/${template.id}`, {
         method: "PUT",
@@ -153,7 +167,8 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
           <div className="space-y-2">
             <Label htmlFor="assignedTo">Default User</Label>
             <Select
-              value={formData.assignedTo}
+              key={formData.assignedTo}
+              value={formData.assignedTo || ""}
               onValueChange={(value) => setFormData((prev) => ({ ...prev, assignedTo: value }))}
             >
               <SelectTrigger>
