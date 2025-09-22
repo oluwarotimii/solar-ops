@@ -128,7 +128,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const sql = getDbSql();
     
-    // Deleting a template will also delete all its occurrences due to ON DELETE CASCADE
+    // First delete all accrued values associated with occurrences of this template
+    await sql`
+      DELETE FROM accrued_values 
+      WHERE maintenance_occurrence_id IN (
+        SELECT id FROM maintenance_occurrences WHERE template_id = ${params.id}
+      )
+    `;
+    
+    // Then delete the template, which will cascade to occurrences
     const result = await sql`
       DELETE FROM maintenance_templates WHERE id = ${params.id}
     `;

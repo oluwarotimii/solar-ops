@@ -118,6 +118,11 @@ export async function DELETE(
     }
     const jobTitle = jobResult[0].title;
 
+    // Delete related accrued values first to maintain referential integrity
+    await sql`
+      DELETE FROM accrued_values WHERE job_id = ${jobId}
+    `;
+
     await sql`
       DELETE FROM jobs WHERE id = ${jobId}
     `;

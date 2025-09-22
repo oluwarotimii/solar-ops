@@ -95,7 +95,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const completionDate = new Date();
         const [existingAccrued] = await sql`SELECT id FROM accrued_values WHERE maintenance_occurrence_id = ${updatedOccurrence.id}`;
 
-        const monthlyValue = template.job_value / 12;
+        // The job_value for maintenance templates is already the monthly value, no division needed
+        const monthlyValue = template.job_value;
 
         if (existingAccrued) {
           await sql`

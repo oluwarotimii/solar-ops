@@ -202,9 +202,8 @@ export async function POST(req: NextRequest) {
       jobValue = templateResult[0].job_value;
       const recurrenceType = templateResult[0].recurrence_type;
 
-      // Assuming 12 occurrences for yearly contracts
-      const occurrencesPerYear = 12;
-      let monthlyValue = jobValue / occurrencesPerYear;
+      // The job_value for maintenance templates is already the monthly value, no division needed
+      let monthlyValue = jobValue;
 
       // For now, we assume one technician per maintenance job
       earnedAmount = monthlyValue;

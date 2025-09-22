@@ -142,8 +142,8 @@ CREATE TABLE IF NOT EXISTS maintenance_occurrences (
 CREATE TABLE IF NOT EXISTS accrued_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
-    job_id UUID REFERENCES jobs(id),
-    maintenance_occurrence_id UUID REFERENCES maintenance_occurrences(id),
+    job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
+    maintenance_occurrence_id UUID REFERENCES maintenance_occurrences(id) ON DELETE CASCADE,
     job_value DECIMAL(12,2) NOT NULL,
     earned_amount DECIMAL(12,2) NOT NULL,
     rating DECIMAL(3,2),
