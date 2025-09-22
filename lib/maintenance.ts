@@ -24,17 +24,28 @@ export async function generateOccurrences(template) {
         if (dayDifference < 0) {
           dayDifference += 7;
         }
+        // For subsequent weeks, add the interval in weeks
         scheduledDate.setDate(now.getDate() + dayDifference + (i * template.recurrence_interval * 7));
         break;
       case 'monthly':
         // For monthly recurrence, we want to start from the current month
-        // Set the day of the month from the template
-        scheduledDate.setDate(template.day_of_month);
-        // Add the appropriate number of months
+        // Add the appropriate number of months first
         scheduledDate.setMonth(now.getMonth() + i * template.recurrence_interval);
+        // Then set the day of the month from the template
+        // Handle cases where the day doesn't exist in the month (e.g., 31st in February)
+        const daysInMonth = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth() + 1, 0).getDate();
+        const targetDay = Math.min(template.day_of_month, daysInMonth);
+        scheduledDate.setDate(targetDay);
         break;
       case 'yearly':
-        scheduledDate.setFullYear(now.getFullYear() + i * template.recurrence_interval, template.month_of_year - 1, template.day_of_month);
+        // Set the year first
+        scheduledDate.setFullYear(now.getFullYear() + i * template.recurrence_interval);
+        // Set the month (0-indexed, so subtract 1)
+        scheduledDate.setMonth(template.month_of_year - 1);
+        // Set the day, handling cases where the day doesn't exist in the month
+        const yearlyDaysInMonth = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth() + 1, 0).getDate();
+        const yearlyTargetDay = Math.min(template.day_of_month, yearlyDaysInMonth);
+        scheduledDate.setDate(yearlyTargetDay);
         break;
     }
 
@@ -54,11 +65,18 @@ export async function generateOccurrences(template) {
       WHERE template_id = ${template.id} AND scheduled_date >= ${now.toISOString().split('T')[0]}
     `;
 
-    const insertQueries = occurrences.map(o => sql`
-      INSERT INTO maintenance_occurrences (template_id, scheduled_date, assigned_to, status, priority)
-      VALUES (${o.templateId}, ${o.scheduledDate}, ${o.assignedTo}, ${o.status}, ${o.priority})
-    `);
-    
-    await Promise.all(insertQueries);
+    // Only insert occurrences that are in the future or today
+    const validOccurrences = occurrences.filter(occ => 
+      new Date(occ.scheduledDate) >= new Date(now.setHours(0, 0, 0, 0))
+    );
+
+    if (validOccurrences.length > 0) {
+      const insertQueries = validOccurrences.map(o => sql`
+        INSERT INTO maintenance_occurrences (template_id, scheduled_date, assigned_to, status, priority)
+        VALUES (${o.templateId}, ${o.scheduledDate}, ${o.assignedTo}, ${o.status}, ${o.priority})
+      `);
+      
+      await Promise.all(insertQueries);
+    }
   }
 }

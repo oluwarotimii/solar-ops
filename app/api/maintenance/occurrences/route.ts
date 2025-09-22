@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
       FROM maintenance_occurrences mo
       JOIN maintenance_templates mt ON mo.template_id = mt.id
       LEFT JOIN users au ON mo.assigned_to = au.id
-      ${isManager ? sql`` : sql`WHERE mo.assigned_to = ${user.id}`}
+      WHERE mt.is_active = true
+      ${isManager ? sql`` : sql`AND mo.assigned_to = ${user.id}`}
       ORDER BY mo.scheduled_date ASC
       LIMIT ${limit}
       OFFSET ${offset}
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
       SELECT COUNT(*) as count
       FROM maintenance_occurrences mo
       JOIN maintenance_templates mt ON mo.template_id = mt.id
-      ${isManager ? sql`` : sql`WHERE mo.assigned_to = ${user.id}`}
+      WHERE mt.is_active = true
+      ${isManager ? sql`` : sql`AND mo.assigned_to = ${user.id}`}
     `;
 
     const occurrences = result.map((row: any) => {

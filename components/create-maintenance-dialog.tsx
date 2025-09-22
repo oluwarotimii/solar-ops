@@ -28,7 +28,9 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
     assignedTo: "",
     recurrenceType: "monthly",
     recurrenceInterval: "1",
-    dayOfMonth: "11", // Default to 11th as requested
+    dayOfWeek: "1", // Default to Monday
+    dayOfMonth: "1", // Default to 1st
+    monthOfYear: "1", // Default to January
     isActive: true,
   })
   const [loading, setLoading] = useState(false)
@@ -45,7 +47,10 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
         recurrenceInterval: Number(formData.recurrenceInterval),
         jobValue: Number(formData.jobValue) || 0,
         assignedTo: formData.assignedTo || null,
-        day_of_month: formData.recurrenceType === 'monthly' ? Number(formData.dayOfMonth) : null,
+        day_of_week: formData.recurrenceType === 'weekly' ? Number(formData.dayOfWeek) : null,
+        day_of_month: formData.recurrenceType === 'monthly' ? Number(formData.dayOfMonth) : 
+                     formData.recurrenceType === 'yearly' ? Number(formData.dayOfMonth) : null,
+        month_of_year: formData.recurrenceType === 'yearly' ? Number(formData.monthOfYear) : null,
       }
 
       const response = await fetch("/api/maintenance/templates", {
@@ -186,6 +191,29 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
               </div>
             </div>
 
+          {formData.recurrenceType === 'weekly' && (
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="dayOfWeek">Day of Week</Label>
+                <Select
+                  value={formData.dayOfWeek}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, dayOfWeek: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Sunday</SelectItem>
+                    <SelectItem value="1">Monday</SelectItem>
+                    <SelectItem value="2">Tuesday</SelectItem>
+                    <SelectItem value="3">Wednesday</SelectItem>
+                    <SelectItem value="4">Thursday</SelectItem>
+                    <SelectItem value="5">Friday</SelectItem>
+                    <SelectItem value="6">Saturday</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+          )}
+
           {formData.recurrenceType === 'monthly' && (
               <div className="space-y-2 border-t pt-4">
                 <Label htmlFor="dayOfMonth">Day of Month</Label>
@@ -198,6 +226,49 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
                   onChange={(e) => setFormData((prev) => ({ ...prev, dayOfMonth: e.target.value }))}
                   className="w-24"
                 />
+              </div>
+          )}
+
+          {formData.recurrenceType === 'yearly' && (
+              <div className="space-y-4 border-t pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="monthOfYear">Month</Label>
+                  <Select
+                    value={formData.monthOfYear}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, monthOfYear: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">January</SelectItem>
+                      <SelectItem value="2">February</SelectItem>
+                      <SelectItem value="3">March</SelectItem>
+                      <SelectItem value="4">April</SelectItem>
+                      <SelectItem value="5">May</SelectItem>
+                      <SelectItem value="6">June</SelectItem>
+                      <SelectItem value="7">July</SelectItem>
+                      <SelectItem value="8">August</SelectItem>
+                      <SelectItem value="9">September</SelectItem>
+                      <SelectItem value="10">October</SelectItem>
+                      <SelectItem value="11">November</SelectItem>
+                      <SelectItem value="12">December</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="dayOfMonth">Day of Month</Label>
+                  <Input
+                    id="dayOfMonth"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.dayOfMonth}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, dayOfMonth: e.target.value }))}
+                    className="w-24"
+                  />
+                </div>
               </div>
           )}
 

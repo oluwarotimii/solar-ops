@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const [template] = await sql`
       INSERT INTO maintenance_templates (
         title, description, site_location, job_value, assigned_to, created_by,
-        recurrence_type, recurrence_interval, is_active
+        recurrence_type, recurrence_interval, day_of_week, day_of_month, month_of_year, is_active
       ) VALUES (
         ${templateData.title},
         ${templateData.description || null},
@@ -94,6 +94,9 @@ export async function POST(request: NextRequest) {
         ${user.id},
         ${templateData.recurrenceType},
         ${templateData.recurrenceInterval || 1},
+        ${templateData.dayOfWeek !== undefined && templateData.dayOfWeek !== null ? Number(templateData.dayOfWeek) : null},
+        ${templateData.dayOfMonth !== undefined && templateData.dayOfMonth !== null ? Number(templateData.dayOfMonth) : null},
+        ${templateData.monthOfYear !== undefined && templateData.monthOfYear !== null ? Number(templateData.monthOfYear) : null},
         ${'isActive' in templateData ? templateData.isActive : true}
       ) RETURNING *
     `
