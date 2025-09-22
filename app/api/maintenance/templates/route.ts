@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
 
     const templates = result.map((row: any) => {
       const template = toCamelCase(row)
+      console.log('Raw template data from DB:', row);
+      console.log('Processed template data:', template);
 
       if (template.assignedFirstName) {
         template.assignedUser = {
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
       delete template.createdFirstName
       delete template.createdLastName
 
+      console.log('Final template data:', template);
       return template
     })
 

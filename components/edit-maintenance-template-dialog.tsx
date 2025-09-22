@@ -39,6 +39,7 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
 
   useEffect(() => {
     if (template) {
+      console.log('Template data in edit dialog:', template);
       setFormData({
         title: template.title || "",
         description: template.description || "",
