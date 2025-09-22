@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
     const templates = result.map((row: any) => {
       const template = toCamelCase(row)
 
+      // Preserve the assignedTo field before we potentially delete related fields
+      const assignedToId = template.assignedTo;
+
       if (template.assignedFirstName) {
         template.assignedUser = {
           id: template.assignedTo,
@@ -45,6 +48,9 @@ export async function GET(request: NextRequest) {
           lastName: template.createdLastName,
         }
       }
+
+      // Make sure assignedTo field is preserved
+      template.assignedTo = assignedToId;
 
       delete template.assignedFirstName
       delete template.assignedLastName

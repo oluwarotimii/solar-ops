@@ -17,14 +17,51 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const sql = getDbSql();
     const [template] = await sql`
-      SELECT * FROM maintenance_templates WHERE id = ${params.id}
+      SELECT 
+        mt.*,
+        au.first_name as assigned_first_name, au.last_name as assigned_last_name,
+        cu.first_name as created_first_name, cu.last_name as created_last_name
+      FROM maintenance_templates mt
+      LEFT JOIN users au ON mt.assigned_to = au.id
+      LEFT JOIN users cu ON mt.created_by = cu.id
+      WHERE mt.id = ${params.id}
     `;
 
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    return NextResponse.json(toCamelCase(template));
+    // Process the template to create nested user objects
+    const processedTemplate = toCamelCase(template);
+
+    // Preserve the assignedTo field before we potentially delete related fields
+    const assignedToId = processedTemplate.assignedTo;
+
+    if (processedTemplate.assignedFirstName) {
+      processedTemplate.assignedUser = {
+        id: processedTemplate.assignedTo,
+        firstName: processedTemplate.assignedFirstName,
+        lastName: processedTemplate.assignedLastName,
+      }
+    }
+
+    if (processedTemplate.createdFirstName) {
+      processedTemplate.createdUser = {
+        id: processedTemplate.createdBy,
+        firstName: processedTemplate.createdFirstName,
+        lastName: processedTemplate.createdLastName,
+      }
+    }
+
+    // Make sure assignedTo field is preserved
+    processedTemplate.assignedTo = assignedToId;
+
+    delete processedTemplate.assignedFirstName;
+    delete processedTemplate.assignedLastName;
+    delete processedTemplate.createdFirstName;
+    delete processedTemplate.createdLastName;
+
+    return NextResponse.json(processedTemplate);
   } catch (error) {
     console.error("Maintenance template fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
