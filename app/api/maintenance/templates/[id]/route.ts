@@ -34,9 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Process the template to create nested user objects
     const processedTemplate = toCamelCase(template);
 
-    // Preserve the assignedTo field before we potentially delete related fields
-    const assignedToId = processedTemplate.assignedTo;
-
+    // Create assignedUser object if assigned user exists
     if (processedTemplate.assignedFirstName) {
       processedTemplate.assignedUser = {
         id: processedTemplate.assignedTo,
@@ -45,6 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
+    // Create createdUser object if created user exists
     if (processedTemplate.createdFirstName) {
       processedTemplate.createdUser = {
         id: processedTemplate.createdBy,
@@ -53,9 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // Make sure assignedTo field is preserved
-    processedTemplate.assignedTo = assignedToId;
-
+    // Clean up temporary fields but preserve assignedTo
     delete processedTemplate.assignedFirstName;
     delete processedTemplate.assignedLastName;
     delete processedTemplate.createdFirstName;

@@ -132,7 +132,6 @@ export default function MaintenancePage() {
   }
 
   const handleEditTemplate = (template: MaintenanceTemplate) => {
-    console.log('Template data being passed to edit dialog:', template);
     setEditingTemplate(template);
     setShowEditDialog(true);
   };

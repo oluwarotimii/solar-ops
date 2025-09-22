@@ -29,12 +29,8 @@ export async function GET(request: NextRequest) {
 
     const templates = result.map((row: any) => {
       const template = toCamelCase(row)
-      console.log('Raw template data from DB:', row);
-      console.log('Processed template data:', template);
 
-      // Preserve the assignedTo field before we potentially delete related fields
-      const assignedToId = template.assignedTo;
-
+      // Create assignedUser object if assigned user exists
       if (template.assignedFirstName) {
         template.assignedUser = {
           id: template.assignedTo,
@@ -43,6 +39,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Create createdUser object if created user exists
       if (template.createdFirstName) {
         template.createdUser = {
           id: template.createdBy,
@@ -51,15 +48,12 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Make sure assignedTo field is preserved
-      template.assignedTo = assignedToId;
-
+      // Clean up temporary fields but preserve assignedTo
       delete template.assignedFirstName
       delete template.assignedLastName
       delete template.createdFirstName
       delete template.createdLastName
 
-      console.log('Final template data:', template);
       return template
     })
 

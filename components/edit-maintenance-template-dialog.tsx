@@ -39,13 +39,12 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
 
   useEffect(() => {
     if (template) {
-      console.log('Template data in edit dialog:', template);
       setFormData({
         title: template.title || "",
         description: template.description || "",
         siteLocation: template.siteLocation || "",
         jobValue: String(template.jobValue || ""),
-        assignedTo: template.assignedTo || undefined, // Use undefined instead of empty string
+        assignedTo: template.assignedTo || undefined,
         recurrenceType: template.recurrenceType || "monthly",
         recurrenceInterval: String(template.recurrenceInterval || "1"),
         dayOfWeek: String(template.dayOfWeek !== null && template.dayOfWeek !== undefined ? template.dayOfWeek : "1"),
