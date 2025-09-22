@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDbSql } from '@/lib/db';
-import { hash } from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { generate } from 'generate-password';
 import { authenticateApiRequest } from '@/lib/api-auth';
 import { hasPermission } from '@/lib/auth';
@@ -35,7 +35,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
 
     // Hash the new password
-    const hashedPassword = await hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     console.log('[Password Reset] New password generated and hashed');
 
     // Update the user's password in the database using the correct method
