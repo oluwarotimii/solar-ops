@@ -44,7 +44,7 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
         description: template.description || "",
         siteLocation: template.siteLocation || "",
         jobValue: String(template.jobValue || ""),
-        assignedTo: template.assignedTo || "",
+        assignedTo: template.assignedTo || undefined, // Use undefined instead of empty string
         recurrenceType: template.recurrenceType || "monthly",
         recurrenceInterval: String(template.recurrenceInterval || "1"),
         dayOfWeek: String(template.dayOfWeek !== null && template.dayOfWeek !== undefined ? template.dayOfWeek : "1"),
@@ -65,7 +65,7 @@ export default function EditMaintenanceTemplateDialog({ template, users, onTempl
         ...formData,
         recurrenceInterval: Number(formData.recurrenceInterval),
         jobValue: Number(formData.jobValue) || 0,
-        assignedTo: formData.assignedTo || null,
+        assignedTo: formData.assignedTo || null, // This should work correctly now
         day_of_week: formData.recurrenceType === 'weekly' ? Number(formData.dayOfWeek) : null,
         day_of_month: formData.recurrenceType === 'monthly' ? Number(formData.dayOfMonth) : 
                      formData.recurrenceType === 'yearly' ? Number(formData.dayOfMonth) : null,
