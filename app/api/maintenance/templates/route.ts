@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
       console.log('Raw template data from DB:', row);
       console.log('Processed template data:', template);
 
+      // Preserve the assignedTo field before we potentially delete related fields
+      const assignedToId = template.assignedTo;
+
       if (template.assignedFirstName) {
         template.assignedUser = {
           id: template.assignedTo,
@@ -47,6 +50,9 @@ export async function GET(request: NextRequest) {
           lastName: template.createdLastName,
         }
       }
+
+      // Make sure assignedTo field is preserved
+      template.assignedTo = assignedToId;
 
       delete template.assignedFirstName
       delete template.assignedLastName
