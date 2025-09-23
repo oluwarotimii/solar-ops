@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { toCamelCase, getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+import { logAuditEvent } from "@/lib/audit";
 
 // GET a single maintenance occurrence
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -124,12 +125,56 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           `;
         }
       }
+      
+      // Log completion event
+      await logAuditEvent({
+        userId: user.id,
+        action: "maintenance_occurrence_completed",
+        targetType: "maintenance_occurrence",
+        targetId: params.id,
+        details: {
+          status: newStatus,
+          previousStatus: previousStatus,
+          assignedTo: updatedOccurrence.assigned_to
+        },
+        request,
+      });
     }
     // Case 2: Job no longer completed
     else if (newStatus !== 'completed' && previousStatus === 'completed') {
       await sql`
         DELETE FROM accrued_values WHERE maintenance_occurrence_id = ${params.id}
       `;
+      
+      // Log status change event
+      await logAuditEvent({
+        userId: user.id,
+        action: "maintenance_occurrence_status_changed",
+        targetType: "maintenance_occurrence",
+        targetId: params.id,
+        details: {
+          status: newStatus,
+          previousStatus: previousStatus,
+          assignedTo: updatedOccurrence.assigned_to
+        },
+        request,
+      });
+    }
+    // Case 3: Other status changes
+    else if (newStatus !== previousStatus) {
+      // Log status change event
+      await logAuditEvent({
+        userId: user.id,
+        action: "maintenance_occurrence_status_changed",
+        targetType: "maintenance_occurrence",
+        targetId: params.id,
+        details: {
+          status: newStatus,
+          previousStatus: previousStatus,
+          assignedTo: updatedOccurrence.assigned_to
+        },
+        request,
+      });
     }
 
     return NextResponse.json(toCamelCase(updatedOccurrence));

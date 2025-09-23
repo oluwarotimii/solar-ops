@@ -1,6 +1,10 @@
 import { getDbSql } from "@/lib/db";
 import { NextRequest } from "next/server";
 
+// In-memory cache to prevent duplicate logs within a short time period
+const logCache: Map<string, number> = new Map();
+const CACHE_DURATION = 5000; // 5 seconds
+
 interface AuditLogParams {
   userId: string | null;
   action: string;
@@ -21,6 +25,29 @@ export async function logAuditEvent(params: AuditLogParams): Promise<void> {
   } = params;
 
   try {
+    // Create a cache key to identify duplicate events
+    const cacheKey = `${userId || 'system'}-${action}-${targetType || 'none'}-${targetId || 'none'}-${JSON.stringify(details || {})}`;
+    const now = Date.now();
+    
+    // Check if we've logged this exact event recently
+    const lastLogged = logCache.get(cacheKey);
+    if (lastLogged && now - lastLogged < CACHE_DURATION) {
+      // Skip logging this duplicate event
+      return;
+    }
+    
+    // Update the cache
+    logCache.set(cacheKey, now);
+    
+    // Clean up old cache entries periodically
+    if (logCache.size > 100) {
+      for (const [key, timestamp] of logCache.entries()) {
+        if (now - timestamp > CACHE_DURATION) {
+          logCache.delete(key);
+        }
+      }
+    }
+
     const sql = getDbSql();
     
     let ipAddress = null;

@@ -31,13 +31,14 @@ interface AuditLog {
 }
 
 export default function AuditTrailPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [logs, setLogs] = useState<AuditLog[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
 
   const fetchLogs = async (page = 1) => {
     setLoading(true);
@@ -51,12 +52,15 @@ export default function AuditTrailPage() {
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       
+      console.log('Fetching audit logs with params:', params.toString());
+      
       const response = await fetch(`/api/audit-trail?${params.toString()}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch audit logs.');
       }
       const responseData = await response.json();
+      console.log('Audit logs response:', responseData);
       if (Array.isArray(responseData.logs)) {
         setLogs(responseData.logs);
       } else {
@@ -64,6 +68,7 @@ export default function AuditTrailPage() {
       }
       setCurrentPage(responseData.currentPage);
       setTotalPages(responseData.totalPages);
+      setTotalCount(responseData.totalCount || (responseData.totalPages * 15)); // Fallback for backward compatibility
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -76,9 +81,17 @@ export default function AuditTrailPage() {
     fetchLogs(currentPage);
   };
 
+  // Fetch logs on component mount and when filters change
   useEffect(() => {
-    fetchLogs(currentPage);
-  }, [currentPage, startDate, endDate]);
+    fetchLogs(1); // Always start on page 1
+  }, [startDate, endDate]);
+
+  // Fetch logs on initial mount if no data
+  useEffect(() => {
+    if (logs.length === 0) {
+      fetchLogs(1);
+    }
+  }, []);
 
   const getInitials = (log: AuditLog) => {
     if (!log.first_name) return <Server className="h-4 w-4" />;
@@ -145,7 +158,7 @@ export default function AuditTrailPage() {
               
               {/* Results Info */}
               <div className="mb-4 text-sm text-muted-foreground">
-                Showing {logs.length} of {totalPages * 15} entries (Page {currentPage} of {totalPages})
+                Showing {logs.length} of {totalCount} entries (Page {currentPage} of {totalPages})
               </div>
 
               {/* Desktop Table View */}
@@ -180,9 +193,17 @@ export default function AuditTrailPage() {
                                     {userName} <span className="font-normal text-muted-foreground">{formatAction(log)}</span>
                                   </p>
                                   {targetLink ? (
-                                    <Link href={targetLink} className="text-sm text-blue-500 hover:underline">{log.target_type} #{log.target_id.substring(0, 8)}</Link>
+                                    <Link href={targetLink} className="text-sm text-blue-500 hover:underline">
+                                      {log.target_type === 'user' && log.details?.userName 
+                                        ? log.details.userName 
+                                        : `${log.target_type} #${log.target_id.substring(0, 8)}`}
+                                    </Link>
                                   ) : log.target_type && (
-                                    <p className="text-sm text-muted-foreground">{log.target_type} #{log.target_id?.substring(0, 8)}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {log.target_type === 'user' && log.details?.userName 
+                                        ? log.details.userName 
+                                        : `${log.target_type} #${log.target_id?.substring(0, 8)}`}
+                                    </p>
                                   )}
                                   <p className="text-xs text-muted-foreground mt-1" title={format(new Date(log.created_at), 'PPpp')}>
                                     {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}

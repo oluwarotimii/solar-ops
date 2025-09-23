@@ -51,6 +51,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Get the user's name for audit logging
+    const [resetUser] = await sql`SELECT first_name, last_name, email FROM users WHERE id = ${userId}`;
+    const userName = resetUser ? 
+      (resetUser.first_name && resetUser.last_name ? 
+        `${resetUser.first_name} ${resetUser.last_name}` : 
+        resetUser.email) : 
+      'Unknown User';
+
     // Log the password reset event
     await logAuditEvent({
       userId: user.id,
@@ -59,7 +67,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       targetId: userId,
       details: { 
         resetBy: user.email,
-        resetUserId: userId
+        resetUserId: userId,
+        userName: userName
       },
       request,
     });

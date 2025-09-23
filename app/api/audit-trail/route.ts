@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    console.log('Audit trail request params:', { page, limit, offset, startDate, endDate });
+
     const sql = getDbSql();
 
     // Build date filter conditions
@@ -33,12 +35,14 @@ export async function GET(request: NextRequest) {
         conditions.push(sql`al.created_at >= ${startDate}`);
       }
       if (endDate) {
-        conditions.push(sql`al.created_at <= ${endDate} 23:59:59`);
+        conditions.push(sql`al.created_at <= ${endDate + ' 23:59:59'}`);
       }
       if (conditions.length > 0) {
         dateConditions = sql`AND ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
       }
     }
+
+    console.log('Date conditions:', dateConditions);
 
     const logs = await sql`
       SELECT
@@ -61,13 +65,16 @@ export async function GET(request: NextRequest) {
       OFFSET ${offset}
     `;
 
+    console.log('Audit logs query result count:', logs.length);
+    console.log('First log created_at:', logs[0]?.created_at);
+
     // Count query with same filters
-    let countQuery = sql`SELECT COUNT(*) FROM audit_logs al WHERE 1=1`;
+    let countQuery = sql`SELECT COUNT(*) as count FROM audit_logs al WHERE 1=1`;
     if (startDate) {
       countQuery = sql`${countQuery} AND al.created_at >= ${startDate}`;
     }
     if (endDate) {
-      countQuery = sql`${countQuery} AND al.created_at <= ${endDate} 23:59:59`;
+      countQuery = sql`${countQuery} AND al.created_at <= ${endDate + ' 23:59:59'}`;
     }
     
     const [{ count }] = await sql`${countQuery}`;
@@ -75,7 +82,11 @@ export async function GET(request: NextRequest) {
     console.log("Audit logs count:", count); // Debug log
 
     return NextResponse.json({
-      logs,
+      logs: logs.map((log: any) => ({
+        ...log,
+        userName: log.firstName && log.lastName ? `${log.firstName} ${log.lastName}` : log.email || 'Unknown User'
+      })),
+      totalCount: parseInt(count, 10),
       totalPages: Math.ceil(count / limit),
       currentPage: page,
     });

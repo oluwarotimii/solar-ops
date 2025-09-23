@@ -71,6 +71,18 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
         </div>
       );
 
+    case 'maintenance_occurrence_completed':
+    case 'maintenance_occurrence_status_changed':
+      return (
+        <div>
+          <p>Status changed to <Badge>{log.details.status}</Badge></p>
+          {log.details.previousStatus && (
+            <p>Previous status: <Badge variant="secondary">{log.details.previousStatus}</Badge></p>
+          )}
+          {log.details.assignedTo && <p>Assigned to: <span className="font-medium">{log.details.assignedTo}</span></p>}
+        </div>
+      );
+
     case 'job_create':
       return (
         <div>
@@ -106,8 +118,12 @@ export default function AuditLogDetails({ log }: AuditLogDetailsProps) {
     case 'user_password_reset':
       return (
         <div>
-          <p>User ID: <span className="font-medium">{log.details.resetUserId}</span></p>
-          {log.details.resetBy && <p>Reset by: <span className="font-medium">{log.details.resetBy}</span></p>}
+          {log.details.userName && (
+            <p>User: <span className="font-medium">{log.details.userName}</span></p>
+          )}
+          {log.details.resetBy && (
+            <p>Reset by: <span className="font-medium">{log.details.resetBy}</span></p>
+          )}
         </div>
       );
 

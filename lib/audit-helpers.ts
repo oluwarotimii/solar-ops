@@ -35,6 +35,10 @@ export function formatAction(log: AuditLog): string {
       return `updated the status of a job.`;
     case 'job_delete':
       return `deleted a job.`;
+    case 'maintenance_occurrence_completed':
+      return `marked a maintenance task as completed.`;
+    case 'maintenance_occurrence_status_changed':
+      return `updated the status of a maintenance task.`;
     case 'gps_location_logged':
       return `logged a GPS location.`;
     case 'journey_started':
@@ -62,6 +66,8 @@ export function getTargetLink(log: AuditLog): string | null {
   switch (log.target_type) {
     case 'job':
       return `/dashboard/jobs?search=${log.target_id}`;
+    case 'maintenance_occurrence':
+      return `/dashboard/maintenance?search=${log.target_id}`;
     case 'user':
       return `/dashboard/users?search=${log.target_id}`;
     default:

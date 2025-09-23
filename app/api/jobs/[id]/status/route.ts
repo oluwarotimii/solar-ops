@@ -28,6 +28,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
       }
 
+      // Check current job status to prevent duplicate logging
+      const [currentJob] = await sql`SELECT status FROM jobs WHERE id = ${jobId}`;
+      const currentStatus = currentJob?.status;
+
       if (status === 'completed') {
         const [job] = await sql`UPDATE jobs SET status = 'completed', completed_at = NOW(), is_archived = TRUE, archived_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;`;
         
@@ -65,14 +69,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         await query;
       }
 
-      await logAuditEvent({
-        userId: user.id,
-        action: "job_status_update_admin",
-        targetType: "job",
-        targetId: jobId,
-        details: { status },
-        request,
-      });
+      // Only log if the status actually changed
+      if (currentStatus !== status) {
+        await logAuditEvent({
+          userId: user.id,
+          action: "job_status_update_admin",
+          targetType: "job",
+          targetId: jobId,
+          details: { status },
+          request,
+        });
+      }
 
       return NextResponse.json({ message: "Job status updated successfully by admin" });
     }
@@ -106,6 +113,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     `;
 
     if (total_technicians > 0 && total_technicians === completed_technicians) {
+        // Check current job status to prevent duplicate logging
+        const [currentJob] = await sql`SELECT status FROM jobs WHERE id = ${jobId}`;
+        const currentStatus = currentJob?.status;
+
         const [job] = await sql`
           UPDATE jobs SET status = 'completed', completed_at = NOW(), is_archived = TRUE, archived_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;
         `;
@@ -131,13 +142,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           }
         }
 
-        await logAuditEvent({
-          userId: null, // System action
-          action: "job_status_update_system",
-          targetType: "job",
-          targetId: jobId,
-          details: { status: "completed", reason: "All technicians marked as complete" },
-        });
+        // Only log if the status actually changed
+        if (currentStatus !== 'completed') {
+          await logAuditEvent({
+            userId: null, // System action
+            action: "job_status_update_system",
+            targetType: "job",
+            targetId: jobId,
+            details: { status: "completed", reason: "All technicians marked as complete" },
+          });
+        }
       }
 
     return NextResponse.json({ message: "Your status has been marked as complete." });
