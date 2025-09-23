@@ -31,11 +31,13 @@ export default function SetupPage() {
         const response = await fetch("/api/setup/status");
         const data = await response.json();
         
-        if (data.setupComplete) {
-          router.push("/login");
-        } else {
-          setIsLoading(false);
-        }
+        // Always show setup page for new database setup
+        setIsLoading(false);
+        // if (data.setupComplete) {
+        //   router.push("/login");
+        // } else {
+        //   setIsLoading(false);
+        // }
       } catch (error) {
         console.error("Error checking setup status:", error);
         setIsLoading(false);
