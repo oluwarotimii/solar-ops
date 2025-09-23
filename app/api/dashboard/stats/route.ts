@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     const activeJobsResult = await sql`SELECT COUNT(*) as count FROM jobs WHERE status = 'assigned' OR status = 'in_progress'`;
     const completedJobsResult = await sql`SELECT COUNT(*) as count FROM jobs WHERE status = 'completed'`;
     const totalUsersResult = await sql`SELECT COUNT(*) as count FROM users`;
-    const pendingMaintenanceResult = await sql`SELECT COUNT(*) as count FROM maintenance_tasks WHERE status != 'completed' AND status != 'cancelled'`;
+    const pendingMaintenanceResult = await sql`SELECT COUNT(*) as count FROM maintenance_occurrences WHERE status != 'completed' AND status != 'missed'`;
 
     const stats = {
       totalJobsValue: totalJobsValueResult[0].total_value || 0,
