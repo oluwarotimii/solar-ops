@@ -53,6 +53,12 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       if (isLoading || !user || !user.role || !user.role.permissions) {      return false;
     }
 
+    // Add this check
+    if (typeof permission !== 'string') {
+      console.error("hasPermission called with non-string permission:", permission);
+      return false;
+    }
+
     // Super Admins with 'all: true' have all permissions
     if (user.role.permissions.all === true) {
       return true;

@@ -22,7 +22,7 @@ const allPermissions = {
   users: ["create", "read", "update", "delete", "reset_password"],
   "users:stats": ["read", "read:all"],
   roles: ["create", "read", "update", "delete"],
-  maintenance: ["create", "read", "update", "delete"],
+  maintenance: ["create", "read", "read:all", "update", "delete"],
   "accrued_values": ["create", "read", "read:all", "create:all"],
   // tracking: ["read", "start_journey", "end_journey", "log_gps", "checkin"],
   notifications: ["read", "send", "update", "delete", "mark_read", "subscribe"],

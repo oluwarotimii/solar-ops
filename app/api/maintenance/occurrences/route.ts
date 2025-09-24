@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "12", 10)
     const offset = (page - 1) * limit
     
-    const isManager = hasPermission(user, 'maintenance:read');
+    let assignedToFilter = sql``;
+    if (!hasPermission(user, 'maintenance:read:all')) {
+      // If user does not have 'maintenance:read:all', they can only see their own assigned occurrences
+      assignedToFilter = sql`AND mo.assigned_to = ${user.id}`;
+    }
 
     const result = await sql`
       SELECT 
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
       JOIN maintenance_templates mt ON mo.template_id = mt.id
       LEFT JOIN users au ON mo.assigned_to = au.id
       WHERE mt.is_active = true
-      ${isManager ? sql`` : sql`AND mo.assigned_to = ${user.id}`}
+      ${assignedToFilter}
       ORDER BY mo.scheduled_date ASC
       LIMIT ${limit}
       OFFSET ${offset}
@@ -44,7 +48,7 @@ export async function GET(request: NextRequest) {
       FROM maintenance_occurrences mo
       JOIN maintenance_templates mt ON mo.template_id = mt.id
       WHERE mt.is_active = true
-      ${isManager ? sql`` : sql`AND mo.assigned_to = ${user.id}`}
+      ${assignedToFilter}
     `;
 
     const occurrences = result.map((row: any) => {

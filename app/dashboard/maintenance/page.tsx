@@ -21,6 +21,7 @@ import MaintenanceOccurrenceDetails from "@/components/maintenance-occurrence-de
 import MobileTableCard from "@/components/mobile-table-card"
 import BottomSheet from "@/components/bottom-sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { usePermissions } from "@/contexts/permission-context";
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +40,11 @@ const priorityColors = {
 
 export default function MaintenancePage() {
   const isMobile = useIsMobile();
+  const { user, hasPermission, isLoading: permissionsLoading } = usePermissions();
   const [templates, setTemplates] = useState<MaintenanceTemplate[]>([])
   const [occurrences, setOccurrences] = useState<MaintenanceOccurrence[]>([])
   const [users, setUsers] = useState<UserType[]>([])
-  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -61,13 +63,13 @@ export default function MaintenancePage() {
   const [occurrencesPerPage] = useState(12)
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
-    setCurrentUser(user);
-    fetchData(user, currentPage)
-    if (user?.role?.isAdmin) {
-      fetchUsers()
+    if (!permissionsLoading && user) {
+      fetchData(user, currentPage);
+      if (hasPermission('users:read')) {
+        fetchUsers();
+      }
     }
-  }, [currentPage])
+  }, [user, currentPage, hasPermission, permissionsLoading]);
 
   const fetchData = async (user: UserType | null, page = 1) => {
     setLoading(true)
@@ -85,7 +87,7 @@ export default function MaintenancePage() {
       if (occurrencesRes.ok) {
         const data = await occurrencesRes.json();
         let occurrencesData = data.occurrences;
-        if (user && !user.role.isAdmin) {
+        if (user && !hasPermission(user, 'maintenance:read:all')) {
           occurrencesData = occurrencesData.filter(occ => occ.assignedTo === user.id);
         }
         setOccurrences(occurrencesData);
@@ -127,7 +129,7 @@ export default function MaintenancePage() {
   }
 
   const handleTemplateCreated = () => {
-    fetchData(currentUser, currentPage)
+    fetchData(user, currentPage)
     setShowCreateDialog(false)
   }
 
@@ -138,7 +140,7 @@ export default function MaintenancePage() {
 
   const handleTemplateUpdated = () => {
     setShowEditDialog(false);
-    fetchData(currentUser, currentPage);
+    fetchData(user, currentPage);
   };
 
   const handleDeleteTemplate = (template: MaintenanceTemplate) => {
@@ -158,7 +160,7 @@ export default function MaintenancePage() {
       });
 
       if (response.ok) {
-        fetchData(currentUser);
+        fetchData(user);
       } else {
         console.error("Failed to delete template");
       }
@@ -230,11 +232,11 @@ export default function MaintenancePage() {
       occurrence={selectedOccurrence} 
       users={users} 
       onUpdate={handleOccurrenceUpdate} 
-      currentUser={currentUser}
+      currentUser={user}
     />
   ) : null;
 
-  if (currentUser && !currentUser.role.isAdmin && occurrences.length === 0 && !loading) {
+  if (user && !hasPermission('maintenance:read:all') && occurrences.length === 0 && !loading && !hasPermission('maintenance:create')) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <h1 className="text-2xl font-bold">No Maintenance Jobs</h1>
@@ -250,7 +252,7 @@ export default function MaintenancePage() {
           <h1 className="text-3xl font-bold">Maintenance</h1>
           <p className="text-muted-foreground">Manage maintenance templates and scheduled jobs</p>
         </div>
-        {currentUser?.role.isAdmin && (
+        {hasPermission('maintenance:create') && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button>
@@ -296,11 +298,11 @@ export default function MaintenancePage() {
       <Tabs defaultValue="occurrences">
         <TabsList>
           <TabsTrigger value="occurrences">Scheduled Jobs</TabsTrigger>
-          {currentUser?.role.isAdmin && <TabsTrigger value="templates">Templates</TabsTrigger>}
+          {hasPermission('maintenance:read:all') && <TabsTrigger value="templates">Templates</TabsTrigger>}
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
         </TabsList>
 
-        {currentUser?.role.isAdmin && (
+        {hasPermission('maintenance:read:all') && (
           <TabsContent value="templates" className="space-y-4">
             <Card>
               <CardHeader>
