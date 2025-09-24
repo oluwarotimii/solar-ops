@@ -12,20 +12,20 @@ export async function GET(request: NextRequest) {
       return response
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!user || !hasPermission(user, "jobs:read")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const sql = getDbSql()
+    const { searchParams } = request.nextUrl
+    const page = parseInt(searchParams.get("page") || "1", 10)
+    const limit = parseInt(searchParams.get("limit") || "10", 10)
+    const offset = (page - 1) * limit
 
-    // Admins can see all jobs
+    let result, count;
+
     if (hasPermission(user, "jobs:read:all")) {
-      const { searchParams } = request.nextUrl
-      const page = parseInt(searchParams.get("page") || "1", 10)
-      const limit = parseInt(searchParams.get("limit") || "12", 10)
-      const offset = (page - 1) * limit
-
-      const result = await sql`
+      result = await sql`
         SELECT 
           j.*,
           jt.name as job_type_name, jt.color as job_type_color,
@@ -38,93 +38,13 @@ export async function GET(request: NextRequest) {
         LIMIT ${limit}
         OFFSET ${offset}
       `
-
-      const [{ count }] = await sql`
+      ;[{ count }] = await sql`
         SELECT COUNT(*) as count
         FROM jobs j
         WHERE j.is_archived = FALSE
       `
-
-      const jobs = await Promise.all(
-        result.map(async (row: any) => {
-          const job = toCamelCase(row)
-
-          // Fetch assigned technicians
-          const techniciansResult = await sql`
-            SELECT
-              jt.technician_id,
-              jt.role,
-              jt.completed_at,
-              u.first_name,
-              u.last_name
-            FROM job_technicians jt
-            JOIN users u ON jt.technician_id = u.id
-            WHERE jt.job_id = ${job.id}
-          `
-          job.technicians = techniciansResult.map((tech: any) => ({
-            technicianId: tech.technician_id,
-            role: tech.role,
-            completedAt: tech.completed_at,
-            firstName: tech.first_name,
-            lastName: tech.last_name,
-          }))
-
-          if (job.jobTypeName) {
-            job.jobType = {
-              id: job.jobTypeId,
-              name: job.jobTypeName,
-              color: job.jobTypeColor,
-            }
-          }
-
-          if (job.createdFirstName) {
-            job.createdUser = {
-              id: job.createdBy,
-              firstName: job.createdFirstName,
-              lastName: job.createdLastName,
-            }
-          }
-
-          delete job.jobTypeName
-          delete job.jobTypeColor
-          delete job.assignedFirstName
-          delete job.assignedLastName
-          delete job.createdFirstName
-          delete job.createdLastName
-
-          return job
-        })
-      )
-
-      const jobsWithDate = jobs.map((job: any) => ({
-        ...job,
-        scheduledDate:
-          job.scheduledDate instanceof Date
-            ? new Date(
-                job.scheduledDate.getTime() -
-                  job.scheduledDate.getTimezoneOffset() * 60000
-              )
-                .toISOString()
-                .split("T")[0]
-            : null,
-        scheduledTime: job.scheduledTime || null,
-      }))
-      return NextResponse.json({
-        jobs: jobsWithDate,
-        total: parseInt(count, 10),
-        page,
-        limit,
-      })
-    }
-
-    // Supervisors can see jobs for their team
-    if (hasPermission(user, "jobs:read:team")) {
-      const { searchParams } = request.nextUrl
-      const page = parseInt(searchParams.get("page") || "1", 10)
-      const limit = parseInt(searchParams.get("limit") || "12", 10)
-      const offset = (page - 1) * limit
-
-      const result = await sql`
+    } else if (hasPermission(user, "jobs:read:team")) {
+      result = await sql`
         SELECT 
           j.*,
           jt.name as job_type_name, jt.color as job_type_color,
@@ -141,8 +61,7 @@ export async function GET(request: NextRequest) {
         LIMIT ${limit}
         OFFSET ${offset}
       `
-
-      const [{ count }] = await sql`
+      ;[{ count }] = await sql`
         SELECT COUNT(DISTINCT j.id)
         FROM jobs j
         JOIN job_technicians jtech ON j.id = jtech.job_id
@@ -151,97 +70,36 @@ export async function GET(request: NextRequest) {
         )
         AND j.is_archived = FALSE
       `
-
-      const jobs = await Promise.all(
-        result.map(async (row: any) => {
-          const job = toCamelCase(row)
-
-          const techniciansResult = await sql`
-            SELECT
-              jt.technician_id,
-              jt.role,
-              jt.completed_at,
-              u.first_name,
-              u.last_name
-            FROM job_technicians jt
-            JOIN users u ON jt.technician_id = u.id
-            WHERE jt.job_id = ${job.id}
-          `
-          job.technicians = techniciansResult.map((tech: any) => ({
-            technicianId: tech.technician_id,
-            role: tech.role,
-            completedAt: tech.completed_at,
-            firstName: tech.first_name,
-            lastName: tech.last_name,
-          }))
-
-          if (job.jobTypeName) {
-            job.jobType = {
-              id: job.jobTypeId,
-              name: job.jobTypeName,
-              color: job.jobTypeColor,
-            }
-          }
-
-          if (job.createdFirstName) {
-            job.createdUser = {
-              id: job.createdBy,
-              firstName: job.createdFirstName,
-              lastName: job.createdLastName,
-            }
-          }
-
-          delete job.jobTypeName
-          delete job.jobTypeColor
-          delete job.assignedFirstName
-          delete job.assignedLastName
-          delete job.createdFirstName
-          delete job.createdLastName
-
-          return job
-        })
-      )
-
-      const jobsWithDate = jobs.map((job: any) => ({
-        ...job,
-        scheduledDate:
-          job.scheduledDate instanceof Date
-            ? new Date(
-                job.scheduledDate.getTime() -
-                  job.scheduledDate.getTimezoneOffset() * 60000
-              )
-                .toISOString()
-                .split("T")[0]
-            : null,
-        scheduledTime: job.scheduledTime || null,
-      }))
-      return NextResponse.json({
-        jobs: jobsWithDate,
-        total: parseInt(count, 10),
-        page,
-        limit,
-      })
+    } else {
+      result = await sql`
+        SELECT 
+          j.*,
+          jt.name as job_type_name, jt.color as job_type_color,
+          cu.first_name as created_first_name, cu.last_name as created_last_name
+        FROM jobs j
+        LEFT JOIN job_types jt ON j.job_type_id = jt.id
+        LEFT JOIN users cu ON j.created_by = cu.id
+        JOIN job_technicians jtech ON j.id = jtech.job_id
+        WHERE jtech.technician_id = ${user.id}
+        AND j.is_archived = FALSE
+        ORDER BY j.created_at DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      `
+      ;[{ count }] = await sql`
+        SELECT COUNT(*) as count
+        FROM jobs j
+        JOIN job_technicians jtech ON j.id = jtech.job_id
+        WHERE jtech.technician_id = ${user.id}
+        AND j.is_archived = FALSE
+      `
     }
-
-    // Technicians can only see their own jobs
-    const result = await sql`
-      SELECT 
-        j.*,
-        jt.name as job_type_name, jt.color as job_type_color,
-        cu.first_name as created_first_name, cu.last_name as created_last_name
-      FROM jobs j
-      LEFT JOIN job_types jt ON j.job_type_id = jt.id
-      LEFT JOIN users cu ON j.created_by = cu.id
-      JOIN job_technicians jtech ON j.id = jtech.job_id
-      WHERE jtech.technician_id = ${user.id}
-      AND j.is_archived = FALSE
-      ORDER BY j.created_at DESC
-    `
 
     const jobs = await Promise.all(
       result.map(async (row: any) => {
         const job = toCamelCase(row)
 
+        // Fetch assigned technicians
         const techniciansResult = await sql`
           SELECT
             jt.technician_id,
@@ -301,7 +159,13 @@ export async function GET(request: NextRequest) {
           : null,
       scheduledTime: job.scheduledTime || null,
     }))
-    return NextResponse.json(jobsWithDate)
+
+    return NextResponse.json({
+      jobs: jobsWithDate,
+      total: parseInt(count, 10),
+      page,
+      limit,
+    })
   } catch (error) {
     console.error("Jobs fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -334,7 +198,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO jobs (
         title, description, job_type_id, created_by,
         priority, location_address, location_lat, location_lng,
-        scheduled_date, scheduled_time, estimated_duration, job_value,
+        scheduled_date, scheduled_time, job_value,
         instructions, status
       ) VALUES (
         ${jobData.title},
@@ -347,7 +211,6 @@ export async function POST(request: NextRequest) {
         ${jobData.locationLng || null},
         ${jobData.scheduledDate || null},
         ${jobData.scheduledTime || null},
-        ${jobData.estimatedDuration || null},
         ${jobData.jobValue || 0},
         ${jobData.instructions || null},
         'assigned'

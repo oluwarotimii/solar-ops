@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 import { getDbSql } from "@/lib/db";
 import { sendPushNotification } from '@/lib/push';
 
@@ -10,8 +11,8 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user || !hasPermission(user, 'notifications:send')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { title, message, type, recipientId } = await req.json();

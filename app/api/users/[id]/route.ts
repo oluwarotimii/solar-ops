@@ -74,63 +74,36 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { email, firstName, lastName, phone, roleId, status, password } = await request.json();
     const db = getDbSql();
 
-    const setClauses = [];
-    const values = [];
-    let valueIndex = 1;
-
-    if (email) {
-      setClauses.push(`email = $${valueIndex++}`);
-      values.push(email);
-    }
-    if (firstName) {
-      setClauses.push(`first_name = $${valueIndex++}`);
-      values.push(firstName);
-    }
-    if (lastName) {
-      setClauses.push(`last_name = $${valueIndex++}`);
-      values.push(lastName);
-    }
-    if (phone) {
-      setClauses.push(`phone = $${valueIndex++}`);
-      values.push(phone);
-    }
-    if (roleId) {
-      setClauses.push(`role_id = $${valueIndex++}`);
-      values.push(roleId);
-    }
+    const updates: any = {};
+    if (email) updates.email = email;
+    if (firstName) updates.first_name = firstName;
+    if (lastName) updates.last_name = lastName;
+    if (phone) updates.phone = phone;
+    if (roleId) updates.role_id = roleId;
     if (status) {
       const allowedStatuses = ['active', 'inactive', 'pending'];
       if (!allowedStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid user status provided" }, { status: 400 });
       }
-      setClauses.push(`status = $${valueIndex++}`);
-      values.push(status);
+      updates.status = status;
     }
-
     if (password) {
-      const hashedPassword = await hashPassword(password);
-      setClauses.push(`password_hash = $${valueIndex++}`);
-      values.push(hashedPassword);
+      updates.password_hash = await hashPassword(password);
     }
 
-    if (setClauses.length === 0) {
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json({ message: 'No changes to update' }, { status: 200 });
     }
 
-    setClauses.push(`updated_at = NOW()`);
+    updates.updated_at = new Date();
 
-    const query = `
+    const result = await db`
       UPDATE users
-      SET ${setClauses.join(', ')}
-      WHERE id = $${valueIndex++}
-      RETURNING id;
-    `;
-    values.push(params.id);
+      SET ${db(updates)}
+      WHERE id = ${params.id}
+      RETURNING id;`;
 
-    // @ts-ignore
-    const result = await db.query(query, values);
-
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return NextResponse.json({ error: "User not found or no changes made" }, { status: 404 });
     }
 
@@ -153,11 +126,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   try {
     const db = getDbSql();
-    await db`
+    const result = await db`
       DELETE FROM users
       WHERE id = ${params.id}
+      RETURNING id;
     `;
-    return NextResponse.json({ message: 'User deleted successfully' });
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ id: result[0].id, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });

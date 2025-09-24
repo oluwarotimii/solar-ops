@@ -48,9 +48,9 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     fetchCurrentUser();
   }, []);
 
-  const hasPermission = (permission: string): boolean => {
-    if (isLoading || !user || !user.role || !user.role.permissions) {
-      return false;
+      const hasPermission = (permission: string): boolean => {
+      console.log("Checking permission:", permission, "for user role permissions:", user?.role?.permissions);
+      if (isLoading || !user || !user.role || !user.role.permissions) {      return false;
     }
 
     // Super Admins with 'all: true' have all permissions
@@ -76,7 +76,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <PermissionContext.Provider value={{ hasPermission, isLoading }}>
+    <PermissionContext.Provider value={{ user, hasPermission, isLoading }}>
       {children}
     </PermissionContext.Provider>
   );

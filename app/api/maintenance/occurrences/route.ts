@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return response
   }
 
-  if (!user) {
+  if (!user || !hasPermission(user, 'maintenance:read')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -87,6 +87,45 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("Maintenance occurrences fetch error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const { user, response } = await authenticateApiRequest(request)
+  if (response) {
+    return response
+  }
+
+  if (!user || !hasPermission(user, 'maintenance:create')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  try {
+    const sql = getDbSql();
+    const occurrenceData = await request.json()
+
+    if (!occurrenceData.templateId || !occurrenceData.scheduledDate) {
+      return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
+    }
+
+    const [occurrence] = await sql`
+      INSERT INTO maintenance_occurrences (
+        template_id, scheduled_date, status, assigned_to
+      ) VALUES (
+        ${occurrenceData.templateId},
+        ${occurrenceData.scheduledDate},
+        ${occurrenceData.status || 'pending'},
+        ${occurrenceData.assignedTo || null}
+      ) RETURNING *
+    `
+
+    return NextResponse.json({
+      id: occurrence.id,
+      message: "Maintenance occurrence created successfully",
+    }, { status: 201 })
+  } catch (error) {
+    console.error("Maintenance occurrence creation error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

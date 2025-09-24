@@ -12,7 +12,7 @@ function getJobChanges(originalJob: any, newJobData: any) {
   const simpleFields = [
     'title', 'description', 'priority', 'location_address', 
     'location_lat', 'location_lng', 'scheduled_date', 'scheduled_time',
-    'estimated_duration', 'job_value', 'instructions', 'status'
+    'job_value', 'instructions', 'status'
   ];
   
   for (const field of simpleFields) {
@@ -185,7 +185,6 @@ export async function PUT(
         location_lng = ${jobData.locationLng || null},
         scheduled_date = ${jobData.scheduledDate || null},
         scheduled_time = ${jobData.scheduledTime || null},
-        estimated_duration = ${jobData.estimatedDuration || null},
         job_value = ${jobData.jobValue || 0},
         instructions = ${jobData.instructions || null},
         status = ${jobData.status || originalJob.status}

@@ -183,3 +183,37 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const { user, response } = await authenticateApiRequest(request);
+  if (response) {
+    return response;
+  }
+
+  if (!user || !hasPermission(user, 'maintenance:delete')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  try {
+    const sql = getDbSql();
+    
+    // First delete all accrued values associated with this occurrence
+    await sql`
+      DELETE FROM accrued_values WHERE maintenance_occurrence_id = ${params.id}
+    `;
+    
+    // Then delete the occurrence
+    const result = await sql`
+      DELETE FROM maintenance_occurrences WHERE id = ${params.id}
+    `;
+
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Occurrence not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Maintenance occurrence deleted successfully" });
+  } catch (error) {
+    console.error("Maintenance occurrence delete error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

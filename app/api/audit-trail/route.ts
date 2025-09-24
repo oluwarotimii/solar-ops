@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 

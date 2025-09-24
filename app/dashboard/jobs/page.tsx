@@ -84,7 +84,7 @@ export default function JobsPage() {
   const [totalJobs, setTotalJobs] = useState(0);
   const [jobsPerPage] = useState(12);
   const { toast } = useToast();
-  const { hasPermission } = usePermissions();
+  const { user, hasPermission } = usePermissions();
 
   const fetchJobs = async (page = 1) => {
     setLoading(true)
@@ -255,8 +255,8 @@ export default function JobsPage() {
 
   const totalJobsValue = (jobs || []).reduce((acc, job) => acc + job.jobValue, 0)
 
-  const isUserAssigned = selectedJobForSheet?.technicians?.some((t) => t.technicianId === currentUser?.id)
-  const technicianInfo = selectedJobForSheet?.technicians?.find((t) => t.technicianId === currentUser?.id)
+  const isUserAssigned = selectedJobForSheet?.technicians?.some((t) => t.technicianId === user?.id)
+  const technicianInfo = selectedJobForSheet?.technicians?.find((t) => t.technicianId === user?.id)
   const hasCompleted = !!technicianInfo?.completedAt
 
   return (
@@ -416,9 +416,9 @@ export default function JobsPage() {
                       </TableRow>
                     ) : (
                       filteredJobs.map((job) => {
-                        const isUserAdmin = currentUser?.role?.isAdmin
-                        const isUserAssigned = job.technicians?.some((u) => u.technicianId === currentUser?.id)
-                        const userInfo = job.technicians?.find((u) => u.technicianId === currentUser?.id)
+                        const isUserAdmin = user?.role?.isAdmin
+                        const isUserAssigned = job.technicians?.some((u) => u.technicianId === user?.id)
+                        const userInfo = job.technicians?.find((u) => u.technicianId === user?.id)
                         const hasCompleted = !!userInfo?.completedAt
 
                         return (
@@ -534,9 +534,9 @@ export default function JobsPage() {
                   </div>
                 ) : (
                   filteredJobs.map((job) => {
-                    const isUserAdmin = currentUser?.role?.isAdmin
-                    const isUserAssigned = job.users?.some((u) => u.userId === currentUser?.id)
-                    const userInfo = job.users?.find((u) => u.userId === currentUser?.id)
+                    const isUserAdmin = user?.role?.isAdmin
+                    const isUserAssigned = job.users?.some((u) => u.userId === user?.id)
+                    const userInfo = job.users?.find((u) => u.userId === user?.id)
                     const hasCompleted = !!userInfo?.completedAt
 
                     return (
@@ -700,7 +700,7 @@ export default function JobsPage() {
           <DialogContent className="max-w-2xl">
             <ViewJobDialog
               job={selectedJob}
-              currentUser={currentUser}
+              currentUser={user}
               onEdit={() => {
                 setShowViewDialog(false)
                 setShowEditDialog(true)
@@ -708,7 +708,8 @@ export default function JobsPage() {
             />
           </DialogContent>
         </Dialog>
-      )}
+      )
+      }
 
       {/* Edit Job Dialog */}
       {selectedJob && (
@@ -720,7 +721,7 @@ export default function JobsPage() {
           }}
         >
           <DialogContent className="max-w-2xl">
-            <EditJobDialog job={selectedJob} onJobUpdated={handleJobUpdated} currentUser={currentUser} />
+            <EditJobDialog job={selectedJob} onJobUpdated={handleJobUpdated} currentUser={user} />
           </DialogContent>
         </Dialog>
       )}

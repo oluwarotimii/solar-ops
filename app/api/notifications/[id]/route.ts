@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const sql = getDbSql();
     const notification = await sql`
-      SELECT * FROM notifications WHERE id = ${params.id} AND recipient_id = ${user.id}
+      SELECT * FROM notifications WHERE id = ${params.id} ${!hasPermission(user, 'notifications:read:all') ? sql`AND recipient_id = ${user.id}` : sql``}
     `;
 
     if (notification.length === 0) {
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         message = ${message},
         type = ${type || 'general'},
         read_at = ${readAt || null}
-      WHERE id = ${params.id} AND recipient_id = ${user.id}
+      WHERE id = ${params.id} ${!hasPermission(user, 'notifications:update:all') ? sql`AND recipient_id = ${user.id}` : sql``}
       RETURNING *;
     `;
 
@@ -83,7 +83,7 @@ export async function DELETE(
     const sql = getDbSql();
     await sql`
       DELETE FROM notifications
-      WHERE id = ${params.id} AND recipient_id = ${user.id}
+      WHERE id = ${params.id} ${!hasPermission(user, 'notifications:delete:all') ? sql`AND recipient_id = ${user.id}` : sql``}
     `;
 
     return NextResponse.json({ message: 'Notification deleted' });

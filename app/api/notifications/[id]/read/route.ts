@@ -22,7 +22,7 @@ export async function PATCH(
     await sql`
       UPDATE notifications
       SET is_read = TRUE, updated_at = NOW()
-      WHERE id = ${params.id} AND recipient_id = ${user.id}
+      WHERE id = ${params.id} ${!hasPermission(user, 'notifications:mark_read:all') ? sql`AND recipient_id = ${user.id}` : sql``}
     `;
 
     return NextResponse.json({ message: 'Notification marked as read' });

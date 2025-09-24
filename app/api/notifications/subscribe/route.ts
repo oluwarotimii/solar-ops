@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
+import { getDbSql } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const { subscription } = await request.json()
+    const sql = getDbSql()
 
     if (!subscription || !subscription.endpoint) {
       return NextResponse.json({ error: "Invalid subscription" }, { status: 400 })

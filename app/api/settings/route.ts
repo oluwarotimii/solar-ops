@@ -1,6 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 import { getDbSql, toCamelCase } from "@/lib/db";
 
 export async function GET(request: NextRequest) {

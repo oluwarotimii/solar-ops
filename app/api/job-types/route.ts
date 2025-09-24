@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return response
     }
 
-    if (!user || !hasPermission(user, 'jobTypes:read')) {
+    if (!user || (!hasPermission(user, 'job_types:read') && !hasPermission(user, 'jobs:create') && !hasPermission(user, 'jobs:read'))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

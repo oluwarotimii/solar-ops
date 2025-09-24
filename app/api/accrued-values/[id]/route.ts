@@ -64,4 +64,67 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
+    }
+
+    if (!user || !hasPermission(user, 'accrued_values:update')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = params;
+    const { rating } = await request.json();
+    const sql = getDbSql();
+
+    const result = await sql`
+      UPDATE accrued_values
+      SET rating = ${rating}
+      WHERE id = ${id}
+      RETURNING *;
+    `;
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Accrued value not found or no changes made" }, { status: 404 });
+    }
+
+    return NextResponse.json(toCamelCase(result[0]));
+  } catch (error) {
+    console.error("Accrued value PUT error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
+    }
+
+    if (!user || !hasPermission(user, 'accrued_values:delete')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = params;
+    const sql = getDbSql();
+
+    const result = await sql`
+      DELETE FROM accrued_values
+      WHERE id = ${id}
+      RETURNING id;
+    `;
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Accrued value not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Accrued value deleted successfully" });
+  } catch (error) {
+    console.error("Accrued value DELETE error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
 
