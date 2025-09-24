@@ -8,7 +8,7 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters long"),
   firstName: z.string().min(2, "First name is required").max(100),
   lastName: z.string().min(2, "Last name is required").max(100),
-  phone: z.string().regex(/^\+234\d{10}$/, "Phone number must be in +234 format followed by 10 digits (e.g., +2348012345678)"),
+  phone: z.string().regex(/^\+234\d{10}$/, "Invalid phone number. Please use the format +234 followed by 10 digits (e.g., +2348012345678)."),
 });
 
 export async function POST(request: NextRequest) {
@@ -36,26 +36,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 })
     }
 
-    // Get default technician role
-    const technicianRole = await db`
-      SELECT id FROM roles WHERE name = 'Technician'
-    `
-    console.log(`[Register Debug] Technician role found:`, technicianRole);
+    // Get default user role
+    const userRole = await db`
+      SELECT id FROM roles WHERE name = 'User'
+    `;
+    console.log(`[Register Debug] User role found:`, userRole);
 
-    if (technicianRole.length === 0) {
-      console.log(`[Register Debug] Default role 'Technician' not found.`);
+    if (userRole.length === 0) {
+      console.log(`[Register Debug] Default role 'User' not found.`);
       return NextResponse.json({ error: "System error: Default role not found" }, { status: 500 })
     }
 
-    const hashedPassword = await hashPassword(password)
-    console.log(`[Register Debug] Hashed password for ${email}`);
+    const hashedPassword = await hashPassword(password);
 
+    // Create the new user
     const result = await db`
       INSERT INTO users (email, password_hash, first_name, last_name, phone, role_id, status)
-      VALUES (${email}, ${hashedPassword}, ${firstName}, ${lastName}, ${phone || null}, ${technicianRole[0].id}, 'pending')
-      RETURNING id
-    `
-    console.log(`[Register Debug] User inserted, returned ID:`, result[0].id);
+      VALUES (${email}, ${hashedPassword}, ${firstName}, ${lastName}, ${phone || null}, ${userRole[0].id}, 'pending')
+      RETURNING id, email, first_name, last_name, status
+    `;
 
     return NextResponse.json({
       message: "Registration successful. Awaiting approval.",

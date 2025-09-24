@@ -28,9 +28,10 @@ import { formatDate } from "@/lib/date-utils"
 import CreateJobDialog from "@/components/create-job-dialog"
 import EditJobDialog from "@/components/edit-job-dialog"
 import ViewJobDialog from "@/components/view-job-dialog"
-import { useToast } from "@/components/ui/use-toast"
-import { MobileTableCard } from "@/components/mobile-table-card"
-import { BottomSheet } from "@/components/bottom-sheet"
+import { useToast } from "@/components/ui/use-toast";
+import { MobileTableCard } from "@/components/mobile-table-card";
+import { BottomSheet } from "@/components/bottom-sheet";
+import { usePermissions } from "@/contexts/permission-context";
 
 // ... (interfaces and color constants remain the same)
 interface UserJobAssignment {
@@ -71,19 +72,19 @@ export default function JobsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showViewDialog, setShowViewDialog] = useState(false)
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [selectedJobForSheet, setSelectedJobForSheet] = useState<Job | null>(null)
-  const [showBottomSheet, setShowBottomSheet] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJobForSheet, setSelectedJobForSheet] = useState<Job | null>(null);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [stats, setStats] = useState({ totalJobsValue: 0, completedJobsValue: 0 });
   const [showTotalValue, setShowTotalValue] = useState(false);
   const [showCompletedValue, setShowCompletedValue] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalJobs, setTotalJobs] = useState(0)
-  const [jobsPerPage] = useState(12)
-  const { toast } = useToast()
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [jobsPerPage] = useState(12);
+  const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   const fetchJobs = async (page = 1) => {
     setLoading(true)
@@ -131,14 +132,10 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
-    }
-    fetchJobs(currentPage)
-    fetchJobTypes()
-    fetchStats()
-  }, [currentPage])
+    fetchJobs(currentPage);
+    fetchJobTypes();
+    fetchStats();
+  }, [currentPage]);
 
   const handleJobCreated = () => {
     fetchJobs()
@@ -271,7 +268,7 @@ export default function JobsPage() {
             <h1 className="text-3xl font-bold">Jobs</h1>
             <p className="text-muted-foreground">Manage and track all field operations</p>
           </div>
-          {currentUser?.role?.isAdmin && (
+          {hasPermission('jobs:create') && (
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
               <DialogTrigger asChild>
                 <Button>
@@ -451,7 +448,7 @@ export default function JobsPage() {
                             </td>
                             <td className="md:table-cell py-2 text-right" onClick={(e) => e.stopPropagation()}>
                               <div className="flex justify-end gap-2 mt-2 md:mt-0">
-                                {isUserAdmin && job.status !== "completed" && (
+                                {hasPermission('jobs:update') && job.status !== "completed" && (
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -463,22 +460,22 @@ export default function JobsPage() {
                                     <Edit className="h-4 w-4 mr-2" /> Edit
                                   </Button>
                                 )}
-                                {isUserAdmin && job.status === "completed" && (
+                                {hasPermission('jobs:update') && job.status === "completed" && (
                                   <Button variant="outline" size="sm" onClick={() => handleReopenJob(job.id)}>
                                     <RotateCcw className="h-4 w-4 mr-2" /> Re-open
                                   </Button>
                                 )}
-                                {isUserAdmin && job.status === "completed" && !job.isArchived && (
+                                {hasPermission('jobs:archive') && job.status === "completed" && !job.isArchived && (
                                   <Button variant="outline" size="sm" onClick={() => handleArchiveJob(job.id)}>
                                     <Archive className="h-4 w-4 mr-2" /> Archive
                                   </Button>
                                 )}
-                                {isUserAdmin && (
+                                {hasPermission('jobs:delete') && (
                                   <Button variant="destructive" size="sm" onClick={() => handleJobDelete(job.id)}>
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 )}
-                                {isUserAssigned && !isUserAdmin && (
+                                {isUserAssigned && !hasPermission('jobs:update') && (
                                   <Button
                                     variant={hasCompleted ? "secondary" : "default"}
                                     size="sm"
@@ -589,7 +586,7 @@ export default function JobsPage() {
         actions={
           selectedJobForSheet && (
             <div className="flex gap-2">
-              {currentUser?.role?.isAdmin && selectedJobForSheet.status !== "completed" && (
+              {hasPermission('jobs:update') && selectedJobForSheet.status !== "completed" && (
                 <Button
                   variant="outline"
                   size="sm"

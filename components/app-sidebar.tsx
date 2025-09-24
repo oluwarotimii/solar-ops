@@ -38,109 +38,113 @@ import {
 } from "lucide-react"
 import type { User as UserType } from "@/types"
 
-// Navigation items
-const data = {
-  navMain: [
-    {
-      title: "Overview",
-      items: [
-        {
-          title: "Dashboard",
-          url: "/dashboard",
-          icon: LayoutDashboard,
-        },
-      ],
-    },
-    {
-      title: "Operations",
-      items: [
-        {
-          title: "Jobs",
-          url: "/dashboard/jobs",
-          icon: Briefcase,
-        },
-        {
-          title: "Archived Jobs",
-          url: "/dashboard/archived-jobs",
-          icon: Archive,
-          adminOnly: true,
-        },
-        {
-          title: "Maintenance",
-          url: "/dashboard/maintenance",
-          icon: Wrench,
-        },
-      ],
-    },
-    {
-      title: "Analytics",
-      items: [
-        {
-          title: "Accrued Values",
-          url: "/dashboard/accrued-values",
-          icon: DollarSign,
-          adminOnly: true,
-        },
-        {
-          title: "Reports",
-          url: "/dashboard/reports",
-          icon: FileText,
-          adminOnly: true,
-        },
-      ],
-    },
-    {
-      title: "System",
-      items: [
-        {
-          title: "Users",
-          url: "/dashboard/users",
-          icon: User,
-          adminOnly: true,
-        },
-        {
-          title: "Roles",
-          url: "/dashboard/roles",
-          icon: Shield,
-          adminOnly: true,
-        },
-        {
-          title: "Notifications",
-          url: "/dashboard/notifications",
-          icon: Bell,
-        },
-        {
-          title: "Settings",
-          url: "/dashboard/settings",
-          icon: Settings,
-          adminOnly: true,
-        },
-        {
-          title: "Audit Trail",
-          url: "/dashboard/audit-trail",
-          icon: History,
-          adminOnly: true,
-        },
-      ],
-    },
-  ],
-}
+import { usePermissions } from "@/contexts/permission-context";
+import { useSidebar } from "@/components/ui/sidebar";
 
-import { useSidebar } from "@/components/ui/sidebar"
+// Navigation items
+const navConfig = [
+  {
+    title: "Overview",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: LayoutDashboard,
+        permission: "dashboard:read",
+      },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      {
+        title: "Jobs",
+        url: "/dashboard/jobs",
+        icon: Briefcase,
+        permission: "jobs:read",
+      },
+      {
+        title: "Archived Jobs",
+        url: "/dashboard/archived-jobs",
+        icon: Archive,
+        permission: "jobs:archive",
+      },
+      {
+        title: "Maintenance",
+        url: "/dashboard/maintenance",
+        icon: Wrench,
+        permission: "maintenance:read",
+      },
+    ],
+  },
+  {
+    title: "Analytics",
+    items: [
+      {
+        title: "Accrued Values",
+        url: "/dashboard/accrued-values",
+        icon: DollarSign,
+        permission: "accrued_values:read",
+      },
+      {
+        title: "Reports",
+        url: "/dashboard/reports",
+        icon: FileText,
+        permission: "reports:read",
+      },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      {
+        title: "Users",
+        url: "/dashboard/users",
+        icon: User,
+        permission: "users:read",
+      },
+      {
+        title: "Roles",
+        url: "/dashboard/roles",
+        icon: Shield,
+        permission: "roles:read",
+      },
+      {
+        title: "Notifications",
+        url: "/dashboard/notifications",
+        icon: Bell,
+        permission: "notifications:read",
+      },
+      {
+        title: "Settings",
+        url: "/dashboard/settings",
+        icon: Settings,
+        permission: "settings:read",
+      },
+      {
+        title: "Audit Trail",
+        url: "/dashboard/audit-trail",
+        icon: History,
+        permission: "audit_trail:read",
+      },
+    ],
+  },
+];
 
 export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: UserType }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const { isMobile, setOpenMobile } = useSidebar()
+  const router = useRouter();
+  const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const { hasPermission, isLoading } = usePermissions();
 
   // Get user info from localStorage (demo)
-  const userEmail = user.email
+  const userEmail = user.email;
   const userName = user.email
     .split("@")[0]
     .replace(/\d+/g, "")
     .replace(/[^a-zA-Z]/g, " ")
-    .trim()
-  const displayName = userName.charAt(0).toUpperCase() + userName.slice(1) || "User"
+    .trim();
+  const displayName = userName.charAt(0).toUpperCase() + userName.slice(1) || "User";
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -152,7 +156,12 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
       .split(" ")
       .map((n) => n[0])
       .join("")
-      .toUpperCase()
+      .toUpperCase();
+  };
+
+  if (isLoading) {
+    // Optionally, render a loading state for the sidebar
+    return <Sidebar {...props}><SidebarHeader /><SidebarContent><div>Loading...</div></SidebarContent><SidebarFooter /></Sidebar>;
   }
 
   return (
@@ -170,13 +179,13 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
       </SidebarHeader>
 
       <SidebarContent>
-        {data.navMain.map((section) => (
+        {navConfig.map((section) => (
           <SidebarGroup key={section.title}>
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {section.items
-                  .filter((item) => !item.adminOnly || (item.adminOnly && user.role?.isAdmin))
+                  .filter((item) => hasPermission(item.permission))
                   .map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={pathname === item.url}>

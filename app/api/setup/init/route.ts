@@ -258,9 +258,8 @@ export async function POST(request: NextRequest) {
       INSERT INTO roles (name, description, is_admin, permissions) 
       VALUES 
         ('Super Admin', 'Full system access', true, '{"all": true}'),
-        ('Admin', 'Administrative access', true, '{"jobs": true, "users": true, "reports": true, "maintenance": true}'),
-        ('Supervisor', 'Supervisor access', false, '{"jobs": true, "technician_tracking": true, "reports": true}'),
-        ('Technician', 'Field worker access', false, '{"jobs": "assigned_only", "checkin": true, "media_upload": true}')
+        ('User', 'Default role for new users', false, '{}'),
+        ('Technician', 'Technician role with job-specific permissions', false, '{"jobs:create": true, "jobs:read": true, "jobs:update": true, "maintenance:create": true, "maintenance:read": true, "maintenance:update": true}')
       ON CONFLICT (name) DO NOTHING
     `;
     

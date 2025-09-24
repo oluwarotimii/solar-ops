@@ -17,14 +17,19 @@ import type { Role } from "@/types";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const allPermissions = {
-  jobs: ["create", "read:all", "read:team", "read:assigned", "update", "delete"],
-  users: ["create", "read", "update", "delete"],
+  jobs: ["create", "read", "read:all", "read:team", "update", "delete", "archive"],
+  job_types: ["create", "read", "update", "delete"],
+  users: ["create", "read", "update", "delete", "reset_password"],
+  "users:stats": ["read", "read:all"],
   roles: ["create", "read", "update", "delete"],
   maintenance: ["create", "read", "update", "delete"],
-  tracking: ["read", "start_journey", "end_journey", "log_gps", "checkin"],
-  job_types: ["create", "read", "update", "delete"],
-  notifications: ["read", "send", "mark_read", "delete", "subscribe"],
+  "accrued_values": ["create", "read", "read:all", "create:all"],
+  // tracking: ["read", "start_journey", "end_journey", "log_gps", "checkin"],
+  notifications: ["read", "send", "update", "delete", "mark_read", "subscribe"],
   reports: ["read"],
+  "audit_trail": ["read"],
+  settings: ["read", "update"],
+  dashboard: ["read", "stats:read", "activity:read", "completionRate:read"],
 };
 
 interface RoleEditDialogProps {

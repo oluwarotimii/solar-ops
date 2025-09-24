@@ -77,7 +77,8 @@ export default function RegisterPage() {
       if (response.ok) {
         setSuccess(true);
       } else {
-        setError(data.error || "Registration failed");
+        const errorData = data.errors ? data.errors.map((err: any) => err.message).join(', ') : data.error;
+        setError(errorData || "Registration failed");
       }
     } catch (err) {
       console.error('[Frontend] Registration fetch error:', err);

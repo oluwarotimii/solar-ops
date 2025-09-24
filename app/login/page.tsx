@@ -52,10 +52,10 @@ export default function LoginPage() {
     }
   }
 
-  const useDefaultAdmin = () => {
-    setEmail("admin@solar.com")
-    setPassword("admin123")
-  }
+  // const useDefaultAdmin = () => {
+  //   setEmail("admin@solar.com")
+  //   setPassword("admin123")
+  // }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">

@@ -11,33 +11,35 @@ export async function GET(request: NextRequest) {
       return response || NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only admins can view all time entries
-    if (!user.role?.isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const limit = parseInt(search_params.get("limit") || "20", 10);
     const offset = (page - 1) * limit;
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    let userId = searchParams.get("userId");
+
+    if (!hasPermission(user, 'time_entries:read:all')) {
+      userId = user.id;
+    }
 
     const sql = getDbSql();
 
-    // Build date filter conditions
-    let dateConditions = sql``;
-    if (startDate || endDate) {
-      const conditions = [];
-      if (startDate) {
-        conditions.push(sql`te.created_at >= ${startDate}`);
-      }
-      if (endDate) {
-        conditions.push(sql`te.created_at <= ${endDate} 23:59:59`);
-      }
-      if (conditions.length > 0) {
-        dateConditions = sql`AND ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
-      }
+    // Build filter conditions
+    const conditions = [];
+    if (startDate) {
+      conditions.push(sql`te.created_at >= ${startDate}`);
+    }
+    if (endDate) {
+      conditions.push(sql`te.created_at <= ${endDate} 23:59:59`);
+    }
+    if (userId) {
+      conditions.push(sql`te.user_id = ${userId}`);
+    }
+
+    let whereClause = sql``;
+    if (conditions.length > 0) {
+      whereClause = sql`WHERE ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
     }
 
     const timeEntries = await sql`
@@ -53,22 +55,15 @@ export async function GET(request: NextRequest) {
         u.email
       FROM time_entries te
       LEFT JOIN users u ON te.user_id = u.id
-      WHERE 1=1 ${dateConditions}
+      ${whereClause}
       ORDER BY te.created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
 
     // Count query with same filters
-    let countQuery = sql`SELECT COUNT(*) FROM time_entries te WHERE 1=1`;
-    if (startDate) {
-      countQuery = sql`${countQuery} AND te.created_at >= ${startDate}`;
-    }
-    if (endDate) {
-      countQuery = sql`${countQuery} AND te.created_at <= ${endDate} 23:59:59`;
-    }
-    
-    const [{ count }] = await sql`${countQuery}`;
+    const countResult = await sql`SELECT COUNT(*) FROM time_entries te ${whereClause}`;
+    const count = countResult[0].count;
 
     console.log("Time entries count:", count); // Debug log
 

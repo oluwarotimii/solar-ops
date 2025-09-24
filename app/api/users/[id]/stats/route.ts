@@ -18,8 +18,8 @@ export async function GET(
 
     const userId = params.id;
 
-    // Security check: Allow admins or the user themselves to access this endpoint
-    if (currentUser.id !== userId && !currentUser.role?.isAdmin) {
+    // Security check: Allow users with permission or the user themselves to access this endpoint
+    if (currentUser.id !== userId && !hasPermission(currentUser, 'users:read:stats:all')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user || !hasPermission(user, 'settings:read')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const sql = getDbSql();
@@ -35,7 +35,7 @@ export async function PUT(request: NextRequest) {
       return response;
     }
 
-    if (!user || !user.role?.isAdmin) {
+    if (!user || !hasPermission(user, 'settings:update')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

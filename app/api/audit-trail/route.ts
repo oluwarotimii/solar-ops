@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
       return response || NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // This is a critical security check. Only admins can view the audit trail.
-    if (!user.role?.isAdmin) {
+    // This is a critical security check. Only users with the correct permission can view the audit trail.
+    if (!hasPermission(user, 'audit_trail:read')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

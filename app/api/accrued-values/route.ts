@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     let userId = searchParams.get('userId');
     const mode = searchParams.get('mode'); // 'detailed' or null
 
-    if (!user.role.isAdmin) {
+    if (!hasPermission(user, 'accrued_values:read:all')) {
       userId = user.id;
     }
 
@@ -144,8 +144,8 @@ export async function POST(req: NextRequest) {
 
     const { userId, jobId, jobType, rating, month, year } = await req.json();
 
-    if (!user.role.isAdmin && userId !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!hasPermission(user, 'accrued_values:create:all') && userId !== user.id) {
+      return NextResponse.json({ error: "Forbidden: You can only create accrued values for yourself." }, { status: 403 });
     }
 
     if (!userId || !jobId || !jobType || !month || !year) {

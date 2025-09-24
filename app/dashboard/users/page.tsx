@@ -8,79 +8,81 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Users, Search, UserCheck, Phone, Clock, Edit, Star, Briefcase } from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { MobileTableCard } from "@/components/mobile-table-card"
-import type { User, Role } from "@/types"
-import EditUserDialog from "@/components/edit-user-dialog"
+import { Users, Search, UserCheck, Phone, Clock, Edit, Star, Briefcase, Plus } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileTableCard } from "@/components/mobile-table-card";
+import type { User, Role } from "@/types";
+import EditUserDialog from "@/components/edit-user-dialog";
+import { usePermissions } from "@/contexts/permission-context";
 
 const statusColors: { [key: string]: string } = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   active: "bg-green-100 text-green-800 border-green-200",
   suspended: "bg-red-100 text-red-800 border-red-200",
   deactivated: "bg-gray-100 text-gray-800 border-gray-200",
-}
+};
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([])
-  const [roles, setRoles] = useState<Role[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [roleFilter, setRoleFilter] = useState("all")
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const isMobile = useIsMobile()
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const isMobile = useIsMobile();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
-    fetchUsers()
-    fetchRoles()
-  }, [])
+    fetchUsers();
+    fetchRoles();
+  }, []);
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users", {})
+      const response = await fetch("/api/users", {});
 
       if (response.ok) {
-        const data = await response.json()
-        setUsers(data)
+        const data = await response.json();
+        setUsers(data);
       }
     } catch (error) {
-      console.error("Failed to fetch users:", error)
+      console.error("Failed to fetch users:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("/api/roles", {})
+      const response = await fetch("/api/roles", {});
 
       if (response.ok) {
-        const data = await response.json()
-        setRoles(data)
+        const data = await response.json();
+        setRoles(data);
       }
     } catch (error) {
-      console.error("Failed to fetch roles:", error)
+      console.error("Failed to fetch roles:", error);
     }
-  }
+  };
 
   const filteredUsers = users.filter((user) => {
-    if (!user) return false
+    if (!user) return false;
     const matchesSearch =
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter
-    const matchesRole = roleFilter === "all" || user.roleId === roleFilter
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+    const matchesRole = roleFilter === "all" || user.roleId === roleFilter;
 
-    return matchesSearch && matchesStatus && matchesRole
-  })
+    return matchesSearch && matchesStatus && matchesRole;
+  });
 
-  const pendingUsers = users.filter((user) => user && user.status === "pending")
+  const pendingUsers = users.filter((user) => user && user.status === "pending");
 
-  const totalUsers = users.length
-  const activeUsers = users.filter((u) => u.status === "active").length
+  const totalUsers = users.length;
+  const activeUsers = users.filter((u) => u.status === "active").length;
 
   if (loading) {
     return (
@@ -94,7 +96,7 @@ export default function UsersPage() {
           <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -104,19 +106,34 @@ export default function UsersPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">User Management</h1>
           {!isMobile && <p className="text-muted-foreground mt-1">Manage user accounts, roles, and permissions</p>}
         </div>
+        {hasPermission("users:create") && (
+          <Button onClick={() => {
+            setSelectedUser(null); // Ensure we are creating a new user
+            setShowEditDialog(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create User
+          </Button>
+        )}
       </div>
 
-      {selectedUser && (
+      {showEditDialog && (
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent>
             <EditUserDialog
-              user={selectedUser}
+              user={selectedUser} // This will be null for creating a new user
               roles={roles}
               onUserUpdated={(updatedUser) => {
-                setSelectedUser(updatedUser)
-                setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
-                fetchUsers()
-                setShowEditDialog(false)
+                if (selectedUser) {
+                  // Update existing user
+                  setUsers((prevUsers) => prevUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user)));
+                } else {
+                  // Add new user
+                  setUsers((prevUsers) => [...prevUsers, updatedUser]);
+                }
+                fetchUsers(); // Refetch to be safe
+                setShowEditDialog(false);
+                setSelectedUser(null);
               }}
             />
           </DialogContent>
@@ -165,6 +182,7 @@ export default function UsersPage() {
                     </p>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
+                  {hasPermission("users:update") && (
                   <Button
                     size="sm"
                     onClick={() => {
@@ -182,6 +200,7 @@ export default function UsersPage() {
                       </>
                     )}
                   </Button>
+                  )}
                 </div>
               ))}
             </div>
