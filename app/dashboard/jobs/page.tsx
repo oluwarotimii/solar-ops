@@ -164,7 +164,11 @@ export default function JobsPage() {
 
   const handleMarkComplete = async (jobId: string) => {
     try {
-      const response = await fetch(`/api/jobs/${jobId}/status`, { method: "PATCH" })
+      const response = await fetch(`/api/jobs/${jobId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed" }),
+      })
       if (!response.ok) throw new Error((await response.json()).error || "Failed to mark as complete.")
       toast({ title: "Success", description: "Your work has been marked as complete." })
       fetchJobs()

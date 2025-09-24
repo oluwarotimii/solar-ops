@@ -49,6 +49,7 @@ export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpda
   };
 
   const canComplete = isCurrentMonth() && occurrence.status !== 'completed';
+  console.log("MaintenanceOccurrenceDetails - canComplete:", canComplete, "occurrence.status:", occurrence.status);
 
   const statusColors = {
     scheduled: "bg-blue-100 text-blue-800",
@@ -116,14 +117,14 @@ export default function MaintenanceOccurrenceDetails({ occurrence, users, onUpda
                   <p className="font-medium">Assigned To</p>
                   <p>{occurrence.assignedUser?.firstName} {occurrence.assignedUser?.lastName}</p>
                 </div>
-                <Button onClick={handleMarkComplete} disabled={!canComplete || isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Mark as Completed
-                </Button>
-                {!isCurrentMonth() && occurrence.status !== 'completed' && (
-                  <p className="text-sm text-red-500">This task cannot be completed until the scheduled month.</p>
-                )}
               </>
+            )}
+            <Button onClick={handleMarkComplete} disabled={!canComplete || isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Mark as Completed
+            </Button>
+            {!isCurrentMonth() && occurrence.status !== 'completed' && (
+              <p className="text-sm text-red-500">This task cannot be completed until the scheduled month.</p>
             )}
           </CardContent>
         </Card>

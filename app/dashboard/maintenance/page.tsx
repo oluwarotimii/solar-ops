@@ -64,6 +64,7 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     if (!permissionsLoading && user) {
+      console.log("Super Admin has maintenance:read:all permission:", hasPermission('maintenance:read:all'));
       fetchData(user, currentPage);
       if (hasPermission('users:read')) {
         fetchUsers();
@@ -87,7 +88,7 @@ export default function MaintenancePage() {
       if (occurrencesRes.ok) {
         const data = await occurrencesRes.json();
         let occurrencesData = data.occurrences;
-        if (user && !hasPermission(user, 'maintenance:read:all')) {
+        if (user && !hasPermission('maintenance:read:all')) {
           occurrencesData = occurrencesData.filter(occ => occ.assignedTo === user.id);
         }
         setOccurrences(occurrencesData);
