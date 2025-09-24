@@ -101,7 +101,7 @@ const navConfig = [
         title: "Users",
         url: "/dashboard/users",
         icon: User,
-        permission: "users:read",
+        permission: "users:update",
       },
       {
         title: "Roles",
@@ -179,7 +179,11 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
       </SidebarHeader>
 
       <SidebarContent>
-        {navConfig.map((section) => (
+        {navConfig
+          .filter((section) =>
+            section.items.some((item) => hasPermission(item.permission))
+          )
+          .map((section) => (
           <SidebarGroup key={section.title}>
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>

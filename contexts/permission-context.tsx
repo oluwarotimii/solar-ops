@@ -56,6 +56,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     // Add this check
     if (typeof permission !== 'string') {
       console.error("hasPermission called with non-string permission:", permission);
+      console.trace(); // Add this line to see the call stack
       return false;
     }
 
@@ -64,18 +65,19 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       return true;
     }
 
+    // Check for flat permission (e.g., "jobs:read": true)
+    if (user.role.permissions[permission] === true) {
+      return true;
+    }
+
+    // Check for nested permission (e.g., { "jobs": { "read": true } })
     const keys = permission.split(':');
     let current: any = user.role.permissions;
-
     for (const key of keys) {
-      if (current === undefined) {
+      if (typeof current !== 'object' || current === null || !current.hasOwnProperty(key)) {
         return false;
       }
-      if (typeof current === 'object' && current !== null) {
-        current = current[key];
-      } else {
-        return false;
-      }
+      current = current[key];
     }
     
     return current === true;

@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
     
     let assignedToFilter = sql``;
-    if (!hasPermission(user, 'maintenance:read:all')) {
+    // If user is a Super Admin (has 'all: true' permission), show all occurrences
+    if (user.role.permissions.all === true) {
+      assignedToFilter = sql``;
+    } else if (!hasPermission(user, 'maintenance:read:all')) {
       // If user does not have 'maintenance:read:all', they can only see their own assigned occurrences
       assignedToFilter = sql`AND mo.assigned_to = ${user.id}`;
     }

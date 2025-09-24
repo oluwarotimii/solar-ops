@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(search_params.get("limit") || "20", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = (page - 1) * limit;
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");

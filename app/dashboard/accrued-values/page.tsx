@@ -44,8 +44,10 @@ export default function AccruedValuesPage() {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        const { accruedValues, minYear, maxYear } = await response.json();
-        console.log("API Response Data:", accruedValues, minYear, maxYear);
+        const responseData = await response.json();
+        console.log("Raw API Response Data:", responseData);
+        const { accruedValues, minYear, maxYear } = responseData;
+        console.log("Parsed API Response Data (accruedValues, minYear, maxYear):", accruedValues, minYear, maxYear);
         if (Array.isArray(accruedValues)) {
           setAccruedValues(accruedValues);
         } else {
@@ -111,6 +113,7 @@ export default function AccruedValuesPage() {
 
     return matchesSearch && matchesUser
   })
+  console.log("Filtered Values for rendering:", filteredValues);
 
   // Calculate summary stats
   const totalEarned = filteredValues.reduce((sum, value) => sum + parseFloat(value.totalEarnedAmount.toString()), 0)

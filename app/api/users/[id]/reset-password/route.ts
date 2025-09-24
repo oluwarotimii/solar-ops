@@ -16,9 +16,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return response;
     }
 
-    // Check if user has permission to reset passwords (admin only)
-    if (!user || !hasPermission(user, 'users:reset_password')) {
-      console.log('[Password Reset] User lacks permission to reset passwords');
+    // Allow user to reset their own password OR if they have permission to reset others' passwords
+    if (!user || (!hasPermission(user, 'users:reset_password') && user.id !== userId)) {
+      console.log('[Password Reset] User lacks permission to reset passwords or is not resetting their own.');
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

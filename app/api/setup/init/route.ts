@@ -230,7 +230,20 @@ export async function POST(request: NextRequest) {
           ip_address VARCHAR(45),
           user_agent TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
+      );
+    `;
+
+    // Create time_entries table
+    await sql`
+      CREATE TABLE IF NOT EXISTS time_entries (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          clock_in TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          clock_out TIMESTAMP WITH TIME ZONE,
+          notes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
     `;
     
     // Create indexes for better performance
