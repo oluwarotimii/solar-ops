@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const db = getDbSql();
     const rows = await db`
       SELECT 
-        u.id, u.email, u.first_name, u.last_name, u.phone, u.role_id, u.status, u.created_at, u.updated_at,
+        u.id, u.email, u.first_name, u.last_name, u.phone, u.role_id, u.status, u.created_at, u.updated_at, u.referral_points,
         r.name as role_name, r.description as role_description, r.is_admin as role_is_admin, r.permissions as role_permissions
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
@@ -40,6 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       approved: camelCaseRow.status === 'active',
       createdAt: camelCaseRow.createdAt,
       updatedAt: camelCaseRow.updatedAt,
+      referralPoints: camelCaseRow.referralPoints,
     };
 
     if (camelCaseRow.roleName) {
@@ -75,13 +76,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const db = getDbSql();
 
     const updates: any = {};
-    if (email) updates.email = email;
-    if (firstName) updates.first_name = firstName;
-    if (lastName) updates.last_name = lastName;
-    if (phone) updates.phone = phone;
-    if (roleId) updates.role_id = roleId;
-    if (status) {
-      const allowedStatuses = ['active', 'inactive', 'pending'];
+    if (email !== undefined) updates.email = email;
+    if (firstName !== undefined) updates.first_name = firstName;
+    if (lastName !== undefined) updates.last_name = lastName;
+    if (phone !== undefined) updates.phone = phone;
+    if (roleId !== undefined) updates.role_id = parseInt(String(roleId), 10);
+    if (status !== undefined) {
+      const allowedStatuses = ['active', 'inactive', 'pending', 'deactivated'];
       if (!allowedStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid user status provided" }, { status: 400 });
       }

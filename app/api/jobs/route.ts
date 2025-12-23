@@ -184,6 +184,7 @@ export async function POST(request: NextRequest) {
     }
 
     const jobData = await request.json()
+    const { referrerId } = jobData
 
     if (!jobData.title || !jobData.jobTypeId || !jobData.locationAddress) {
       return NextResponse.json(
@@ -194,59 +195,78 @@ export async function POST(request: NextRequest) {
 
     const sql = getDbSql()
 
-    const result = await sql`
-      INSERT INTO jobs (
-        title, description, job_type_id, created_by,
-        priority, location_address, location_lat, location_lng,
-        scheduled_date, scheduled_time, job_value,
-        instructions, status
-      ) VALUES (
-        ${jobData.title},
-        ${jobData.description || null},
-        ${jobData.jobTypeId},
-        ${user.id},
-        ${jobData.priority || "medium"},
-        ${jobData.locationAddress},
-        ${jobData.locationLat || null},
-        ${jobData.locationLng || null},
-        ${jobData.scheduledDate || null},
-        ${jobData.scheduledTime || null},
-        ${jobData.jobValue || 0},
-        ${jobData.instructions || null},
-        'assigned'
-      ) RETURNING id
-    `
+    // Use a transaction to ensure atomicity
+    const jobId = await sql.begin(async tx => {
+      // 1. Create the job
+      const jobResult = await tx`
+        INSERT INTO jobs (
+          title, description, job_type_id, created_by,
+          priority, location_address, location_lat, location_lng,
+          scheduled_date, scheduled_time, job_value,
+          instructions, status, referrer_id
+        ) VALUES (
+          ${jobData.title},
+          ${jobData.description || null},
+          ${jobData.jobTypeId},
+          ${user.id},
+          ${jobData.priority || "medium"},
+          ${jobData.locationAddress},
+          ${jobData.locationLat || null},
+          ${jobData.locationLng || null},
+          ${jobData.scheduledDate || null},
+          ${jobData.scheduledTime || null},
+          ${jobData.jobValue || 0},
+          ${jobData.instructions || null},
+          'assigned',
+          ${referrerId || null}
+        ) RETURNING id
+      `
+      const newJobId = jobResult[0].id
 
-    const jobId = result[0].id
+      // 2. Update referrer points if a referrer was specified
+      if (referrerId) {
+        await tx`
+          UPDATE users
+          SET referral_points = referral_points + 10
+          WHERE id = ${referrerId}
+        `
+      }
 
+      // 3. Assign technicians and create notifications
+      if (jobData.assignedUsers && jobData.assignedUsers.length > 0) {
+        for (const assignedTech of jobData.assignedUsers) {
+          await tx`
+            INSERT INTO job_technicians (job_id, technician_id, role)
+            VALUES (${newJobId}, ${assignedTech.userId}, ${assignedTech.role})
+          `
+
+          await tx`
+            INSERT INTO notifications (recipient_id, sender_id, title, message, type, related_job_id)
+            VALUES (
+              ${assignedTech.userId},
+              ${user.id},
+              'New Job Assignment',
+              ${`You have been assigned a new job: ${jobData.title}`},
+              'job_assignment',
+              ${newJobId}
+            )
+          `
+        }
+      }
+      
+      return newJobId
+    })
+
+    // 4. Send push notifications (can be outside the main DB transaction)
     if (jobData.assignedUsers && jobData.assignedUsers.length > 0) {
       for (const assignedTech of jobData.assignedUsers) {
-        await sql`
-          INSERT INTO job_technicians (job_id, technician_id, role)
-          VALUES (${jobId}, ${assignedTech.userId}, ${assignedTech.role})
-        `
-
-        await sql`
-          INSERT INTO notifications (recipient_id, sender_id, title, message, type, related_job_id)
-          VALUES (
-            ${assignedTech.userId},
-            ${user.id},
-            'New Job Assignment',
-            ${`You have been assigned a new job: ${jobData.title}`},
-            'job_assignment',
-            ${jobId}
-          )
-        `
-
         const subscriptionsResult = await sql`
           SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = ${assignedTech.userId}
         `
-
         const payload = {
           title: "New Job Assignment",
           body: `You have been assigned a new job: ${jobData.title}`,
         }
-
         for (const row of subscriptionsResult) {
           const subscription = {
             endpoint: row.endpoint,
@@ -260,6 +280,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 5. Log the audit event
     await logAuditEvent({
       userId: user.id,
       action: "job_create",
@@ -268,6 +289,7 @@ export async function POST(request: NextRequest) {
       details: {
         title: jobData.title,
         assignedTechnicians: jobData.assignedUsers?.map((t: any) => t.userId),
+        referrerId: referrerId || null,
       },
       request,
     })

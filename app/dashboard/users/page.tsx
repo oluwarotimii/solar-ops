@@ -123,6 +123,7 @@ export default function UsersPage() {
             <EditUserDialog
               user={selectedUser} // This will be null for creating a new user
               roles={roles}
+              isAdmin={hasPermission("users:update")}
               onUserUpdated={(updatedUser) => {
                 if (selectedUser) {
                   // Update existing user

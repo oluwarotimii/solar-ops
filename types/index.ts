@@ -10,6 +10,7 @@ export interface User {
   role?: Role
   createdAt: string
   updatedAt: string
+  referralPoints?: number
   stats?: {
     totalJobs: number
     completedJobs: number
@@ -60,6 +61,7 @@ export interface Job {
   users?: JobUser[]
   createdAt: string
   updatedAt: string
+  referrerId?: string
 }
 
 export interface JobType {

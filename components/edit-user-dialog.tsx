@@ -13,9 +13,10 @@ interface EditUserDialogProps {
   user: User;
   roles: Role[];
   onUserUpdated: (updatedUser: User) => void;
+  isAdmin: boolean;
 }
 
-export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserDialogProps) {
+export default function EditUserDialog({ user, roles, onUserUpdated, isAdmin }: EditUserDialogProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     firstName: user.firstName,
@@ -47,6 +48,34 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
 
   const handleSelectChange = (value: string, field: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleRedeemPoints = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/users/${user.id}/redeem-points`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to redeem points.");
+      }
+
+      toast({
+        title: "Points Redeemed",
+        description: `Referral points for ${user.firstName} ${user.lastName} have been reset to 0.`,
+      });
+      onUserUpdated({ ...user, referralPoints: 0 });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred while redeeming points.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetPassword = async () => {
@@ -173,7 +202,7 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
     <form onSubmit={handleSubmit} className="space-y-4">
       <DialogTitle>Edit User</DialogTitle>
       <DialogDescription>Make changes to the user's profile here. Click save when you're done.</DialogDescription>
-      <ScrollArea className="h-[400px] w-full">
+      <ScrollArea className="h-[450px] w-full">
         <div className="grid gap-4 py-4 px-2">
           <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
             <Label htmlFor="firstName" className="text-left sm:text-right">First Name</Label>
@@ -205,6 +234,39 @@ export default function EditUserDialog({ user, roles, onUserUpdated }: EditUserD
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+            <Label htmlFor="referralPoints" className="text-left sm:text-right">Referral Points</Label>
+            <div className="col-span-1 sm:col-span-3 flex items-center space-x-2">
+              <Input id="referralPoints" type="number" value={user.referralPoints || 0} readOnly />
+              {isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!user.referralPoints || user.referralPoints === 0 || loading}
+                    >
+                      Redeem
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will reset the user's referral points to 0. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRedeemPoints} disabled={loading}>
+                        {loading ? "Redeeming..." : "Confirm & Redeem"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
             <Label htmlFor="newPassword" className="text-left sm:text-right">New Password</Label>

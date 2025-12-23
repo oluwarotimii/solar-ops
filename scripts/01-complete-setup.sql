@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(20),
     role_id UUID REFERENCES roles(id),
     status VARCHAR(20) DEFAULT 'active',
+    referral_points INTEGER DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -61,7 +62,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     scheduled_time TIME WITHOUT TIME ZONE,
     is_archived BOOLEAN DEFAULT FALSE,
-    archived_at TIMESTAMP WITH TIME ZONE
+    archived_at TIMESTAMP WITH TIME ZONE,
+    referrer_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Create job_technicians table (many-to-many relationship between jobs and technicians)
