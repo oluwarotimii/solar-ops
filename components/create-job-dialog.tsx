@@ -122,7 +122,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          referrerId: formData.referrerId || null,
+          referrerId: formData.referrerId === "none" ? null : (formData.referrerId || null),
           // Strip clientId before sending to backend
           assignedUsers: assignedUsers.map(({ clientId, ...rest }) => rest),
           estimatedDuration: Number.parseInt(formData.estimatedDuration) || 0,
@@ -191,7 +191,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                 <Select value={formData.referrerId} onValueChange={(value) => setFormData({ ...formData, referrerId: value })}>
                   <SelectTrigger><SelectValue placeholder="Select referrer (optional)" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {users.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                   </SelectContent>
                 </Select>

@@ -97,15 +97,47 @@ export interface CheckinLog {
   job?: Job
 }
 
+export interface AccruedValueDisplay {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  totalEarnedAmount: number;
+}
+
+export interface AccruedValueDetailed {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  job: {
+    id: string;
+    title: string;
+    type: string;
+  };
+  earnedAmount: number;
+  rating?: number;
+  month: number;
+  year: number;
+  createdAt: string;
+}
+
 export interface TimeEntry {
   id: string;
   userId: string;
+  jobId?: string;
   clockIn: string;
   clockOut?: string;
   notes?: string;
+  latitude?: number;
+  longitude?: number;
   createdAt: string;
   updatedAt: string;
-  user?: User; // To include user details from the join
+  user?: User;
+  job?: Job;
 }
 
 export interface JobMedia {

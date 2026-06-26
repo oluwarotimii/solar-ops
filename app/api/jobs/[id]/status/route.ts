@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       const currentStatus = currentJob?.status;
 
       if (status === 'completed') {
-        const [job] = await sql`UPDATE jobs SET status = 'completed', completed_at = NOW(), is_archived = TRUE, archived_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;`;
+        const [job] = await sql`UPDATE jobs SET status = 'completed', completed_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;`;
         
         if (job) {
           const techniciansResult = await sql`SELECT technician_id FROM job_technicians WHERE job_id = ${jobId}`;
@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         const currentStatus = currentJob?.status;
 
         const [job] = await sql`
-          UPDATE jobs SET status = 'completed', completed_at = NOW(), is_archived = TRUE, archived_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;
+          UPDATE jobs SET status = 'completed', completed_at = NOW() WHERE id = ${jobId} RETURNING id, job_value;
         `;
 
         if (job) {

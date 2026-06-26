@@ -315,9 +315,9 @@ export default function AccruedValuesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Users</SelectItem>
-                {allUsers.map((user) => (
-                  <SelectItem key={user?.id} value={user?.id || ""}>
-                    {user?.firstName} {user?.lastName}
+                {allUsers.filter(u => u?.id).map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -53,7 +53,13 @@ interface Job {
   scheduledDate?: string | Date | null
   jobValue: number
   estimatedDuration?: number
-  users?: UserJobAssignment[]
+  technicians?: Array<{
+    technicianId: string
+    role: "lead" | "assistant" | "specialist"
+    firstName: string
+    lastName: string
+    completedAt: string | null
+  }>
   isArchived?: boolean
 }
 
@@ -365,7 +371,7 @@ export default function JobsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {jobTypes.map((type) => (
+                  {jobTypes.filter(t => t.name).map((type) => (
                     <SelectItem key={type.id} value={type.name}>
                       {type.name}
                     </SelectItem>
@@ -539,8 +545,8 @@ export default function JobsPage() {
                 ) : (
                   filteredJobs.map((job) => {
                     const isUserAdmin = user?.role?.isAdmin
-                    const isUserAssigned = job.users?.some((u) => u.userId === user?.id)
-                    const userInfo = job.users?.find((u) => u.userId === user?.id)
+                    const isUserAssigned = job.technicians?.some((u) => u.technicianId === user?.id)
+                    const userInfo = job.technicians?.find((u) => u.technicianId === user?.id)
                     const hasCompleted = !!userInfo?.completedAt
 
                     return (
@@ -567,10 +573,10 @@ export default function JobsPage() {
                             </>
                           )}
                         </div>
-                        {job.users && job.users.length > 0 && (
+                        {job.technicians && job.technicians.length > 0 && (
                           <div className="mt-2 text-xs">
                             <span className="text-muted-foreground">Assigned: </span>
-                            <span>{job.users.map((u) => `${u.firstName} ${u.lastName}`).join(", ")}</span>
+                            <span>{job.technicians.map((u) => `${u.firstName} ${u.lastName}`).join(", ")}</span>
                           </div>
                         )}
                       </MobileTableCard>
@@ -666,12 +672,12 @@ export default function JobsPage() {
               </div>
             )}
 
-            {selectedJobForSheet.users && selectedJobForSheet.users.length > 0 && (
+            {selectedJobForSheet.technicians && selectedJobForSheet.technicians.length > 0 && (
               <div>
                 <h3 className="font-medium text-sm text-muted-foreground">Assigned Users</h3>
                 <div className="mt-2 space-y-2">
-                  {selectedJobForSheet.users.map((user) => (
-                    <div key={user.userId} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                  {selectedJobForSheet.technicians.map((user) => (
+                    <div key={user.technicianId} className="flex items-center justify-between p-2 bg-muted rounded-lg">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         <span className="text-sm">

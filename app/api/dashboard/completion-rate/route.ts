@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
       SELECT COUNT(*) as count
       FROM jobs
       WHERE status = 'completed'
-      AND EXTRACT(MONTH FROM scheduled_date) = ${currentMonth}
-      AND EXTRACT(YEAR FROM scheduled_date) = ${currentYear}
+      AND EXTRACT(MONTH FROM completed_at) = ${currentMonth}
+      AND EXTRACT(YEAR FROM completed_at) = ${currentYear}
     `;
     const completedJobs = Number(completedJobsResult[0].count);
 

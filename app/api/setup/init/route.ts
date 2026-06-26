@@ -240,8 +240,11 @@ export async function POST(request: NextRequest) {
       CREATE TABLE IF NOT EXISTS time_entries (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          job_id UUID REFERENCES jobs(id) ON DELETE SET NULL,
           clock_in TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
           clock_out TIMESTAMP WITH TIME ZONE,
+          latitude DECIMAL(10, 8),
+          longitude DECIMAL(11, 8),
           notes TEXT,
           created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
