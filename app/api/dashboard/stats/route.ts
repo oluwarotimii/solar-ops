@@ -20,7 +20,7 @@ export async function GET(req: Request) {
       SELECT SUM(job_value) as total_value FROM jobs`;
 
     const currentUtcDate = new Date();
-    const currentMonth = currentUtcDate.getUTCMonth() + 1; // getUTCMonth() is 0-indexed
+    const currentMonth = currentUtcDate.getUTCMonth() + 1;
     const currentYear = currentUtcDate.getUTCFullYear();
 
     const completedJobsValueResult = await sql`
@@ -66,7 +66,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

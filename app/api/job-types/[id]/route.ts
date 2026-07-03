@@ -2,6 +2,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getDbSql, toCamelCase } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+import { z } from "zod";
+
+const updateJobTypeSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  description: z.string().optional().nullable(),
+  color: z.string().min(1, "Color is required").max(7),
+});
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -25,7 +32,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(result[0]));
   } catch (error) {
-    console.error("Job type GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -42,12 +48,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const { id } = params;
-    const { name, description, color } = await request.json();
-    const sql = getDbSql();
-
-    if (!name || !color) {
-      return NextResponse.json({ error: "Name and color are required" }, { status: 400 });
+    const body = await request.json();
+    const validation = updateJobTypeSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 });
     }
+
+    const { name, description, color } = validation.data;
+    const sql = getDbSql();
 
     const result = await sql`
       UPDATE job_types
@@ -62,7 +70,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(result[0]));
   } catch (error) {
-    console.error("Job type PUT error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -81,7 +88,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const { id } = params;
     const sql = getDbSql();
 
-    // Check for associated jobs before deleting job type
     const associatedJobs = await sql`SELECT COUNT(*) FROM jobs WHERE job_type_id = ${id}`;
     if (parseInt(associatedJobs[0].count, 10) > 0) {
       return NextResponse.json({ error: "Cannot delete job type with associated jobs" }, { status: 400 });
@@ -99,7 +105,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ message: "Job type deleted successfully" });
   } catch (error) {
-    console.error("Job type DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

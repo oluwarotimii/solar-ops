@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/auth";
 
 export async function GET(
   req: Request,
@@ -55,7 +56,6 @@ export async function GET(
     return NextResponse.json(stats);
 
   } catch (error) {
-    console.error("[API_USERS_STATS]", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

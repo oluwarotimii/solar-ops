@@ -3,7 +3,7 @@ import runtimeCaching from 'next-pwa/cache.js';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // output: 'standalone', // disabled — conflicts with next-pwa plugin
   async headers() {
     return [
       {

@@ -1,8 +1,33 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from "zod";
 import { getDbSql, toCamelCase } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+
+interface NotificationRow {
+  id: string;
+  recipient_id: string;
+  sender_id: string | null;
+  title: string;
+  message: string;
+  type: string | null;
+  related_job_id: string | null;
+  read_at: Date | null;
+  created_at: Date;
+  recipient_first_name: string;
+  recipient_last_name: string;
+  recipient_email: string;
+  sender_first_name: string | null;
+  sender_last_name: string | null;
+}
+
+const createNotificationSchema = z.object({
+  title: z.string().min(1),
+  message: z.string().min(1),
+  type: z.string().optional().default('general'),
+  recipientId: z.string().min(1),
+});
 
 export async function GET(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -31,7 +56,7 @@ export async function GET(request: NextRequest) {
       ORDER BY n.created_at DESC
     `;
 
-    const formattedNotifications = notifications.map((row: any) => {
+    const formattedNotifications = notifications.map((row: NotificationRow) => {
       const notification = toCamelCase(row);
       notification.recipient = {
         id: notification.recipientId,
@@ -56,7 +81,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedNotifications);
   } catch (error) {
-    console.error('[NOTIFICATIONS_GET]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }
@@ -72,12 +96,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { title, message, type, recipientId } = await request.json();
-    const sql = getDbSql();
-
-    if (!title || !message || !recipientId) {
-      return NextResponse.json({ error: 'Title, message, and recipientId are required' }, { status: 400 });
+    const body = await request.json();
+    const parsed = createNotificationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
     }
+
+    const { title, message, type, recipientId } = parsed.data;
+    const sql = getDbSql();
 
     await sql`
       INSERT INTO notifications (recipient_id, sender_id, title, message, type)
@@ -86,7 +112,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Notification sent successfully' });
   } catch (error) {
-    console.error('[NOTIFICATIONS_POST]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }

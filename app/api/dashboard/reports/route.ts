@@ -1,7 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getDbSql, toCamelCase } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+
+interface TimeOverviewRow {
+  activeTechnicians: number;
+  totalShifts: number;
+  totalHoursWorked: number;
+}
+
+interface TimeTechnicianRow {
+  id: string;
+  name: string;
+  email: string;
+  shiftsCount: bigint;
+  totalHours: number;
+  avgShiftHours: number;
+}
+
+interface TimeJobRow {
+  id: string;
+  title: string;
+  jobType: string | null;
+  clockIns: bigint;
+  totalHours: number;
+  avgHoursPerShift: number;
+  jobValue: string | null;
+}
 
 export async function GET(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -14,7 +39,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const sql = getDbSql();
     const { searchParams } = request.nextUrl;
     const reportType = searchParams.get('type') || 'overview';
     const dateRange = searchParams.get('range') || '30';
@@ -22,7 +46,7 @@ export async function GET(request: NextRequest) {
     const getStartDate = (range: string): Date => {
       const now = new Date();
       const days = parseInt(range, 10);
-      if (isNaN(days)) return new Date(0); // Default to a very old date if range is invalid
+      if (isNaN(days)) return new Date(0);
       now.setDate(now.getDate() - days);
       return now;
     };
@@ -32,195 +56,286 @@ export async function GET(request: NextRequest) {
     let data = {};
 
     if (reportType === 'overview') {
-      const overviewStats = await sql`
-        SELECT
-          (SELECT COUNT(*) FROM jobs WHERE created_at >= ${startDate}) as total_jobs,
-          (SELECT COUNT(*) FROM jobs WHERE status = 'completed' AND completed_at >= ${startDate}) as completed_jobs,
-          (SELECT COALESCE(AVG(rating), 0) FROM accrued_values WHERE created_at >= ${startDate}) as customer_satisfaction,
-          (SELECT COUNT(DISTINCT id) FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'Technician')) as total_technicians
-      `;
+      const [
+        totalJobs,
+        completedJobs,
+        customerSatisfaction,
+        totalTechnicians,
+        activeTechnicians,
+        revenueData,
+        avgJobValueData,
+      ] = await Promise.all([
+        prisma.job.count({ where: { createdAt: { gte: startDate } } }),
+        prisma.job.count({ where: { status: 'completed', completedAt: { gte: startDate } } }),
+        prisma.accruedValue.aggregate({ _avg: { rating: true }, where: { createdAt: { gte: startDate } } }),
+        prisma.user.count({ where: { role: { name: 'Technician' } } }),
+        prisma.jobTechnician.groupBy({
+          by: ['technicianId'],
+          where: { job: { createdAt: { gte: startDate } } },
+        }).then((r) => r.length),
+        prisma.job.aggregate({
+          _sum: { jobValue: true },
+          where: { createdAt: { gte: startDate } },
+        }),
+        prisma.job.aggregate({
+          _avg: { jobValue: true },
+          where: { createdAt: { gte: startDate }, jobValue: { gt: 0 } },
+        }),
+      ]);
 
-      const technicianUtilizationResult = await sql`
-          SELECT COUNT(DISTINCT technician_id) as active_technicians
-          FROM job_technicians jt
-          JOIN jobs j ON jt.job_id = j.id
-          WHERE j.created_at >= ${startDate}
-      `;
+      const completedRevenue = await prisma.job.aggregate({
+        _sum: { jobValue: true },
+        where: { status: 'completed', createdAt: { gte: startDate } },
+      });
 
-      const { total_jobs, completed_jobs, customer_satisfaction, total_technicians } = overviewStats[0];
-      const active_technicians = technicianUtilizationResult[0].active_technicians;
-      const technicianUtilization = total_technicians > 0 ? (active_technicians / total_technicians) * 100 : 0;
-
-      // Additional insights for overview
-      const revenueData = await sql`
-        SELECT 
-          COALESCE(SUM(job_value), 0) as total_revenue,
-          COALESCE(SUM(CASE WHEN status = 'completed' THEN job_value ELSE 0 END), 0) as completed_revenue
-        FROM jobs 
-        WHERE created_at >= ${startDate}
-      `;
-
-      const avgJobValue = await sql`
-        SELECT 
-          COALESCE(AVG(job_value), 0) as average_job_value
-        FROM jobs 
-        WHERE created_at >= ${startDate} AND job_value > 0
-      `;
+      const technicianUtilization = totalTechnicians > 0 ? (activeTechnicians / totalTechnicians) * 100 : 0;
 
       data = {
         overviewStats: {
-          totalJobs: Number(total_jobs),
-          completedJobs: Number(completed_jobs),
-          customerSatisfaction: parseFloat(customer_satisfaction).toFixed(1),
-          technicianUtilization: parseFloat(technicianUtilization.toString()).toFixed(1),
-          totalRevenue: Number(revenueData[0].total_revenue),
-          completedRevenue: Number(revenueData[0].completed_revenue),
-          averageJobValue: Number(avgJobValue[0].average_job_value),
-        }
+          totalJobs,
+          completedJobs,
+          customerSatisfaction: (customerSatisfaction._avg.rating ?? 0).toFixed(1),
+          technicianUtilization: technicianUtilization.toFixed(1),
+          totalRevenue: Number(revenueData._sum.jobValue ?? 0),
+          completedRevenue: Number(completedRevenue._sum.jobValue ?? 0),
+          averageJobValue: Number(avgJobValueData._avg.jobValue ?? 0),
+        },
       };
     } else if (reportType === 'jobs') {
-      const jobsByType = await sql`
-        SELECT jt.name, COUNT(j.id) as count
-        FROM jobs j
-        JOIN job_types jt ON j.job_type_id = jt.id
-        WHERE j.created_at >= ${startDate}
-        GROUP BY jt.name
-        ORDER BY count DESC
-      `;
+      const [jobsByType, jobsByStatus, jobsByPriority, revenueByJobType] = await Promise.all([
+        prisma.job.groupBy({
+          by: ['jobTypeId'],
+          where: { createdAt: { gte: startDate }, jobTypeId: { not: null } },
+          _count: { id: true },
+        }).then(async (rows) => {
+          const typeIds = rows.map((r) => r.jobTypeId!);
+          const types = typeIds.length > 0
+            ? await prisma.jobType.findMany({ where: { id: { in: typeIds } }, select: { id: true, name: true } })
+            : [];
+          const typeMap = new Map(types.map((t) => [t.id, t.name]));
+          return rows.map((r) => ({ name: typeMap.get(r.jobTypeId!) ?? 'Unknown', count: r._count.id }));
+        }),
+        prisma.job.groupBy({
+          by: ['status'],
+          where: { createdAt: { gte: startDate } },
+          _count: { id: true },
+        }).then((rows) => rows.map((r) => ({ status: r.status, count: r._count.id }))),
+        prisma.job.groupBy({
+          by: ['priority'],
+          where: { createdAt: { gte: startDate } },
+          _count: { id: true },
+        }).then((rows) => rows.map((r) => ({ priority: r.priority, count: r._count.id }))),
+        prisma.job.groupBy({
+          by: ['jobTypeId'],
+          where: { createdAt: { gte: startDate }, jobTypeId: { not: null } },
+          _count: { id: true },
+          _sum: { jobValue: true },
+        }).then(async (rows) => {
+          const typeIds = rows.map((r) => r.jobTypeId!);
+          const types = typeIds.length > 0
+            ? await prisma.jobType.findMany({ where: { id: { in: typeIds } }, select: { id: true, name: true } })
+            : [];
+          const typeMap = new Map(types.map((t) => [t.id, t.name]));
+          return rows.map((r) => ({
+            name: typeMap.get(r.jobTypeId!) ?? 'Unknown',
+            jobCount: r._count.id,
+            totalValue: Number(r._sum.jobValue ?? 0),
+          }));
+        }),
+      ]);
 
-      const jobsByStatus = await sql`
-        SELECT status, COUNT(id) as count
-        FROM jobs
-        WHERE created_at >= ${startDate}
-        GROUP BY status
-        ORDER BY status
-      `;
-
-      // Additional insights for jobs
-      const jobsByPriority = await sql`
-        SELECT priority, COUNT(id) as count
-        FROM jobs
-        WHERE created_at >= ${startDate}
-        GROUP BY priority
-        ORDER BY priority
-      `;
-
-      const revenueByJobType = await sql`
-        SELECT 
-          jt.name,
-          COUNT(j.id) as job_count,
-          COALESCE(SUM(j.job_value), 0) as total_value
-        FROM jobs j
-        JOIN job_types jt ON j.job_type_id = jt.id
-        WHERE j.created_at >= ${startDate}
-        GROUP BY jt.name
-        ORDER BY total_value DESC
-      `;
-
-      data = {
-        jobsByType: jobsByType.map(toCamelCase),
-        jobsByStatus: jobsByStatus.map(toCamelCase),
-        jobsByPriority: jobsByPriority.map(toCamelCase),
-        revenueByJobType: revenueByJobType.map(toCamelCase),
-      };
+      data = { jobsByType, jobsByStatus, jobsByPriority, revenueByJobType };
     } else if (reportType === 'technicians') {
-      // Performance summary for technicians
-      const technicianPerformance = await sql`
-        SELECT
-          u.id,
-          u.first_name || ' ' || u.last_name as name,
-          u.email,
-          COUNT(j.id) as completed_jobs,
-          COALESCE(SUM(av_user.earned_amount), 0) as total_earned,
-          COALESCE(AVG(av_user.rating), 0) as average_rating
-        FROM users u
-        LEFT JOIN jobs j ON j.status = 'completed' AND j.completed_at >= ${startDate} AND EXISTS (
-          SELECT 1 FROM job_technicians jt WHERE jt.job_id = j.id AND jt.technician_id = u.id
-        )
-        LEFT JOIN (
-          SELECT user_id, SUM(earned_amount) as earned_amount, AVG(rating) as rating
-          FROM accrued_values
-          WHERE created_at >= ${startDate}
-          GROUP BY user_id
-        ) av_user ON av_user.user_id = u.id
-        WHERE u.role_id = (SELECT id FROM roles WHERE name = 'Technician')
-        GROUP BY u.id, u.first_name, u.last_name, u.email
-        ORDER BY total_earned DESC
-      `;
-      
-      // Detailed job stats for all users
-      const userJobStats = await sql`
-        SELECT
-          u.id,
-          u.first_name || ' ' || u.last_name as name,
-          u.email,
-          COUNT(j.id) as total_jobs,
-          COUNT(CASE WHEN j.status = 'completed' THEN 1 END) as completed_jobs,
-          COUNT(CASE WHEN j.status = 'in_progress' THEN 1 END) as in_progress_jobs,
-          COUNT(CASE WHEN j.status = 'assigned' THEN 1 END) as assigned_jobs,
-          COUNT(CASE WHEN j.status = 'cancelled' THEN 1 END) as cancelled_jobs,
-          COALESCE(SUM(j.job_value), 0) as total_value,
-          COALESCE(SUM(CASE WHEN j.status = 'completed' THEN j.job_value ELSE 0 END), 0) as completed_value,
-          COALESCE(SUM(av_user.earned_amount), 0) as total_earned
-        FROM users u
-        LEFT JOIN job_technicians jt ON jt.technician_id = u.id
-        LEFT JOIN jobs j ON jt.job_id = j.id AND j.created_at >= ${startDate}
-        LEFT JOIN (
-          SELECT user_id, SUM(earned_amount) as earned_amount
-          FROM accrued_values
-          WHERE created_at >= ${startDate}
-          GROUP BY user_id
-        ) av_user ON av_user.user_id = u.id
-        GROUP BY u.id, u.first_name, u.last_name, u.email
-        ORDER BY total_earned DESC
-      `;
+      const technicianRole = await prisma.role.findFirst({ where: { name: 'Technician' }, select: { id: true } });
+
+      const technicianPerformance = await prisma.user.findMany({
+        where: { roleId: technicianRole?.id },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          jobTechnicians: {
+            where: { job: { status: 'completed', completedAt: { gte: startDate } } },
+            select: { jobId: true },
+          },
+        },
+      });
+
+      const techPerformance = await Promise.all(
+        technicianPerformance.map(async (tech) => {
+          const earnedAgg = await prisma.accruedValue.aggregate({
+            _sum: { earnedAmount: true },
+            _avg: { rating: true },
+            where: { userId: tech.id, createdAt: { gte: startDate } },
+          });
+          return {
+            id: tech.id,
+            name: `${tech.firstName} ${tech.lastName}`,
+            email: tech.email,
+            completedJobs: tech.jobTechnicians.length,
+            totalEarned: Number(earnedAgg._sum.earnedAmount ?? 0),
+            averageRating: Number(earnedAgg._avg.rating ?? 0),
+          };
+        })
+      );
+
+      techPerformance.sort((a, b) => b.totalEarned - a.totalEarned);
+
+      const allUsers = await prisma.user.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          jobTechnicians: {
+            where: { job: { createdAt: { gte: startDate } } },
+            include: { job: { select: { status: true, jobValue: true } } },
+          },
+        },
+      });
+
+      const userJobStats = allUsers.map((u) => {
+        const jobs = u.jobTechnicians.map((jt) => jt.job);
+        const totalValue = jobs.reduce((s, j) => s + Number(j.jobValue ?? 0), 0);
+        const completedValue = jobs
+          .filter((j) => j.status === 'completed')
+          .reduce((s, j) => s + Number(j.jobValue ?? 0), 0);
+        return {
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`,
+          email: u.email,
+          totalJobs: jobs.length,
+          completedJobs: jobs.filter((j) => j.status === 'completed').length,
+          inProgressJobs: jobs.filter((j) => j.status === 'in_progress').length,
+          assignedJobs: jobs.filter((j) => j.status === 'assigned').length,
+          cancelledJobs: jobs.filter((j) => j.status === 'cancelled').length,
+          totalValue,
+          completedValue,
+          totalEarned: 0,
+        };
+      });
 
       data = {
-        technicianPerformance: technicianPerformance.map(toCamelCase),
-        userJobStats: userJobStats.map(toCamelCase),
+        technicianPerformance: techPerformance,
+        userJobStats,
       };
     } else if (reportType === 'maintenance') {
-      // Maintenance stats
-      const maintenanceStats = await sql`
-        SELECT
-          COUNT(*) as total_tasks,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks,
-          COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_tasks,
-          COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as scheduled_tasks,
-          COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_tasks
-        FROM maintenance_templates mt
-        JOIN maintenance_occurrences mo ON mt.id = mo.template_id
-        WHERE mo.scheduled_date >= ${startDate}
-      `;
+      const [totalTasks, completedTasks, inProgressTasks, scheduledTasks] = await Promise.all([
+        prisma.maintenanceOccurrence.count({ where: { scheduledDate: { gte: startDate } } }),
+        prisma.maintenanceOccurrence.count({ where: { status: 'completed', scheduledDate: { gte: startDate } } }),
+        prisma.maintenanceOccurrence.count({ where: { status: 'in_progress', scheduledDate: { gte: startDate } } }),
+        prisma.maintenanceOccurrence.count({ where: { status: 'scheduled', scheduledDate: { gte: startDate } } }),
+      ]);
 
-      // Maintenance by technician
-      const maintenanceByTechnician = await sql`
+      const maintenanceStats = {
+        totalTasks,
+        completedTasks,
+        inProgressTasks,
+        scheduledTasks,
+        overdueTasks: 0,
+      };
+
+      const technicianRole = await prisma.role.findFirst({ where: { name: 'Technician' }, select: { id: true } });
+      const maintenanceByTechnician = await prisma.user.findMany({
+        where: { roleId: technicianRole?.id },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          maintenanceOccurrences: {
+            where: { scheduledDate: { gte: startDate } },
+            select: { status: true },
+          },
+        },
+      });
+
+      data = {
+        maintenanceStats,
+        maintenanceByTechnician: maintenanceByTechnician.map((tech) => {
+          const occs = tech.maintenanceOccurrences;
+          return {
+            id: tech.id,
+            name: `${tech.firstName} ${tech.lastName}`,
+            email: tech.email,
+            totalTasks: occs.length,
+            completedTasks: occs.filter((o) => o.status === 'completed').length,
+            inProgressTasks: occs.filter((o) => o.status === 'in_progress').length,
+            scheduledTasks: occs.filter((o) => o.status === 'scheduled').length,
+            overdueTasks: occs.filter((o) => o.status === 'missed').length,
+          };
+        }),
+      };
+    } else if (reportType === 'time') {
+      const timeRows = await prisma.$queryRaw<TimeOverviewRow[]>`
+        SELECT
+          COUNT(DISTINCT te.user_id) as "activeTechnicians",
+          COUNT(te.id) as "totalShifts",
+          COALESCE(SUM(EXTRACT(EPOCH FROM (te.clock_out - te.clock_in)) / 3600), 0) as "totalHoursWorked"
+        FROM time_entries te
+        WHERE te.created_at >= ${startDate}
+          AND te.clock_out IS NOT NULL
+      `;
+      const timeOverview = timeRows[0];
+
+      const hoursByTechnician = await prisma.$queryRaw<TimeTechnicianRow[]>`
         SELECT
           u.id,
           u.first_name || ' ' || u.last_name as name,
           u.email,
-          COUNT(mo.id) as total_tasks,
-          COUNT(CASE WHEN mo.status = 'completed' THEN 1 END) as completed_tasks,
-          COUNT(CASE WHEN mo.status = 'in_progress' THEN 1 END) as in_progress_tasks,
-          COUNT(CASE WHEN mo.status = 'scheduled' THEN 1 END) as scheduled_tasks,
-          COUNT(CASE WHEN mo.status = 'overdue' THEN 1 END) as overdue_tasks
+          COUNT(te.id) as "shiftsCount",
+          COALESCE(SUM(EXTRACT(EPOCH FROM (te.clock_out - te.clock_in)) / 3600), 0) as "totalHours",
+          COALESCE(AVG(EXTRACT(EPOCH FROM (te.clock_out - te.clock_in)) / 3600), 0) as "avgShiftHours"
         FROM users u
-        LEFT JOIN maintenance_occurrences mo ON mo.assigned_to = u.id AND mo.scheduled_date >= ${startDate}
-        WHERE u.role_id = (SELECT id FROM roles WHERE name = 'Technician')
+        JOIN time_entries te ON te.user_id = u.id
+        WHERE te.created_at >= ${startDate}
+          AND te.clock_out IS NOT NULL
+          AND u.role_id = (SELECT id FROM roles WHERE name = 'Technician')
         GROUP BY u.id, u.first_name, u.last_name, u.email
-        ORDER BY completed_tasks DESC
+        ORDER BY "totalHours" DESC
+      `;
+
+      const hoursByJob = await prisma.$queryRaw<TimeJobRow[]>`
+        SELECT
+          j.id,
+          j.title,
+          jt.name as "jobType",
+          COUNT(te.id) as "clockIns",
+          COALESCE(SUM(EXTRACT(EPOCH FROM (te.clock_out - te.clock_in)) / 3600), 0) as "totalHours",
+          COALESCE(AVG(EXTRACT(EPOCH FROM (te.clock_out - te.clock_in)) / 3600), 0) as "avgHoursPerShift",
+          j.job_value as "jobValue"
+        FROM jobs j
+        JOIN time_entries te ON te.job_id = j.id
+        LEFT JOIN job_types jt ON j.job_type_id = jt.id
+        WHERE te.created_at >= ${startDate}
+          AND te.clock_out IS NOT NULL
+          AND te.job_id IS NOT NULL
+        GROUP BY j.id, j.title, jt.name, j.job_value
+        ORDER BY "totalHours" DESC
       `;
 
       data = {
-        maintenanceStats: maintenanceStats[0],
-        maintenanceByTechnician: maintenanceByTechnician.map(toCamelCase),
+        timeOverview: timeOverview ?? { activeTechnicians: 0, totalShifts: 0, totalHoursWorked: 0 },
+        hoursByTechnician: hoursByTechnician.map((r) => ({
+          ...r,
+          totalHours: parseFloat(String(r.totalHours)) || 0,
+          avgShiftHours: parseFloat(String(r.avgShiftHours)) || 0,
+          shiftsCount: Number(r.shiftsCount),
+        })),
+        hoursByJob: hoursByJob.map((r) => ({
+          ...r,
+          totalHours: parseFloat(String(r.totalHours)) || 0,
+          avgHoursPerShift: parseFloat(String(r.avgHoursPerShift)) || 0,
+          clockIns: Number(r.clockIns),
+          jobValue: parseFloat(String(r.jobValue)) || 0,
+        })),
       };
     }
 
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error("Dashboard reports error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +11,7 @@ import { Archive, MapPin, Calendar, User, RotateCcw } from "lucide-react"
 import { formatDate } from "@/lib/date-utils"
 import ViewJobDialog from "@/components/view-job-dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { MonetaryValue } from "@/components/ui/monetary-value"
 import MobileTableCard from "@/components/mobile-table-card"
 import BottomSheet from "@/components/bottom-sheet"
 
@@ -296,11 +298,11 @@ export default function ArchivedJobsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="font-medium text-sm text-muted-foreground">Value</h3>
-                <p className="text-sm mt-1 font-medium">₦{selectedJobForSheet.jobValue.toLocaleString()}</p>
+                <MonetaryValue value={selectedJobForSheet.jobValue} className="text-sm mt-1 font-medium" />
               </div>
               <div>
                 <h3 className="font-medium text-sm text-muted-foreground">Priority</h3>
-                <Badge className={`mt-1 ${getPriorityColor(selectedJobForSheet.priority)}`}>
+                <Badge className={cn("mt-1", getPriorityColor(selectedJobForSheet.priority))}>
                   {selectedJobForSheet.priority}
                 </Badge>
               </div>

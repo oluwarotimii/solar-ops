@@ -1,7 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
 import { getDbSql } from "@/lib/db"
+
+const subscribeSchema = z.object({
+  subscription: z.object({
+    endpoint: z.string().url(),
+    keys: z.object({
+      p256dh: z.string(),
+      auth: z.string(),
+    }),
+  }),
+});
 
 export async function POST(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -14,14 +25,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { subscription } = await request.json()
-    const sql = getDbSql()
-
-    if (!subscription || !subscription.endpoint) {
-      return NextResponse.json({ error: "Invalid subscription" }, { status: 400 })
+    const body = await request.json()
+    const parsed = subscribeSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 })
     }
 
-    // In production, store subscription in database
+    const { subscription } = parsed.data
+    const sql = getDbSql()
+
     await sql`
       INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key)
       VALUES (${user.id}, ${subscription.endpoint}, ${subscription.keys.p256dh}, ${subscription.keys.auth})
@@ -37,7 +49,6 @@ export async function POST(request: NextRequest) {
       message: "Push subscription saved successfully",
     })
   } catch (error) {
-    console.error("Subscribe notification error:", error)
     return NextResponse.json({ error: "Failed to save subscription" }, { status: 500 })
   }
 }

@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -38,17 +39,13 @@ function BottomSheet({ isOpen, onClose, title, children, actions }: BottomSheetP
     <div className="fixed inset-0 z-50 md:hidden">
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0"
-        }`}
+        className={cn("absolute inset-0 bg-black/50 transition-opacity duration-300", isOpen && "opacity-100", !isOpen && "opacity-0")}
         onClick={onClose}
       />
 
       {/* Sheet */}
       <div
-        className={`absolute bottom-0 left-0 right-0 bg-background rounded-t-xl shadow-xl transition-transform duration-300 max-h-[85vh] flex flex-col ${
-          isOpen ? "translate-y-0" : "translate-y-full"
-        }`}
+        className={cn("absolute bottom-0 left-0 right-0 bg-background rounded-t-xl shadow-xl transition-transform duration-300 max-h-[85vh] flex flex-col", isOpen && "translate-y-0", !isOpen && "translate-y-full")}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b shrink-0">

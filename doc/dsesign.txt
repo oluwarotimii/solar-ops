@@ -1,0 +1,1029 @@
+const {
+  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType,
+  LevelFormat, PageNumber, PageBreak, ExternalHyperlink
+} = require('docx');
+const fs = require('fs');
+
+// ─── Color palette ───────────────────────────────────────────────────────────
+const C = {
+  navy:       "0A1628",
+  gold:       "B8860B",
+  goldLight:  "FDF6E3",
+  slate:      "1E293B",
+  slateLight: "334155",
+  muted:      "64748B",
+  border:     "E2E8F0",
+  white:      "FFFFFF",
+  codeGray:   "F1F5F9",
+  accent:     "0EA5E9",
+  danger:     "EF4444",
+  success:    "22C55E",
+  warn:       "F59E0B",
+};
+
+// ─── Border helpers ───────────────────────────────────────────────────────────
+const border = (color = C.border, size = 1) => ({ style: BorderStyle.SINGLE, size, color });
+const noBorder = () => ({ style: BorderStyle.NONE, size: 0, color: "FFFFFF" });
+
+const allBorders = (color, size) => ({
+  top: border(color, size), bottom: border(color, size),
+  left: border(color, size), right: border(color, size)
+});
+
+const noBorders = () => ({
+  top: noBorder(), bottom: noBorder(), left: noBorder(), right: noBorder()
+});
+
+// ─── Spacing helpers ──────────────────────────────────────────────────────────
+const sp = (before = 0, after = 0) => ({ before, after });
+
+// ─── Text helpers ─────────────────────────────────────────────────────────────
+const run = (text, opts = {}) => new TextRun({ text, font: "Arial", ...opts });
+const bold = (text, opts = {}) => run(text, { bold: true, ...opts });
+const mono = (text, opts = {}) => new TextRun({ text, font: "Courier New", size: 18, ...opts });
+const gold = (text, opts = {}) => bold(text, { color: C.gold, ...opts });
+const navy = (text, opts = {}) => bold(text, { color: C.navy, ...opts });
+const muted = (text, opts = {}) => run(text, { color: C.muted, ...opts });
+const link = (text, url) => new ExternalHyperlink({ link: url, children: [new TextRun({ text, font: "Arial", color: C.accent, underline: {} })] });
+
+// ─── Paragraph helpers ────────────────────────────────────────────────────────
+const h1 = (text) => new Paragraph({
+  heading: HeadingLevel.HEADING_1,
+  spacing: sp(480, 160),
+  children: [new TextRun({ text, font: "Arial", bold: true, size: 40, color: C.navy })]
+});
+
+const h2 = (text) => new Paragraph({
+  heading: HeadingLevel.HEADING_2,
+  spacing: sp(400, 140),
+  border: { bottom: { style: BorderStyle.SINGLE, size: 3, color: C.gold, space: 4 } },
+  children: [new TextRun({ text, font: "Arial", bold: true, size: 30, color: C.navy })]
+});
+
+const h3 = (text) => new Paragraph({
+  heading: HeadingLevel.HEADING_3,
+  spacing: sp(320, 100),
+  children: [new TextRun({ text, font: "Arial", bold: true, size: 24, color: C.slateLight })]
+});
+
+const h4 = (text) => new Paragraph({
+  spacing: sp(240, 80),
+  children: [new TextRun({ text, font: "Arial", bold: true, size: 22, color: C.slate })]
+});
+
+const p = (...runs) => new Paragraph({ spacing: sp(80, 160), children: runs });
+
+const pStr = (text, opts = {}) => new Paragraph({ spacing: sp(80, 160), children: [run(text, opts)] });
+
+const bullet = (text, opts = {}) => new Paragraph({
+  numbering: { reference: "bullets", level: 0 },
+  spacing: sp(60, 60),
+  children: [run(text, { size: 22, ...opts })]
+});
+
+const sub_bullet = (text, opts = {}) => new Paragraph({
+  numbering: { reference: "subbullets", level: 1 },
+  spacing: sp(40, 40),
+  children: [run(text, { size: 20, color: C.muted, ...opts })]
+});
+
+const numbered = (text, opts = {}) => new Paragraph({
+  numbering: { reference: "numbers", level: 0 },
+  spacing: sp(60, 60),
+  children: [run(text, { size: 22, ...opts })]
+});
+
+const spacer = (n = 1) => Array.from({ length: n }, () => new Paragraph({ children: [run("")], spacing: sp(0, 0) }));
+
+const divider = () => new Paragraph({
+  spacing: sp(200, 200),
+  border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: C.border } },
+  children: [run("")]
+});
+
+// ─── Code block ───────────────────────────────────────────────────────────────
+const codeBlock = (lines) => {
+  return lines.map((line, i) => new Paragraph({
+    spacing: sp(i === 0 ? 80 : 0, i === lines.length - 1 ? 80 : 0),
+    shading: { fill: C.codeGray, type: ShadingType.CLEAR },
+    border: i === 0 ? {
+      top: border(C.border, 1), left: border(C.gold, 4), right: border(C.border, 1),
+      bottom: lines.length === 1 ? border(C.border, 1) : noBorder()
+    } : i === lines.length - 1 ? {
+      top: noBorder(), left: border(C.gold, 4), right: border(C.border, 1),
+      bottom: border(C.border, 1)
+    } : {
+      top: noBorder(), bottom: noBorder(),
+      left: border(C.gold, 4), right: border(C.border, 1)
+    },
+    children: [new TextRun({ text: line || " ", font: "Courier New", size: 18, color: C.slate })]
+  }));
+};
+
+// ─── Key-value row ────────────────────────────────────────────────────────────
+const kvTable = (rows, widths = [3200, 6160]) => new Table({
+  width: { size: 9360, type: WidthType.DXA },
+  columnWidths: widths,
+  borders: { ...noBorders(), insideH: noBorder(), insideV: noBorder() },
+  rows: rows.map(([key, val], i) => new TableRow({
+    children: [
+      new TableCell({
+        borders: noBorders(),
+        shading: { fill: i % 2 === 0 ? "F8FAFC" : C.white, type: ShadingType.CLEAR },
+        width: { size: widths[0], type: WidthType.DXA },
+        margins: { top: 80, bottom: 80, left: 120, right: 80 },
+        children: [new Paragraph({ children: [bold(key, { size: 20, color: C.slate })] })]
+      }),
+      new TableCell({
+        borders: noBorders(),
+        shading: { fill: i % 2 === 0 ? "F8FAFC" : C.white, type: ShadingType.CLEAR },
+        width: { size: widths[1], type: WidthType.DXA },
+        margins: { top: 80, bottom: 80, left: 120, right: 80 },
+        children: [new Paragraph({ children: [run(val, { size: 20 })] })]
+      })
+    ]
+  }))
+});
+
+// ─── Color swatch table ───────────────────────────────────────────────────────
+const colorRow = (name, variable, hex, usage) => new TableRow({
+  children: [
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 480, type: WidthType.DXA },
+      shading: { fill: hex.replace("#",""), type: ShadingType.CLEAR },
+      margins: { top: 100, bottom: 100, left: 40, right: 40 },
+      children: [new Paragraph({ children: [run("")] })]
+    }),
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 2000, type: WidthType.DXA },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [bold(name, { size: 20 })] })]
+    }),
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 2200, type: WidthType.DXA },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [mono(variable, { size: 18, color: C.gold })] })]
+    }),
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 1200, type: WidthType.DXA },
+      shading: { fill: "F8FAFC", type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [mono(hex, { size: 18 })] })]
+    }),
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 3480, type: WidthType.DXA },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [muted(usage, { size: 18 })] })]
+    })
+  ]
+});
+
+const colorTableHeader = () => new TableRow({
+  tableHeader: true,
+  children: ["Swatch", "Name", "CSS Variable", "Hex / HSL", "Usage"].map((label, i) => {
+    const ws = [480, 2000, 2200, 1200, 3480];
+    return new TableCell({
+      borders: allBorders(C.navy),
+      width: { size: ws[i], type: WidthType.DXA },
+      shading: { fill: C.navy, type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [bold(label, { size: 20, color: C.white })] })]
+    });
+  })
+});
+
+// ─── Rule / Do-Don't row ──────────────────────────────────────────────────────
+const ruleRow = (rule, good, bad) => new TableRow({
+  children: [
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 2800, type: WidthType.DXA },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [bold(rule, { size: 20 })] })]
+    }),
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 3280, type: WidthType.DXA },
+      shading: { fill: "F0FDF4", type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [run("✅  " + good, { size: 20, color: "166534" })] })]
+    }),
+    new TableCell({
+      borders: allBorders(C.border),
+      width: { size: 3280, type: WidthType.DXA },
+      shading: { fill: "FEF2F2", type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [run("❌  " + bad, { size: 20, color: "991B1B" })] })]
+    })
+  ]
+});
+
+const ruleTableHeader = () => new TableRow({
+  tableHeader: true,
+  children: ["Rule", "Do", "Don't"].map((label, i) => {
+    const ws = [2800, 3280, 3280];
+    return new TableCell({
+      borders: allBorders(C.navy),
+      width: { size: ws[i], type: WidthType.DXA },
+      shading: { fill: C.navy, type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [bold(label, { size: 20, color: C.white })] })]
+    });
+  })
+});
+
+// ─── Badge ────────────────────────────────────────────────────────────────────
+const badge = (label, fill, textColor = C.white) => new TableCell({
+  borders: noBorders(),
+  shading: { fill, type: ShadingType.CLEAR },
+  margins: { top: 40, bottom: 40, left: 120, right: 120 },
+  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [bold(label, { size: 18, color: textColor })] })]
+});
+
+// ─── Section callout (tip / warning / critical) ───────────────────────────────
+const callout = (type, text) => {
+  const map = {
+    tip:      { fill: "F0FDF4", accent: "166534", label: "TIP",      icon: "💡" },
+    warning:  { fill: "FFFBEB", accent: "92400E", label: "WARNING",  icon: "⚠️" },
+    critical: { fill: "FEF2F2", accent: "991B1B", label: "CRITICAL", icon: "🚨" },
+    info:     { fill: "EFF6FF", accent: "1E40AF", label: "NOTE",     icon: "ℹ️" },
+  };
+  const { fill, accent, label, icon } = map[type] || map.info;
+  return new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [9360],
+    rows: [new TableRow({
+      children: [new TableCell({
+        borders: { ...noBorders(), left: { style: BorderStyle.SINGLE, size: 8, color: accent } },
+        shading: { fill, type: ShadingType.CLEAR },
+        margins: { top: 100, bottom: 100, left: 200, right: 160 },
+        children: [new Paragraph({ children: [bold(`${icon}  ${label}: `, { size: 20, color: accent }), run(text, { size: 20, color: accent })] })]
+      })]
+    })]
+  });
+};
+
+// ─── Component spec row ───────────────────────────────────────────────────────
+const compRow = (prop, type, defaultVal, description) => new TableRow({
+  children: [prop, type, defaultVal, description].map((text, i) => {
+    const ws = [1800, 1800, 1800, 3960];
+    return new TableCell({
+      borders: allBorders(C.border),
+      width: { size: ws[i], type: WidthType.DXA },
+      shading: { fill: i % 2 === 0 ? "F8FAFC" : C.white, type: ShadingType.CLEAR },
+      margins: { top: 70, bottom: 70, left: 120, right: 80 },
+      children: [new Paragraph({
+        children: [i <= 2
+          ? new TextRun({ text, font: "Courier New", size: 18, color: i === 0 ? C.slate : i === 1 ? "0369A1" : C.muted })
+          : run(text, { size: 20 })
+        ]
+      })]
+    });
+  })
+});
+
+const compTableHeader = (cols) => new TableRow({
+  tableHeader: true,
+  children: cols.map((label, i) => {
+    const ws = [1800, 1800, 1800, 3960];
+    return new TableCell({
+      borders: allBorders(C.slateLight),
+      width: { size: ws[i], type: WidthType.DXA },
+      shading: { fill: C.slateLight, type: ShadingType.CLEAR },
+      margins: { top: 80, bottom: 80, left: 120, right: 80 },
+      children: [new Paragraph({ children: [bold(label, { size: 20, color: C.white })] })]
+    });
+  })
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DOCUMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+const doc = new Document({
+  numbering: {
+    config: [
+      {
+        reference: "bullets",
+        levels: [
+          { level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 640, hanging: 320 } }, run: { color: C.gold, bold: true } } },
+          { level: 1, format: LevelFormat.BULLET, text: "–", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 1100, hanging: 320 } }, run: { color: C.muted } } }
+        ]
+      },
+      {
+        reference: "subbullets",
+        levels: [
+          { level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 640, hanging: 320 } } } },
+          { level: 1, format: LevelFormat.BULLET, text: "–", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 1100, hanging: 320 } } } }
+        ]
+      },
+      {
+        reference: "numbers",
+        levels: [
+          { level: 0, format: LevelFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 640, hanging: 320 } } } }
+        ]
+      }
+    ]
+  },
+  styles: {
+    default: { document: { run: { font: "Arial", size: 22 } } },
+    paragraphStyles: [
+      { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 40, bold: true, font: "Arial", color: C.navy },
+        paragraph: { spacing: { before: 480, after: 160 }, outlineLevel: 0 } },
+      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 30, bold: true, font: "Arial", color: C.navy },
+        paragraph: { spacing: { before: 400, after: 140 }, outlineLevel: 1 } },
+      { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { size: 24, bold: true, font: "Arial", color: C.slateLight },
+        paragraph: { spacing: { before: 320, after: 100 }, outlineLevel: 2 } },
+    ]
+  },
+  sections: [{
+    properties: {
+      page: {
+        size: { width: 12240, height: 15840 },
+        margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+      }
+    },
+    children: [
+
+      // ── COVER ──────────────────────────────────────────────────────────────
+      new Paragraph({
+        spacing: sp(1440, 80),
+        children: [bold("DESIGN SYSTEM", { size: 56, color: C.navy })]
+      }),
+      new Paragraph({
+        spacing: sp(0, 80),
+        children: [run("Frontend Engineering Reference & Standards", { size: 30, color: C.muted })]
+      }),
+      new Paragraph({
+        spacing: sp(0, 80),
+        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: C.gold, space: 6 } },
+        children: [bold("v1.0  ·  Next.js 14  ·  Tailwind CSS v3  ·  shadcn/ui", { size: 20, color: C.gold })]
+      }),
+      ...spacer(2),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 1. OVERVIEW ────────────────────────────────────────────────────────
+      h1("1.  System Overview"),
+      pStr("This document is the single source of truth for all frontend decisions on this project. Every engineer — whether joining mid-sprint or building a new feature from scratch — should use this as their first reference before writing any UI code."),
+      ...spacer(1),
+
+      kvTable([
+        ["Framework",   "Next.js 14 (App Router) — hybrid RSC + client components"],
+        ["Styling",     "Tailwind CSS v3 + tailwindcss-animate + CSS variables"],
+        ["Components",  "shadcn/ui (local copies in components/ui/) via Radix UI"],
+        ["Icons",       "lucide-react v0.454 — tree-shakeable, import by name only"],
+        ["Typography",  "Inter via next/font/google"],
+        ["Forms",       "react-hook-form v7 + zod (@hookform/resolvers)"],
+        ["Charts",      "Recharts v2.15"],
+        ["Toasts",      "sonner + shadcn Toaster"],
+        ["Dates",       "date-fns v4"],
+        ["Auth",        "JWT — stored in localStorage; middleware checks DB readiness"],
+        ["Database",    "Prisma v7.8.0 on Neon (singleton from lib/db.ts) + legacy SQL"],
+        ["State",       "React Context (DashboardProvider, PermissionProvider); no Redux"],
+        ["PWA",         "next-pwa v5.6 — service worker + manifest + install prompt"],
+        ["Mobile",      "Responsive sidebar + vaul drawer + useIsMobile() hook"],
+        ["Dark Mode",   "next-themes — class strategy (darkMode: [\"class\"])"],
+      ]),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 2. DESIGN TOKENS ───────────────────────────────────────────────────
+      h1("2.  Design Tokens"),
+      pStr("All tokens live in app/globals.css as CSS custom properties. Never hardcode hex values or raw pixel sizes. Always reference a token."),
+
+      h2("2.1  Color Palette"),
+      pStr("Tokens are available in both light and dark modes. Dark mode tokens are declared inside .dark { } in globals.css."),
+      ...spacer(1),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [480, 2000, 2200, 1200, 3480],
+        rows: [
+          colorTableHeader(),
+          colorRow("Primary",         "--primary",            "#B8860B", "CTA buttons, active states, focus rings, golden accents"),
+          colorRow("Primary FG",      "--primary-foreground", "#FFFFFF", "Text on primary-colored backgrounds"),
+          colorRow("Background",      "--background",         "#FFFFFF", "Page / main surface background"),
+          colorRow("Foreground",      "--foreground",         "#0A1628", "Default body text"),
+          colorRow("Card",            "--card",               "#FFFFFF", "Card component background"),
+          colorRow("Popover",         "--popover",            "#FFFFFF", "Dropdown, tooltip, popover surfaces"),
+          colorRow("Secondary",       "--secondary",          "#F1F5F9", "Secondary buttons, chips, tags"),
+          colorRow("Muted",           "--muted",              "#F1F5F9", "Subtle backgrounds, placeholder areas"),
+          colorRow("Muted FG",        "--muted-foreground",   "#64748B", "Placeholder text, helper text, captions"),
+          colorRow("Accent",          "--accent",             "#F1F5F9", "Hover highlights on nav items"),
+          colorRow("Destructive",     "--destructive",        "#EF4444", "Error states, delete actions"),
+          colorRow("Border",          "--border",             "#E2E8F0", "Input outlines, dividers, card borders"),
+          colorRow("Input",           "--input",              "#E2E8F0", "Input field border"),
+          colorRow("Ring",            "--ring",               "#B8860B", "Focus ring (keyboard navigation)"),
+          colorRow("Navy Blue",       "navy-blue",            "#0A1628", "Sidebar background, header, brand navs"),
+          colorRow("Golden Yellow",   "golden-yellow",        "#B8860B", "Brand accent, logo mark, highlight"),
+          colorRow("Sidebar BG",      "--sidebar-background", "#0A1628", "AppSidebar container background"),
+          colorRow("Chart 1–5",       "--chart-1 … --chart-5","–",       "Sequential palette for Recharts graphs"),
+        ]
+      }),
+
+      ...spacer(1),
+
+      callout("critical", "Never use arbitrary hex values or raw Tailwind color classes (e.g. bg-blue-500). Always reference a CSS variable token — either via Tailwind semantic classes (bg-primary, text-muted-foreground) or inline style with var(--token)."),
+
+      ...spacer(1),
+      h2("2.2  Spacing Scale"),
+      pStr("Use Tailwind's default spacing scale. Common values:"),
+
+      kvTable([
+        ["4px  (1)",   "Micro gap — icon-to-label, tight inline spacing"],
+        ["8px  (2)",   "Component internal padding (badge, chip)"],
+        ["12px (3)",   "Input padding-y, small card padding"],
+        ["16px (4)",   "Standard component padding, list item gap"],
+        ["24px (6)",   "Section row gap, card content padding"],
+        ["32px (8)",   "Card padding, modal content gap"],
+        ["48px (12)",  "Section vertical separation"],
+        ["64px (16)",  "Page-level vertical rhythm"],
+      ], [1800, 7560]),
+
+      ...spacer(1),
+      h2("2.3  Border Radius"),
+
+      kvTable([
+        ["--radius (md)",  "0.5rem / 8px — cards, modals, dropdowns, buttons"],
+        ["--radius-sm",    "calc(var(--radius) - 4px) = 4px — badges, chips, tags"],
+        ["--radius-lg",    "calc(var(--radius) + 4px) = 12px — large cards, sheets"],
+        ["none (0)",       "Tables, data grids, dividers, horizontal rules"],
+      ], [2400, 6960]),
+
+      ...spacer(1),
+      h2("2.4  Typography Scale"),
+      pStr("Font family: Inter (loaded via next/font/google and injected as --font-sans). All sizes in rem."),
+
+      kvTable([
+        ["text-xs   (12px)",  "Captions, labels inside table cells, timestamps"],
+        ["text-sm   (14px)",  "Body text, form labels, helper text, button labels"],
+        ["text-base (16px)",  "Default body, card copy, descriptions"],
+        ["text-lg   (18px)",  "Sub-section intros, lead text"],
+        ["text-xl   (20px)",  "Section headings (h3 equivalent in UI)"],
+        ["text-2xl  (24px)",  "Page section titles (h2)"],
+        ["text-3xl  (30px)",  "Page title, dashboard KPI values"],
+        ["text-4xl+ (36px+)", "Hero numbers, oversized stat displays"],
+      ], [2400, 6960]),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 3. LAYOUT ──────────────────────────────────────────────────────────
+      h1("3.  Layout Architecture"),
+
+      h2("3.1  Shell Structure"),
+      pStr("Every dashboard page must be wrapped in the following shell. Never build a page outside of this structure."),
+      ...spacer(1),
+      ...codeBlock([
+        "<SidebarProvider>",
+        "  <AppSidebar />",
+        "  <SidebarInset>",
+        "    {/* Sticky page header */}",
+        "    <header className=\"flex h-16 items-center gap-4 border-b bg-background px-6\">",
+        "      <SidebarTrigger />",
+        "      <Breadcrumb />",
+        "      {/* Right-side actions */}",
+        "    </header>",
+        "",
+        "    {/* Scrollable content area */}",
+        "    <main className=\"flex-1 overflow-auto p-6 space-y-6\">",
+        "      {children}",
+        "    </main>",
+        "  </SidebarInset>",
+        "</SidebarProvider>",
+      ]),
+      ...spacer(1),
+
+      h2("3.2  Page Content Grid"),
+      ...codeBlock([
+        "{/* KPI row */}",
+        "<div className=\"grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4\">",
+        "  <KPICard />",
+        "</div>",
+        "",
+        "{/* Main content: chart + sidebar panel */}",
+        "<div className=\"grid grid-cols-1 gap-6 lg:grid-cols-3\">",
+        "  <div className=\"lg:col-span-2\"><Chart /></div>",
+        "  <div><SummaryPanel /></div>",
+        "</div>",
+        "",
+        "{/* Full-width data table */}",
+        "<DataTable />",
+      ]),
+      ...spacer(1),
+
+      h2("3.3  Sidebar Navigation"),
+      bullet("Sidebar navigation items are filtered by usePermissions() — never conditionally render nav items manually."),
+      bullet("Mobile sidebar uses Sheet (vaul drawer) — triggered via SidebarTrigger."),
+      bullet("Active route: highlight with bg-primary/10 text-primary font-medium, left border accent."),
+      bullet("Icon + label pattern only — no text-only or icon-only nav items except icon-collapsed mode."),
+      ...spacer(1),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 4. COMPONENT USAGE ─────────────────────────────────────────────────
+      h1("4.  Component Standards"),
+
+      h2("4.1  Buttons"),
+      pStr("Always use the shadcn Button component. Do not use raw <button> elements in UI code."),
+      ...spacer(1),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [1800, 2400, 5160],
+        rows: [
+          new TableRow({
+            tableHeader: true,
+            children: ["Variant", "When to use", "Tailwind class pattern"].map((label, i) => {
+              const ws = [1800, 2400, 5160];
+              return new TableCell({
+                borders: allBorders(C.navy),
+                width: { size: ws[i], type: WidthType.DXA },
+                shading: { fill: C.navy, type: ShadingType.CLEAR },
+                margins: { top: 80, bottom: 80, left: 120, right: 80 },
+                children: [new Paragraph({ children: [bold(label, { size: 20, color: C.white })] })]
+              });
+            })
+          }),
+          ...[
+            ["default",     "Primary CTA — one per section max",    "bg-primary text-primary-foreground hover:bg-primary/90"],
+            ["secondary",   "Secondary actions, filters",            "bg-secondary text-secondary-foreground hover:bg-secondary/80"],
+            ["outline",     "Tertiary actions, cancel",              "border border-input bg-background hover:bg-accent"],
+            ["ghost",       "Icon buttons, nav items, row actions",  "hover:bg-accent hover:text-accent-foreground"],
+            ["destructive", "Delete, revoke, irreversible actions",  "bg-destructive text-destructive-foreground"],
+            ["link",        "Inline contextual links only",          "underline-offset-4 hover:underline text-primary"],
+          ].map(([variant, when, cls]) => new TableRow({
+            children: [variant, when, cls].map((text, i) => {
+              const ws = [1800, 2400, 5160];
+              return new TableCell({
+                borders: allBorders(C.border),
+                width: { size: ws[i], type: WidthType.DXA },
+                shading: { fill: i === 2 ? C.codeGray : "F8FAFC", type: ShadingType.CLEAR },
+                margins: { top: 80, bottom: 80, left: 120, right: 80 },
+                children: [new Paragraph({ children: [i === 2 ? mono(text, { size: 18 }) : run(text, { size: 20 })] })]
+              });
+            })
+          }))
+        ]
+      }),
+
+      ...spacer(1),
+      callout("tip", "Button size defaults to size=\"default\". Use size=\"sm\" for data table row actions, size=\"lg\" for modal primary CTAs, and size=\"icon\" for icon-only actions (always include an aria-label)."),
+      ...spacer(1),
+
+      h2("4.2  Forms"),
+      pStr("All forms that post data must use react-hook-form with a zod schema. No uncontrolled inputs in production code."),
+      ...spacer(1),
+      ...codeBlock([
+        "const schema = z.object({",
+        "  email: z.string().email('Invalid email address'),",
+        "  role:  z.enum(['admin', 'viewer']),",
+        "});",
+        "",
+        "const form = useForm<z.infer<typeof schema>>({",
+        "  resolver: zodResolver(schema),",
+        "  defaultValues: { email: '', role: 'viewer' },",
+        "});",
+        "",
+        "<Form {...form}>",
+        "  <FormField name=\"email\" control={form.control} render={({ field }) => (",
+        "    <FormItem>",
+        "      <FormLabel>Email</FormLabel>",
+        "      <FormControl><Input {...field} /></FormControl>",
+        "      <FormMessage />  {/* auto-renders zod error */}",
+        "    </FormItem>",
+        "  )} />",
+        "</Form>",
+      ]),
+      ...spacer(1),
+
+      h2("4.3  Data Tables"),
+      bullet("Use shadcn DataTable (built on @tanstack/react-table). Never build raw HTML tables for tabular data."),
+      bullet("Always implement: column sorting, pagination (10 / 25 / 50 rows), and a global search input."),
+      bullet("Row actions: use a DropdownMenu triggered by a ghost icon Button (MoreHorizontal icon)."),
+      bullet("Loading state: replace table body with Skeleton rows matching column count."),
+      bullet("Empty state: centered illustration + label + optional CTA inside the table container."),
+      ...spacer(1),
+
+      h2("4.4  Cards & KPI Widgets"),
+      ...codeBlock([
+        "<Card>",
+        "  <CardHeader className=\"flex flex-row items-center justify-between space-y-0 pb-2\">",
+        "    <CardTitle className=\"text-sm font-medium text-muted-foreground\">Revenue</CardTitle>",
+        "    <DollarSign className=\"h-4 w-4 text-muted-foreground\" />",
+        "  </CardHeader>",
+        "  <CardContent>",
+        "    <div className=\"text-3xl font-bold\">₦4,250,000</div>",
+        "    <p className=\"text-xs text-muted-foreground mt-1\">+12.5% from last month</p>",
+        "  </CardContent>",
+        "</Card>",
+      ]),
+      ...spacer(1),
+
+      h2("4.5  Modals & Sheets"),
+      bullet("Use Dialog for confirmations, small forms, and detail views (max width: max-w-lg)."),
+      bullet("Use Sheet (side panel) for create / edit flows — slide in from the right (side=\"right\")."),
+      bullet("Always include a DialogClose or SheetClose trigger — never rely solely on clicking outside."),
+      bullet("Destructive confirmation dialogs must show a red-border input that requires the user to type the resource name before the confirm button enables."),
+      ...spacer(1),
+
+      h2("4.6  Toasts & Notifications"),
+      ...codeBlock([
+        "import { toast } from 'sonner';",
+        "",
+        "// Success",
+        "toast.success('Record saved successfully.');",
+        "",
+        "// Error — always include an actionable message",
+        "toast.error('Failed to save. Check your connection and try again.');",
+        "",
+        "// Promise (loading → success / error automatically)",
+        "toast.promise(saveRecord(), {",
+        "  loading: 'Saving...',",
+        "  success: 'Saved!',",
+        "  error: 'Failed to save.',",
+        "});",
+      ]),
+      ...spacer(1),
+
+      callout("warning", "Never use alert() or console.log() to communicate status to users. All user-facing feedback must go through sonner toast or inline FormMessage."),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 5. DATA FETCHING ───────────────────────────────────────────────────
+      h1("5.  Data Fetching Patterns"),
+
+      h2("5.1  Client Component Fetch"),
+      pStr("Client components fetch data via the internal API routes. Always include the Bearer token from localStorage."),
+      ...spacer(1),
+      ...codeBlock([
+        "const fetchRecords = async () => {",
+        "  const token = localStorage.getItem('token');",
+        "  const res = await fetch('/api/records', {",
+        "    headers: { Authorization: `Bearer ${token}` },",
+        "    cache: 'no-store',",
+        "  });",
+        "  if (!res.ok) throw new Error(await res.text());",
+        "  return res.json();",
+        "};",
+      ]),
+      ...spacer(1),
+
+      h2("5.2  API Route Patterns"),
+      bullet("Prisma routes: import { db } from '@/lib/db' — use the singleton."),
+      bullet("Never create a new PrismaClient() inline — always use the singleton."),
+      bullet("Validate request body with zod before touching the database."),
+      bullet("Return consistent shape: { data, error, message } — never raw DB objects."),
+      bullet("Use try/catch on every DB call. Return 500 with a sanitised error message (no stack traces)."),
+      ...spacer(1),
+
+      ...codeBlock([
+        "// app/api/users/route.ts",
+        "import { db } from '@/lib/db';",
+        "import { NextResponse } from 'next/server';",
+        "",
+        "export async function GET(req: Request) {",
+        "  try {",
+        "    const users = await db.user.findMany({ orderBy: { createdAt: 'desc' } });",
+        "    return NextResponse.json({ data: users });",
+        "  } catch (err) {",
+        "    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });",
+        "  }",
+        "}",
+      ]),
+      ...spacer(1),
+
+      h2("5.3  Server Components (RSC)"),
+      bullet("Prefer RSC for read-only, non-interactive data display — avoids client bundle cost."),
+      bullet("Mark a component 'use client' only when it needs hooks, events, or browser APIs."),
+      bullet("Never use useEffect for initial data fetching in RSC-capable routes — fetch directly in the async component."),
+      ...spacer(1),
+
+      callout("info", "The rule of thumb: if it needs useState, useEffect, or any event handler, it's a client component. If it's just rendering data from the server, keep it as an RSC."),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 6. PERMISSIONS ─────────────────────────────────────────────────────
+      h1("6.  Permissions & Auth"),
+
+      h2("6.1  usePermissions Hook"),
+      pStr("Always gate UI elements with the permission system. Never conditionally render based on a raw role string."),
+      ...spacer(1),
+      ...codeBlock([
+        "const { can, role } = usePermissions();",
+        "",
+        "// Conditionally render UI",
+        "{can('create:invoice') && <Button>New Invoice</Button>}",
+        "",
+        "// In API routes — re-validate server-side (never trust client)",
+        "const { userId, role } = verifyToken(req.headers.authorization);",
+        "if (!hasPermission(role, 'delete:record')) {",
+        "  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });",
+        "}",
+      ]),
+      ...spacer(1),
+
+      callout("critical", "Never rely solely on client-side permission checks. Every mutating API route must independently verify the token and check permissions server-side. The client UI is a courtesy layer only."),
+
+      ...spacer(1),
+      h2("6.2  Auth Token Lifecycle"),
+      bullet("Token stored: localStorage.getItem('token')"),
+      bullet("On 401 response from any API route: clear token, redirect to /login."),
+      bullet("Token refresh: not currently implemented — tokens expire; user must re-login."),
+      bullet("DB readiness: middleware runs setup-check.ts before any authenticated route."),
+      ...spacer(1),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 7. NAMING CONVENTIONS ──────────────────────────────────────────────
+      h1("7.  Naming Conventions"),
+
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [2800, 3280, 3280],
+        rows: [
+          ruleTableHeader(),
+          ruleRow("React components",         "PascalCase — UserCard.tsx",        "userCard.tsx / user-card.tsx"),
+          ruleRow("Hooks",                     "use prefix — usePermissions.ts",   "permissions.ts / getPermissions.ts"),
+          ruleRow("API routes",                "kebab-case dir — /api/user-roles", "/api/userRoles / /api/UserRoles"),
+          ruleRow("Utility functions",         "camelCase — formatCurrency()",     "FormatCurrency() / format_currency()"),
+          ruleRow("Zod schemas",               "camelCase + Schema — loginSchema", "LoginSchema / login_schema"),
+          ruleRow("Constants",                 "UPPER_SNAKE — MAX_FILE_SIZE",      "maxFileSize / MaxFileSize"),
+          ruleRow("CSS variables (tokens)",    "--kebab-case — --primary-foreground", "--primaryForeground"),
+          ruleRow("Tailwind class order",      "Layout → Flex/Grid → Spacing → Size → Typography → Color → State", "Random order"),
+          ruleRow("Component file structure",  "Component, then types, then helpers at bottom", "Types in separate file unless shared"),
+        ]
+      }),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 8. CODE QUALITY RULES ──────────────────────────────────────────────
+      h1("8.  Code Quality Standards"),
+
+      h2("8.1  TypeScript"),
+      bullet("Strict mode is on — no any allowed. Use unknown + type guard if type is truly unknown."),
+      bullet("All component props must have explicit TypeScript interfaces. No implicit prop spreading without a typed interface."),
+      bullet("API response types must be defined in types/ — never inline in fetch calls."),
+      bullet("Use const assertions and satisfies operator where appropriate."),
+      ...spacer(1),
+
+      h2("8.2  Class Merging"),
+      pStr("Always use the cn() utility for conditional class composition. Never string-interpolate Tailwind classes conditionally."),
+      ...spacer(1),
+      ...codeBlock([
+        "// ✅ Correct",
+        "import { cn } from '@/lib/utils';",
+        "<div className={cn('base-class', isActive && 'bg-primary', className)} />",
+        "",
+        "// ❌ Wrong — tailwind-merge won't deduplicate, cn won't work",
+        "<div className={`base-class ${isActive ? 'bg-primary' : ''}`} />",
+      ]),
+      ...spacer(1),
+
+      h2("8.3  Component Variants (CVA)"),
+      pStr("Use class-variance-authority for components with multiple style variants. This keeps variant logic co-located and type-safe."),
+      ...spacer(1),
+      ...codeBlock([
+        "import { cva, type VariantProps } from 'class-variance-authority';",
+        "",
+        "const badge = cva('inline-flex items-center rounded-sm font-medium', {",
+        "  variants: {",
+        "    variant: {",
+        "      default:     'bg-primary text-primary-foreground',",
+        "      secondary:   'bg-secondary text-secondary-foreground',",
+        "      destructive: 'bg-destructive text-destructive-foreground',",
+        "      outline:     'border border-input text-foreground',",
+        "    },",
+        "    size: {",
+        "      sm: 'px-2 py-0.5 text-xs',",
+        "      md: 'px-2.5 py-1 text-sm',",
+        "    },",
+        "  },",
+        "  defaultVariants: { variant: 'default', size: 'md' },",
+        "});",
+      ]),
+      ...spacer(1),
+
+      h2("8.4  Performance"),
+      bullet("Wrap expensive computations in useMemo. Memoize callbacks passed to child components with useCallback."),
+      bullet("Dynamic imports for heavy components: const HeavyChart = dynamic(() => import('./Chart'), { ssr: false })."),
+      bullet("Images must use next/image with explicit width and height. Never use raw <img> for content images."),
+      bullet("Avoid layout shift: set explicit height on skeleton loaders matching the content they replace."),
+      ...spacer(1),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 9. CHARTS ──────────────────────────────────────────────────────────
+      h1("9.  Charts (Recharts)"),
+
+      pStr("Use the --chart-1 through --chart-5 CSS variables for all chart series colors. Never hardcode hex in chart configs."),
+      ...spacer(1),
+      ...codeBlock([
+        "const COLORS = [",
+        "  'hsl(var(--chart-1))',",
+        "  'hsl(var(--chart-2))',",
+        "  'hsl(var(--chart-3))',",
+        "  'hsl(var(--chart-4))',",
+        "  'hsl(var(--chart-5))',",
+        "];",
+        "",
+        "<ResponsiveContainer width=\"100%\" height={320}>",
+        "  <LineChart data={data}>",
+        "    <CartesianGrid strokeDasharray=\"3 3\" stroke=\"hsl(var(--border))\" />",
+        "    <XAxis dataKey=\"date\" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />",
+        "    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />",
+        "    <Tooltip",
+        "      contentStyle={{",
+        "        background: 'hsl(var(--popover))',",
+        "        border: '1px solid hsl(var(--border))',",
+        "        borderRadius: 'var(--radius)',",
+        "      }}",
+        "    />",
+        "    <Line type=\"monotone\" dataKey=\"value\" stroke={COLORS[0]} strokeWidth={2} dot={false} />",
+        "  </LineChart>",
+        "</ResponsiveContainer>",
+      ]),
+
+      ...spacer(1),
+      callout("tip", "All charts must be wrapped in ResponsiveContainer with width=\"100%\". Never set a fixed pixel width on a chart — it will break on mobile."),
+      ...spacer(1),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 10. DARK MODE ─────────────────────────────────────────────────────
+      h1("10.  Dark Mode"),
+
+      pStr("Dark mode is applied by next-themes toggling the .dark class on <html>. All token values automatically switch. Follow these rules to ensure components look correct in both modes."),
+      ...spacer(1),
+
+      bullet("Always use semantic tokens (bg-background, text-foreground) — never hardcoded colors."),
+      bullet("Use dark: prefix only for overrides that tokens don't cover (e.g. dark:ring-offset-slate-950)."),
+      bullet("Test every new component in both modes before merging."),
+      bullet("SVG icons: use currentColor — never stroke=\"#000\" or fill=\"white\"."),
+      bullet("Shadows: define separately for light/dark in globals.css — dark mode shadows should be darker (shadow-black/40)."),
+      ...spacer(1),
+
+      ...codeBlock([
+        "// Theme toggle — put in header",
+        "import { useTheme } from 'next-themes';",
+        "import { Sun, Moon } from 'lucide-react';",
+        "",
+        "const { theme, setTheme } = useTheme();",
+        "",
+        "<Button variant=\"ghost\" size=\"icon\"",
+        "  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>",
+        "  {theme === 'dark' ? <Sun className=\"h-4 w-4\" /> : <Moon className=\"h-4 w-4\" />}",
+        "</Button>",
+      ]),
+      ...spacer(1),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 11. MOBILE ────────────────────────────────────────────────────────
+      h1("11.  Mobile & Responsive"),
+
+      h2("11.1  Breakpoint Strategy"),
+      kvTable([
+        ["Default (mobile-first)", "Styles without a breakpoint prefix — all screens"],
+        ["sm: (640px+)",           "Wider cards, 2-column grids"],
+        ["md: (768px+)",           "Show/hide sidebar labels, wider tables"],
+        ["lg: (1024px+)",          "3-column grids, full sidebar"],
+        ["xl: (1280px+)",          "4-column KPI grids, expanded layouts"],
+      ], [2600, 6760]),
+
+      ...spacer(1),
+      h2("11.2  Mobile-specific Patterns"),
+      bullet("Sidebar: hidden on mobile — opened via Sheet (vaul drawer). useIsMobile() returns true below 768px."),
+      bullet("Data tables: horizontal scroll on mobile — wrap in <div className=\"overflow-x-auto\">."),
+      bullet("Modals: full-screen on mobile — add className=\"sm:max-w-lg w-full\" to DialogContent."),
+      bullet("Touch targets: minimum 44×44px for all tappable elements."),
+      bullet("Bottom-safe padding on mobile: add pb-safe (env(safe-area-inset-bottom)) for PWA on iOS."),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 12. ACCESSIBILITY ─────────────────────────────────────────────────
+      h1("12.  Accessibility Standards"),
+
+      bullet("All interactive elements must be keyboard-navigable. Radix UI primitives handle most of this — don't override tabIndex without a plan."),
+      bullet("Icon-only buttons require aria-label. <Button size=\"icon\" aria-label=\"Delete record\">."),
+      bullet("Form inputs must have associated <label> elements — use shadcn FormLabel which binds via htmlFor automatically."),
+      bullet("Color must not be the only means of conveying information — pair color with an icon or text label."),
+      bullet("Dialogs must trap focus — Radix Dialog handles this. Never build a custom modal without focus trapping."),
+      bullet("Use role and aria-* attributes when semantic HTML alone is insufficient (e.g. data table sort headers)."),
+      bullet("Minimum contrast ratio: 4.5:1 for normal text, 3:1 for large text (WCAG AA)."),
+
+      ...spacer(1),
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 13. FILE STRUCTURE ────────────────────────────────────────────────
+      h1("13.  File & Folder Structure"),
+      ...spacer(1),
+      ...codeBlock([
+        "app/",
+        "  (dashboard)/              # Route group — layout.tsx applies sidebar shell",
+        "    dashboard/page.tsx",
+        "    users/page.tsx",
+        "  api/",
+        "    users/route.ts",
+        "    auth/login/route.ts",
+        "  globals.css               # All CSS tokens live here",
+        "  layout.tsx                # Root layout — fonts, Providers, Toaster",
+        "",
+        "components/",
+        "  ui/                       # shadcn/ui local copies — edit freely",
+        "  layout/                   # AppSidebar, Header, Breadcrumb",
+        "  features/                 # Domain components — UserCard, InvoiceTable",
+        "  shared/                   # Re-usable cross-domain — PageHeader, EmptyState",
+        "",
+        "lib/",
+        "  db.ts                     # Prisma singleton",
+        "  utils.ts                  # cn() and other pure utilities",
+        "  auth.ts                   # verifyToken, hasPermission",
+        "",
+        "hooks/",
+        "  usePermissions.ts",
+        "  useIsMobile.ts",
+        "  useDashboard.ts",
+        "",
+        "types/",
+        "  api.ts                    # Shared API response shapes",
+        "  models.ts                 # Domain model types",
+        "",
+        "providers/",
+        "  DashboardProvider.tsx",
+        "  PermissionProvider.tsx",
+      ]),
+      ...spacer(1),
+
+      new Paragraph({ children: [new PageBreak()] }),
+
+      // ── 14. QUICK REFERENCE ───────────────────────────────────────────────
+      h1("14.  Quick Reference Checklist"),
+      pStr("Use this checklist before submitting any PR that touches the frontend."),
+      ...spacer(1),
+
+      h3("New Component"),
+      numbered("Exported from components/ui/ (shadcn) or components/features/ (domain)"),
+      numbered("Props have an explicit TypeScript interface"),
+      numbered("Uses cn() for all conditional class merging"),
+      numbered("Uses semantic color tokens — no hardcoded hex"),
+      numbered("Tested in light and dark mode"),
+      numbered("Keyboard accessible and has aria-label where needed"),
+      numbered("Mobile-responsive (tested at 375px)"),
+
+      ...spacer(1),
+      h3("New Page / Route"),
+      numbered("Wrapped in dashboard shell (SidebarProvider > AppSidebar > SidebarInset)"),
+      numbered("Loading state implemented (Skeleton or Suspense boundary)"),
+      numbered("Empty state implemented"),
+      numbered("Error handled — toast on failure, no silent catches"),
+      numbered("Permission check in place (usePermissions on client, verifyToken on API)"),
+      numbered("Breadcrumb updated"),
+
+      ...spacer(1),
+      h3("New API Route"),
+      numbered("Token verified server-side"),
+      numbered("Request body validated with zod"),
+      numbered("Prisma singleton (lib/db.ts) used — no new PrismaClient()"),
+      numbered("Returns { data } on success, { error } on failure"),
+      numbered("try/catch on every DB call — no unhandled promise rejections"),
+      numbered("No stack traces or raw DB errors returned to the client"),
+
+      ...spacer(1),
+      divider(),
+      new Paragraph({
+        spacing: sp(160, 0),
+        alignment: AlignmentType.CENTER,
+        children: [
+          muted("Design System v1.0  ·  ", { size: 18 }),
+          bold("Orionis NG LTD", { size: 18, color: C.navy }),
+          muted("  ·  Last updated June 2026", { size: 18 }),
+        ]
+      }),
+    ]
+  }]
+});
+
+Packer.toBuffer(doc).then(buffer => {
+  fs.writeFileSync('/mnt/user-data/outputs/design-system.docx', buffer);
+  console.log('Done');
+});

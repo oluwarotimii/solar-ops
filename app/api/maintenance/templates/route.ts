@@ -1,7 +1,44 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
+
+interface TemplateRow {
+  id: string;
+  title: string;
+  description: string | null;
+  site_location: string | null;
+  job_value: number | null;
+  assigned_to: string | null;
+  created_by: string | null;
+  recurrence_type: string;
+  recurrence_interval: number | null;
+  day_of_week: number | null;
+  day_of_month: number | null;
+  month_of_year: number | null;
+  is_active: boolean | null;
+  created_at: Date;
+  assigned_first_name: string | null;
+  assigned_last_name: string | null;
+  created_first_name: string | null;
+  created_last_name: string | null;
+  [key: string]: unknown;
+}
+
+const createTemplateSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  siteLocation: z.string().optional().nullable(),
+  jobValue: z.number().optional().default(0),
+  assignedTo: z.string().optional().nullable(),
+  recurrenceType: z.string().min(1),
+  recurrenceInterval: z.number().int().optional().default(1),
+  dayOfWeek: z.number().int().optional().nullable(),
+  dayOfMonth: z.number().int().optional().nullable(),
+  monthOfYear: z.number().int().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
 
 export async function GET(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request)
@@ -27,10 +64,9 @@ export async function GET(request: NextRequest) {
       ORDER BY mt.created_at DESC
     `
 
-    const templates = result.map((row: any) => {
+    const templates = result.map((row: TemplateRow) => {
       const template = toCamelCase(row)
 
-      // Create assignedUser object if assigned user exists
       if (template.assignedFirstName) {
         template.assignedUser = {
           id: template.assignedTo,
@@ -39,7 +75,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Create createdUser object if created user exists
       if (template.createdFirstName) {
         template.createdUser = {
           id: template.createdBy,
@@ -48,7 +83,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Clean up temporary fields but preserve assignedTo
       delete template.assignedFirstName
       delete template.assignedLastName
       delete template.createdFirstName
@@ -59,7 +93,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(templates)
   } catch (error) {
-    console.error("Maintenance templates fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -77,12 +110,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const sql = getDbSql();
-    const templateData = await request.json()
-
-    if (!templateData.title || !templateData.recurrenceType) {
-      return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
+    const body = await request.json()
+    const parsed = createTemplateSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 })
     }
+
+    const templateData = parsed.data
+    const sql = getDbSql();
 
     const [template] = await sql`
       INSERT INTO maintenance_templates (
@@ -104,7 +139,6 @@ export async function POST(request: NextRequest) {
       ) RETURNING *
     `
 
-    // Generate initial occurrences. This can be moved to a background job for better performance.
     if (template) {
       await generateOccurrences(template);
     }
@@ -114,7 +148,6 @@ export async function POST(request: NextRequest) {
       message: "Maintenance template created successfully",
     }, { status: 201 })
   } catch (error) {
-    console.error("Maintenance template creation error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

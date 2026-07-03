@@ -2,8 +2,45 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getDbSql, toCamelCase } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission, hashPassword } from "@/lib/auth";
+import { z } from "zod";
 
-export const revalidate = 0; // Ensure no caching for this API route
+export const revalidate = 0;
+
+const createUserSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  firstName: z.string().min(2, "First name is required").max(100),
+  lastName: z.string().min(2, "Last name is required").max(100),
+  phone: z.string().optional().nullable(),
+  roleId: z.string().uuid("Invalid role ID"),
+  status: z.string().optional(),
+});
+
+interface UserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  roleId: string | null;
+  status: string | null;
+  approved: boolean;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  stats: {
+    totalJobs: number;
+    completedJobs: number;
+    avgRating: number;
+  };
+  role?: {
+    id: string | null;
+    name: string;
+    description: string | null;
+    isAdmin: boolean | null;
+    permissions: unknown;
+    createdAt: Date | null;
+  };
+}
 
 export async function GET(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -28,43 +65,40 @@ export async function GET(request: NextRequest) {
       LEFT JOIN roles r ON u.role_id = r.id
       GROUP BY u.id, r.id
     `;
-    console.log('[API] Raw user rows from DB:', rows);
-    const users = rows.map(row => {
-      const camelCaseRow = toCamelCase(row);
-      const user: any = {
-        id: camelCaseRow.id,
-        email: camelCaseRow.email,
-        firstName: camelCaseRow.firstName,
-        lastName: camelCaseRow.lastName,
-        phone: camelCaseRow.phone,
-        roleId: camelCaseRow.roleId,
-        status: camelCaseRow.status,
+    const users: UserResponse[] = rows.map((row: Record<string, unknown>) => {
+      const camelCaseRow = toCamelCase(row) as Record<string, unknown>;
+      const user: UserResponse = {
+        id: camelCaseRow.id as string,
+        email: camelCaseRow.email as string,
+        firstName: camelCaseRow.firstName as string,
+        lastName: camelCaseRow.lastName as string,
+        phone: (camelCaseRow.phone as string) || null,
+        roleId: (camelCaseRow.roleId as string) || null,
+        status: (camelCaseRow.status as string) || null,
         approved: camelCaseRow.status === 'active',
-        createdAt: camelCaseRow.createdAt,
-        updatedAt: camelCaseRow.updatedAt,
+        createdAt: camelCaseRow.createdAt as Date | null,
+        updatedAt: camelCaseRow.updatedAt as Date | null,
         stats: {
-          totalJobs: parseInt(camelCaseRow.totalJobs || 0),
-          completedJobs: parseInt(camelCaseRow.completedJobs || 0),
-          avgRating: parseFloat(camelCaseRow.avgRating || 0),
+          totalJobs: parseInt((camelCaseRow.totalJobs as string) || "0"),
+          completedJobs: parseInt((camelCaseRow.completedJobs as string) || "0"),
+          avgRating: parseFloat((camelCaseRow.avgRating as string) || "0"),
         }
       };
 
       if (camelCaseRow.roleName) {
         user.role = {
-          id: camelCaseRow.roleId,
-          name: camelCaseRow.roleName,
-          description: camelCaseRow.roleDescription,
-          isAdmin: camelCaseRow.roleIsAdmin,
+          id: camelCaseRow.roleId as string | null,
+          name: camelCaseRow.roleName as string,
+          description: camelCaseRow.roleDescription as string | null,
+          isAdmin: camelCaseRow.roleIsAdmin as boolean | null,
           permissions: camelCaseRow.rolePermissions,
-          createdAt: camelCaseRow.createdAt, // Assuming role createdAt is also needed, or adjust as per Role interface
+          createdAt: camelCaseRow.createdAt as Date | null,
         };
       }
       return user;
     });
-    console.log('[API] Transformed users for frontend:', users);
     return NextResponse.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
@@ -80,11 +114,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { email, password, firstName, lastName, phone, roleId, status } = await request.json();
-
-    if (!email || !password || !firstName || !lastName || !roleId) {
-      return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
+    const body = await request.json();
+    const validation = createUserSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 });
     }
+
+    const { email, password, firstName, lastName, phone, roleId, status } = validation.data;
 
     const db = getDbSql();
 
@@ -106,7 +142,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ id: result[0].id, message: 'User created successfully' }, { status: 201 });
   } catch (error) {
-    console.error('Error creating user:', error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

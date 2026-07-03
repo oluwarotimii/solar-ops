@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { Navigation, Maximize2, Minimize2 } from "lucide-react"
 
 interface TechnicianLocation {
@@ -205,13 +206,24 @@ export default function TechnicianMap({ technicians, selectedTechnician, onTechn
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "#10B981" // Green
+        return "#10B981"
       case "idle":
-        return "#F59E0B" // Yellow
+        return "#F59E0B"
       case "offline":
-        return "#EF4444" // Red
+        return "#EF4444"
       default:
-        return "#6B7280" // Gray
+        return "#6B7280"
+    }
+  }
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800"
+      case "idle":
+        return "bg-yellow-100 text-yellow-800"
+      default:
+        return "bg-red-100 text-red-800"
     }
   }
 
@@ -230,10 +242,10 @@ export default function TechnicianMap({ technicians, selectedTechnician, onTechn
   return (
     <div className="space-y-4">
       {/* Map Container */}
-      <div className={`relative ${isFullscreen ? "fixed inset-0 z-50 bg-white" : ""}`}>
+      <div className={cn("relative", isFullscreen && "fixed inset-0 z-50 bg-white")}>
         <div
           ref={mapRef}
-          className={`bg-gray-100 rounded-lg relative overflow-hidden border ${isFullscreen ? "h-screen" : "h-96"}`}
+          className={cn("bg-gray-100 rounded-lg relative overflow-hidden border", isFullscreen ? "h-screen" : "h-96")}
         >
           {!mapLoaded && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -284,15 +296,7 @@ export default function TechnicianMap({ technicians, selectedTechnician, onTechn
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{selectedTech.name}</h3>
-                    <Badge
-                      className={`${
-                        getStatusColor(selectedTech.status) === "#10B981"
-                          ? "bg-green-100 text-green-800"
-                          : getStatusColor(selectedTech.status) === "#F59E0B"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                      }`}
-                    >
+                    <Badge className={cn(getStatusBadgeClass(selectedTech.status))}>
                       {selectedTech.status}
                     </Badge>
                   </div>
@@ -332,15 +336,7 @@ export default function TechnicianMap({ technicians, selectedTechnician, onTechn
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{selectedTech.name}</h3>
-                <Badge
-                  className={`${
-                    getStatusColor(selectedTech.status) === "#10B981"
-                      ? "bg-green-100 text-green-800"
-                      : getStatusColor(selectedTech.status) === "#F59E0B"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                  }`}
-                >
+                <Badge className={cn(getStatusBadgeClass(selectedTech.status))}>
                   {selectedTech.status}
                 </Badge>
               </div>

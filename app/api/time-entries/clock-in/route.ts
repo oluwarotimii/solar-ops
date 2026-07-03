@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getDbSql } from '@/lib/db';
+import { z } from "zod";
+import { prisma } from '@/lib/db';
 import { authenticateApiRequest } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
+
+const clockInSchema = z.object({
+  jobId: z.string().uuid().optional().nullable(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
 
 export async function POST(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
@@ -14,36 +22,56 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { notes } = await request.json();
-    const db = getDbSql();
+    const body = await request.json();
+    const parsed = clockInSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", errors: parsed.error.errors }, { status: 400 });
+    }
+    const { notes, jobId, latitude, longitude } = parsed.data;
 
     // Check if there is an open time entry
-    const existingEntry = await db`
-      SELECT id FROM time_entries WHERE user_id = ${user.id} AND clock_out IS NULL
-    `;
+    const existingEntry = await prisma.timeEntry.findFirst({
+      where: { userId: user.id, clockOut: null },
+      select: { id: true },
+    });
 
-    if (existingEntry.length > 0) {
+    if (existingEntry) {
       return NextResponse.json({ error: 'User is already clocked in' }, { status: 409 });
     }
 
-    const result = await db`
-      INSERT INTO time_entries (user_id, notes)
-      VALUES (${user.id}, ${notes || null})
-      RETURNING id, clock_in, notes;
-    `;
+    // Validate jobId if provided
+    if (jobId) {
+      const assigned = await prisma.jobTechnician.findFirst({
+        where: { jobId, technicianId: user.id },
+        select: { id: true },
+      });
+      if (!assigned) {
+        return NextResponse.json({ error: 'You are not assigned to this job' }, { status: 403 });
+      }
+    }
+
+    const result = await prisma.timeEntry.create({
+      data: {
+        userId: user.id,
+        jobId: jobId || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        notes: notes || null,
+      },
+      select: { id: true, jobId: true, clockIn: true, latitude: true, longitude: true, notes: true },
+    });
 
     await logAuditEvent({
       userId: user.id,
       action: 'user_clock_in',
       targetType: 'time_entry',
-      targetId: String(result[0].id), // Convert integer ID to string
-      details: { notes: notes || '' },
+      targetId: result.id,
+      details: { notes: notes || '', jobId: jobId || null, hasGps: !!(latitude && longitude) },
       request,
     });
 
-    return NextResponse.json(result[0]);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error clocking in:', error);
     return NextResponse.json({ error: 'Failed to clock in' }, { status: 500 });
   }
 }

@@ -172,7 +172,7 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="locationAddress">Location / Address *</Label>
-                <Input id="locationAddress" value={formData.locationAddress} onChange={(e) => setFormData({ ...formData, locationAddress: e.target.value })} placeholder="e.g., 123 Main St, Anytown, USA" required />
+                <Input id="locationAddress" value={formData.locationAddress} onChange={(e) => setFormData({ ...formData, locationAddress: e.target.value })} placeholder="e.g., 15 Ahmadu Bello Way, Lagos" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
@@ -209,8 +209,8 @@ export default function CreateJobDialog({ onJobCreated }: CreateJobDialogProps) 
                 <Input id="estimatedDuration" type="number" value={formData.estimatedDuration} onChange={(e) => setFormData({ ...formData, estimatedDuration: e.target.value })} placeholder="e.g., 4" />
               </div> */}
               <div className="space-y-2">
-                <Label htmlFor="jobValue">Job Value ($)</Label>
-                <Input id="jobValue" type="number" value={formData.jobValue} onChange={(e) => setFormData({ ...formData, jobValue: parseFloat(e.target.value) || 0 })} placeholder="e.g., 1500.00" />
+                <Label htmlFor="jobValue">Job Value (NGN)</Label>
+                <Input id="jobValue" type="number" value={formData.jobValue} onChange={(e) => setFormData({ ...formData, jobValue: parseFloat(e.target.value) || 0 })} placeholder="e.g., 150000" />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="instructions">Special Instructions</Label>

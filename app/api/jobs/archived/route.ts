@@ -1,7 +1,46 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
+
+interface JobRow {
+  id: string;
+  title: string;
+  description: string | null;
+  job_type_id: string;
+  created_by: string;
+  priority: string;
+  location_address: string;
+  location_lat: string | null;
+  location_lng: string | null;
+  scheduled_date: Date | null;
+  scheduled_time: string | null;
+  job_value: string | null;
+  instructions: string | null;
+  status: string;
+  is_archived: boolean;
+  completed_at: Date | null;
+  archived_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+  job_type_name: string | null;
+  job_type_color: string | null;
+  created_first_name: string | null;
+  created_last_name: string | null;
+}
+
+interface TechnicianRow {
+  technician_id: string;
+  role: string;
+  completed_at: Date | null;
+  first_name: string;
+  last_name: string;
+}
+
+const reopenJobSchema = z.object({
+  jobId: z.string().min(1),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +80,7 @@ export async function GET(request: NextRequest) {
     `
 
     const jobs = await Promise.all(
-      result.map(async (row: any) => {
+      result.map(async (row: JobRow) => {
         const job = toCamelCase(row)
 
         // Fetch assigned technicians
@@ -56,7 +95,7 @@ export async function GET(request: NextRequest) {
           JOIN users u ON jt.technician_id = u.id
           WHERE jt.job_id = ${job.id}
         `
-        job.technicians = techniciansResult.map((tech: any) => ({
+        job.technicians = techniciansResult.map((tech: TechnicianRow) => ({
           technicianId: tech.technician_id,
           role: tech.role,
           completedAt: tech.completed_at,
@@ -91,7 +130,7 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    const jobsWithDate = jobs.map((job: any) => ({
+    const jobsWithDate = jobs.map((job: Record<string, unknown>) => ({
       ...job,
       scheduledDate:
         job.scheduledDate instanceof Date
@@ -113,7 +152,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Archived jobs fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -129,11 +167,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const { jobId } = await request.json()
-
-    if (!jobId) {
-      return NextResponse.json({ error: "Job ID is required" }, { status: 400 })
+    const body = await request.json()
+    const parsed = reopenJobSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.format() }, { status: 400 })
     }
+    const { jobId } = parsed.data
 
     const sql = getDbSql()
 
@@ -180,7 +219,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Job reopen error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

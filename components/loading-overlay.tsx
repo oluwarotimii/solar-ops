@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface LoadingOverlayProps {
   isLoading: boolean
@@ -30,9 +31,7 @@ export default function LoadingOverlay({
 
   return (
     <div 
-      className={`fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 transition-opacity duration-300 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      }`}
+      className={cn("fixed inset-0 bg-black/30 flex items-center justify-center z-50 transition-opacity duration-300", isVisible ? "opacity-100" : "opacity-0")}
     >
       <div className="bg-white rounded-lg p-8 shadow-xl flex flex-col items-center max-w-sm w-full mx-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

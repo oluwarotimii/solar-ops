@@ -1,7 +1,7 @@
 import { DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatNaira } from "@/lib/utils";
+import { MonetaryValue } from "@/components/ui/monetary-value";
 import { formatDate } from "@/lib/date-utils";
 import { MapPin, Calendar, User, Clock, DollarSign, FileText } from "lucide-react";
 
@@ -85,7 +85,7 @@ export default function ViewJobDialog({ job }: ViewJobDialogProps) {
               <p className="text-sm text-muted-foreground">Job Value</p>
               <div className="flex items-center gap-1">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{formatNaira(job.jobValue)}</span>
+                <MonetaryValue value={job.jobValue} />
               </div>
             </div>
 

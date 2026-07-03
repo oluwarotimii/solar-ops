@@ -1,7 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
+
+interface OccurrenceRow {
+  id: string;
+  template_id: string;
+  scheduled_date: Date;
+  assigned_to: string | null;
+  status: string;
+  priority: string | null;
+  completed_at: Date | null;
+  created_at: Date;
+  template_title: string;
+  template_site_location: string | null;
+  template_description: string | null;
+  assigned_first_name: string | null;
+  assigned_last_name: string | null;
+  [key: string]: unknown;
+}
+
+const createOccurrenceSchema = z.object({
+  templateId: z.string().min(1),
+  scheduledDate: z.string().min(1),
+  status: z.string().optional().default('pending'),
+  assignedTo: z.string().optional().nullable(),
+});
 
 export async function GET(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request)
@@ -21,11 +46,9 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
     
     let assignedToFilter = sql``;
-    // If user is a Super Admin (has 'all: true' permission), show all occurrences
     if (user.role.permissions.all === true) {
       assignedToFilter = sql``;
     } else if (!hasPermission(user, 'maintenance:read:all')) {
-      // If user does not have 'maintenance:read:all', they can only see their own assigned occurrences
       assignedToFilter = sql`AND mo.assigned_to = ${user.id}`;
     }
 
@@ -54,10 +77,9 @@ export async function GET(request: NextRequest) {
       ${assignedToFilter}
     `;
 
-    const occurrences = result.map((row: any) => {
+    const occurrences = result.map((row: OccurrenceRow) => {
       const occurrence = toCamelCase(row)
 
-      // Build nested template object
       if (occurrence.templateTitle) {
         occurrence.template = {
           id: occurrence.templateId,
@@ -67,7 +89,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Build nested assigned user object
       if (occurrence.assignedFirstName) {
         occurrence.assignedUser = {
           id: occurrence.assignedTo,
@@ -76,7 +97,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Clean up flat fields
       delete occurrence.templateTitle
       delete occurrence.templateSiteLocation
       delete occurrence.templateDescription
@@ -93,7 +113,6 @@ export async function GET(request: NextRequest) {
       limit,
     })
   } catch (error) {
-    console.error("Maintenance occurrences fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -109,12 +128,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const sql = getDbSql();
-    const occurrenceData = await request.json()
-
-    if (!occurrenceData.templateId || !occurrenceData.scheduledDate) {
-      return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
+    const body = await request.json()
+    const parsed = createOccurrenceSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 })
     }
+
+    const occurrenceData = parsed.data
+    const sql = getDbSql();
 
     const [occurrence] = await sql`
       INSERT INTO maintenance_occurrences (
@@ -132,7 +153,6 @@ export async function POST(request: NextRequest) {
       message: "Maintenance occurrence created successfully",
     }, { status: 201 })
   } catch (error) {
-    console.error("Maintenance occurrence creation error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

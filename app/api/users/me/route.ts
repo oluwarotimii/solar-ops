@@ -13,7 +13,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(user);
 
   } catch (error) {
-    console.error('[API_USERS_ME]', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

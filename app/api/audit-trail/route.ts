@@ -5,6 +5,21 @@ import { hasPermission } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
+interface AuditLogRow {
+  id: string;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: unknown;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: Date;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  [key: string]: unknown;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await authenticateApiRequest(request);
@@ -12,7 +27,6 @@ export async function GET(request: NextRequest) {
       return response || NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // This is a critical security check. Only users with the correct permission can view the audit trail.
     if (!hasPermission(user, 'audit_trail:read')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -24,11 +38,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    console.log('Audit trail request params:', { page, limit, offset, startDate, endDate });
-
     const sql = getDbSql();
 
-    // Build date filter conditions
     let dateConditions = sql``;
     if (startDate || endDate) {
       const conditions = [];
@@ -42,8 +53,6 @@ export async function GET(request: NextRequest) {
         dateConditions = sql`AND ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
       }
     }
-
-    console.log('Date conditions:', dateConditions);
 
     const logs = await sql`
       SELECT
@@ -66,10 +75,6 @@ export async function GET(request: NextRequest) {
       OFFSET ${offset}
     `;
 
-    console.log('Audit logs query result count:', logs.length);
-    console.log('First log created_at:', logs[0]?.created_at);
-
-    // Count query with same filters
     let countQuery = sql`SELECT COUNT(*) as count FROM audit_logs al WHERE 1=1`;
     if (startDate) {
       countQuery = sql`${countQuery} AND al.created_at >= ${startDate}`;
@@ -80,10 +85,8 @@ export async function GET(request: NextRequest) {
     
     const [{ count }] = await sql`${countQuery}`;
 
-    console.log("Audit logs count:", count); // Debug log
-
     return NextResponse.json({
-      logs: logs.map((log: any) => ({
+      logs: logs.map((log: AuditLogRow) => ({
         ...log,
         userName: log.firstName && log.lastName ? `${log.firstName} ${log.lastName}` : log.email || 'Unknown User'
       })),
@@ -93,7 +96,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Audit Trail GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

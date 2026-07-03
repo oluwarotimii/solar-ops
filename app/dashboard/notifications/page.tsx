@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import { Bell, Search, Plus, Eye, Trash2, Send, AlertTriangle, CheckCircle, Info, User } from "lucide-react"
 import { formatDateTime } from "@/lib/date-utils";
 import CreateNotificationDialog from "@/components/create-notification-dialog"
@@ -306,11 +307,11 @@ export default function NotificationsPage() {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 border rounded-lg ${!notification.readAt ? "bg-blue-50 border-blue-200" : ""}`}
+                className={cn("p-4 border rounded-lg", !notification.readAt && "bg-blue-50 border-blue-200")}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
-                    <div className={`p-2 rounded-full ${getTypeColor(notification.type)}`}>
+                    <div className={cn("p-2 rounded-full", getTypeColor(notification.type))}>
                       {getTypeIcon(notification.type)}
                     </div>
 
@@ -322,7 +323,7 @@ export default function NotificationsPage() {
                             New
                           </Badge>
                         )}
-                        <Badge variant="outline" className={`text-xs ${getTypeColor(notification.type)}`}>
+                        <Badge variant="outline" className={cn("text-xs", getTypeColor(notification.type))}>
                           {notification.type.replace("_", " ")}
                         </Badge>
                       </div>

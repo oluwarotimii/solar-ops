@@ -25,7 +25,7 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-    console.log("[Login Debug] handleSubmit triggered.");
+    
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -39,7 +39,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        console.log("[Login Debug] Login successful, storing user and redirecting...");
+        
         localStorage.setItem("user", JSON.stringify(data.user)); // Store the full user object
         router.push("/dashboard")
       } else {
@@ -95,17 +95,19 @@ export default function LoginPage() {
                   required
                   className="rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 top-6"
+                  className="absolute right-1 top-7 h-7 w-7 text-gray-400"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <Eye className="h-4 w-4" />
                   )}
-                </button>
+                </Button>
               </div>
 
               <div className="flex items-center justify-between text-sm">

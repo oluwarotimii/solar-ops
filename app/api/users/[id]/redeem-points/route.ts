@@ -62,7 +62,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     return NextResponse.json({ message: 'Referral points redeemed successfully.' });
   } catch (error) {
-    console.error('Error redeeming referral points:', error);
     return NextResponse.json({ error: 'Failed to redeem referral points' }, { status: 500 });
   }
 }

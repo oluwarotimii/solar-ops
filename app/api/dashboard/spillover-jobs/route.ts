@@ -3,6 +3,17 @@ import { getDbSql, toCamelCase } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
 
+interface SpilloverJobRow {
+  id: string;
+  title: string;
+  status: string;
+  scheduled_date: Date;
+  location_address: string;
+  job_type_name: string | null;
+  job_type_color: string | null;
+  [key: string]: unknown;
+}
+
 export async function GET(request: NextRequest) {
   const { user, response } = await authenticateApiRequest(request);
   if (response) {
@@ -16,13 +27,11 @@ export async function GET(request: NextRequest) {
   try {
     const sql = getDbSql();
 
-    // A spillover job is defined as a job created before the current month that is still not in a final state.
     const now = new Date();
     const firstDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     let spilloverJobs;
 
-    // Admins and supervisors with global read permission see all spillover jobs.
     if (hasPermission(user, 'jobs:read:all')) {
       spilloverJobs = await sql`
         SELECT
@@ -41,7 +50,6 @@ export async function GET(request: NextRequest) {
         ORDER BY j.scheduled_date ASC;
       `;
     } else {
-      // Technicians only see spillover jobs assigned to them.
       spilloverJobs = await sql`
         SELECT
           j.id,
@@ -62,8 +70,7 @@ export async function GET(request: NextRequest) {
       `;
     }
 
-    // Correctly format the date to avoid timezone issues
-    const jobsWithCorrectDates = spilloverJobs.map(job => ({
+    const jobsWithCorrectDates = spilloverJobs.map((job: SpilloverJobRow) => ({
       ...job,
       scheduledDate: job.scheduled_date instanceof Date ? new Date(job.scheduled_date.getTime() - (job.scheduled_date.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : null,
     }));
@@ -71,7 +78,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(jobsWithCorrectDates.map(toCamelCase));
 
   } catch (error) {
-    console.error("Spillover jobs fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

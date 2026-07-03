@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/date-utils";
+import { MonetaryValue } from "@/components/ui/monetary-value";
 import type { AccruedValueDetailed } from "@/types";
 
 interface UserAccruedDetailsDialogProps {
@@ -15,14 +16,6 @@ interface UserAccruedDetailsDialogProps {
 }
 
 export default function UserAccruedDetailsDialog({ isOpen, onClose, userName, details }: UserAccruedDetailsDialogProps) {
-
-  const formatNaira = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -45,7 +38,7 @@ export default function UserAccruedDetailsDialog({ isOpen, onClose, userName, de
                 <TableRow key={detail.id}>
                   <TableCell>{detail.job?.title || "N/A"}</TableCell>
                   <TableCell>{detail.job?.type || "N/A"}</TableCell>
-                  <TableCell>{formatNaira(detail.earnedAmount)}</TableCell>
+                  <TableCell><MonetaryValue value={detail.earnedAmount} /></TableCell>
                   <TableCell>{formatDate(detail.createdAt)}</TableCell>
                 </TableRow>
               ))}

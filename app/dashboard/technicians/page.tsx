@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Search, Phone, Mail, MapPin, Clock, TrendingUp, User, Eye, Loader2, AlertTriangle } from "lucide-react"
+import { MonetaryValue } from "@/components/ui/monetary-value"
 
 interface Technician {
   id: string
@@ -98,14 +99,6 @@ export default function TechniciansPage() {
   const activeTechnicians = technicians.filter((t) => t.status === "active").length
   const totalEarned = technicians.reduce((sum, tech) => sum + tech.stats.totalEarned, 0)
 
-  const formatNaira = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -171,7 +164,7 @@ export default function TechniciansPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Total Earned</p>
-                <p className="text-2xl font-bold">{formatNaira(totalEarned)}</p>
+                <p className="text-2xl font-bold"><MonetaryValue value={totalEarned} /></p>
               </div>
             </div>
           </CardContent>
@@ -273,7 +266,7 @@ export default function TechniciansPage() {
                             <span className="text-muted-foreground">/{tech.stats.totalJobs} jobs</span>
                           </div>
                           <div className="text-sm">
-                            <span className="font-medium">{formatNaira(tech.stats.totalEarned)}</span>
+                            <MonetaryValue value={tech.stats.totalEarned} className="font-medium" />
                             <span className="text-muted-foreground"> earned</span>
                           </div>
                         </div>

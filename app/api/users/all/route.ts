@@ -23,11 +23,10 @@ export async function GET(request: NextRequest) {
       ORDER BY first_name, last_name
     `
 
-    const users = result.map((row: any) => toCamelCase(row));
+    const users = result.map((row: Record<string, unknown>) => toCamelCase(row));
 
     return NextResponse.json(users)
   } catch (error) {
-    console.error("Technicians fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

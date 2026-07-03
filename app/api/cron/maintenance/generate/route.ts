@@ -50,7 +50,6 @@ export async function GET(request: Request) {
 
       // 4. If needed, generate new occurrences
       if (shouldGenerate) {
-        console.log(`Template "${template.title}" needs more occurrences. Generating...`);
         await generateOccurrences(template);
         templatesProcessed++;
       }
@@ -62,7 +61,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Cron job for maintenance failed:', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }

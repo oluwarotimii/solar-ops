@@ -1,12 +1,43 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
 import { logAuditEvent } from "@/lib/audit"
 
+interface TechnicianRow {
+  technician_id: string;
+  role: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface TechnicianIdRow {
+  technician_id: string;
+}
+
+const updateJobSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  jobTypeId: z.string().min(1),
+  priority: z.string().optional(),
+  locationAddress: z.string().min(1),
+  locationLat: z.string().optional(),
+  locationLng: z.string().optional(),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
+  jobValue: z.number().optional(),
+  instructions: z.string().optional(),
+  status: z.string().optional(),
+  assignedUsers: z.array(z.object({
+    userId: z.string(),
+    role: z.string(),
+  })).optional(),
+})
+
 // Helper function to compare job data and return only changed fields
-function getJobChanges(originalJob: any, newJobData: any) {
-  const changes: Record<string, { old: any; new: any }> = {};
+function getJobChanges(originalJob: Record<string, unknown>, newJobData: Record<string, unknown>) {
+  const changes: Record<string, { old: unknown; new: unknown }> = {};
   
   // Compare simple fields
   const simpleFields = [
@@ -84,12 +115,11 @@ export async function GET(
       WHERE jt.job_id = ${jobId}
     `;
 
-    job.technicians = techniciansResult.map((tech: any) => toCamelCase(tech));
+    job.technicians = techniciansResult.map((tech: TechnicianRow) => toCamelCase(tech));
 
     job.scheduledDate = job.scheduledDate instanceof Date ? new Date(job.scheduledDate.getTime() - (job.scheduledDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : null;
     return NextResponse.json(job);
   } catch (error) {
-    console.error(`[Jobs API] GET /api/jobs/${params.id} error:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -138,7 +168,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Job deleted successfully" });
   } catch (error) {
-    console.error(`[Jobs API] DELETE /api/jobs/${params.id} error:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -158,7 +187,12 @@ export async function PUT(
     }
 
     const jobId = params.id;
-    const jobData = await request.json();
+    const body = await request.json();
+    const parsed = updateJobSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.format() }, { status: 400 })
+    }
+    const jobData = parsed.data;
     const sql = getDbSql();
 
     // Fetch original job for audit purposes
@@ -169,7 +203,7 @@ export async function PUT(
     const originalJob = originalJobResult[0];
 
     const originalTechniciansResult = await sql`SELECT technician_id FROM job_technicians WHERE job_id = ${jobId}`;
-    const originalTechnicianIds = originalTechniciansResult.map((t: any) => t.technician_id);
+    const originalTechnicianIds = originalTechniciansResult.map((t: TechnicianIdRow) => t.technician_id);
 
 
     // 1. Update the main job details
@@ -229,7 +263,7 @@ export async function PUT(
       details: {
         changes: getJobChanges(originalJob, jobData),
         originalTechnicians: originalTechnicianIds,
-        newTechnicians: jobData.assignedUsers?.map((t: any) => t.userId),
+        newTechnicians: jobData.assignedUsers?.map((t: { userId: string }) => t.userId),
       },
       request,
     });
@@ -242,7 +276,6 @@ export async function PUT(
     return NextResponse.json(updatedJob);
 
   } catch (error) {
-    console.error(`[Jobs API] PUT /api/jobs/${params.id} error:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

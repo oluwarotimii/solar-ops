@@ -44,6 +44,7 @@ interface SystemSettings {
   dataRetentionDays: number
   maxJobsPerTechnician: number
   defaultJobShare: number
+  earnedValueMode: "split" | "full"
 }
 
 interface JobType {
@@ -93,6 +94,7 @@ export default function SettingsPage() {
         dataRetentionDays: systemSettingsData.dataRetentionDays || 0,
         maxJobsPerTechnician: systemSettingsData.maxJobsPerTechnician || 0,
         defaultJobShare: systemSettingsData.defaultJobShare || 0,
+        earnedValueMode: systemSettingsData.earnedValueMode || "split",
       })
       // Assuming notification settings are also part of system settings or user settings
       setNotificationSettings({
@@ -553,6 +555,26 @@ export default function SettingsPage() {
                       )
                     }
                   />
+                </div>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium">Earnings Distribution</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Full Earned Value</Label>
+                      <p className="text-sm text-muted-foreground">
+                        When enabled, each technician earns the full job value. When disabled, the job value is split equally among all assigned technicians.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={systemSettings?.earnedValueMode === "full"}
+                      onCheckedChange={(checked) =>
+                        setSystemSettings((prev) =>
+                          prev ? { ...prev, earnedValueMode: checked ? "full" : "split" } : null,
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>

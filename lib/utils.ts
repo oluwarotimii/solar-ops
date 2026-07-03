@@ -20,5 +20,5 @@ export const formatNumberWithCommas = (value: number | null | undefined) => {
   if (value === null || value === undefined) {
     return "N/A";
   }
-  return new Intl.NumberFormat("en-US").format(value);
+  return new Intl.NumberFormat("en-NG").format(value);
 };

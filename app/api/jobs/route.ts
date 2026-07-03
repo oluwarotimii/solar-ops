@@ -1,9 +1,62 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
 import { sendPushNotification } from "@/lib/push"
 import { logAuditEvent } from "@/lib/audit"
+
+interface JobRow {
+  id: string;
+  title: string;
+  description: string | null;
+  job_type_id: string;
+  created_by: string;
+  priority: string;
+  location_address: string;
+  location_lat: string | null;
+  location_lng: string | null;
+  scheduled_date: Date | null;
+  scheduled_time: string | null;
+  job_value: string | null;
+  instructions: string | null;
+  status: string;
+  is_archived: boolean;
+  completed_at: Date | null;
+  archived_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+  job_type_name: string | null;
+  job_type_color: string | null;
+  created_first_name: string | null;
+  created_last_name: string | null;
+}
+
+interface TechnicianRow {
+  technician_id: string;
+  role: string;
+  completed_at: Date | null;
+  first_name: string;
+  last_name: string;
+}
+
+const createJobSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  jobTypeId: z.string().min(1),
+  priority: z.string().optional(),
+  locationAddress: z.string().min(1),
+  locationLat: z.string().optional(),
+  locationLng: z.string().optional(),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
+  jobValue: z.number().optional(),
+  instructions: z.string().optional(),
+  assignedUsers: z.array(z.object({
+    userId: z.string(),
+    role: z.string(),
+  })).optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -96,7 +149,7 @@ export async function GET(request: NextRequest) {
     }
 
     const jobs = await Promise.all(
-      result.map(async (row: any) => {
+      result.map(async (row: JobRow) => {
         const job = toCamelCase(row)
 
         // Fetch assigned technicians
@@ -111,7 +164,7 @@ export async function GET(request: NextRequest) {
           JOIN users u ON jt.technician_id = u.id
           WHERE jt.job_id = ${job.id}
         `
-        job.technicians = techniciansResult.map((tech: any) => ({
+        job.technicians = techniciansResult.map((tech: TechnicianRow) => ({
           technicianId: tech.technician_id,
           role: tech.role,
           completedAt: tech.completed_at,
@@ -146,7 +199,7 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    const jobsWithDate = jobs.map((job: any) => ({
+    const jobsWithDate = jobs.map((job: Record<string, unknown>) => ({
       ...job,
       scheduledDate:
         job.scheduledDate instanceof Date
@@ -167,7 +220,6 @@ export async function GET(request: NextRequest) {
       limit,
     })
   } catch (error) {
-    console.error("Jobs fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -183,15 +235,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const jobData = await request.json()
-    const { referrerId } = jobData
-
-    if (!jobData.title || !jobData.jobTypeId || !jobData.locationAddress) {
-      return NextResponse.json(
-        { error: "Required fields missing" },
-        { status: 400 }
-      )
+    const body = await request.json()
+    const parsed = createJobSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.format() }, { status: 400 })
     }
+    const jobData = parsed.data
 
     const db = getDbSql()
 
@@ -201,7 +250,7 @@ export async function POST(request: NextRequest) {
         title, description, job_type_id, created_by,
         priority, location_address, location_lat, location_lng,
         scheduled_date, scheduled_time, job_value,
-        instructions, status, referrer_id
+        instructions, status
       ) VALUES (
         ${jobData.title},
         ${jobData.description || null},
@@ -215,20 +264,10 @@ export async function POST(request: NextRequest) {
         ${jobData.scheduledTime || null},
         ${jobData.jobValue || 0},
         ${jobData.instructions || null},
-        'assigned',
-        ${referrerId || null}
+        'assigned'
       ) RETURNING id
     `
     const jobId = jobResult[0].id
-
-    // 2. Update referrer points if a referrer was specified
-    if (referrerId) {
-      await db`
-        UPDATE users
-        SET referral_points = referral_points + 10
-        WHERE id = ${referrerId}
-      `
-    }
 
     // 3. Assign technicians and create notifications
     if (jobData.assignedUsers && jobData.assignedUsers.length > 0) {
@@ -283,8 +322,7 @@ export async function POST(request: NextRequest) {
       targetId: jobId,
       details: {
         title: jobData.title,
-        assignedTechnicians: jobData.assignedUsers?.map((t: any) => t.userId),
-        referrerId: referrerId || null,
+        assignedTechnicians: jobData.assignedUsers?.map((t: { userId: string }) => t.userId),
       },
       request,
     })
@@ -294,7 +332,7 @@ export async function POST(request: NextRequest) {
       message: "Job created successfully",
     })
   } catch (error) {
-    console.error("Job creation error:", error)
+    console.error("POST /api/jobs error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

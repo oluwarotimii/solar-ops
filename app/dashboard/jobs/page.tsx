@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +26,7 @@ import {
   Archive,
 } from "lucide-react"
 import { formatDate } from "@/lib/date-utils"
+import { MonetaryValue } from "@/components/ui/monetary-value"
 import CreateJobDialog from "@/components/create-job-dialog"
 import EditJobDialog from "@/components/edit-job-dialog"
 import ViewJobDialog from "@/components/view-job-dialog"
@@ -470,6 +472,15 @@ export default function JobsPage() {
                                     <Edit className="h-4 w-4 mr-2" /> Edit
                                   </Button>
                                 )}
+                                {isUserAdmin && job.status !== "completed" && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleMarkComplete(job.id)}
+                                  >
+                                    <CheckSquare className="h-4 w-4 mr-2" /> Complete All
+                                  </Button>
+                                )}
                                 {hasPermission('jobs:update') && job.status === "completed" && (
                                   <Button variant="outline" size="sm" onClick={() => handleReopenJob(job.id)}>
                                     <RotateCcw className="h-4 w-4 mr-2" /> Re-open
@@ -565,7 +576,7 @@ export default function JobsPage() {
                         showMarkComplete={isUserAssigned && !hasCompleted && job.status !== "completed"}
                       >
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>₦{job.jobValue.toLocaleString()}</span>
+                          <MonetaryValue value={job.jobValue} />
                           {job.scheduledDate && (
                             <>
                               <span>•</span>
@@ -609,7 +620,7 @@ export default function JobsPage() {
                   Edit Job
                 </Button>
               )}
-              {isUserAssigned && !hasCompleted && selectedJobForSheet.status !== "completed" && (
+              {isUserAssigned && !hasCompleted && selectedJobForSheet.status !== "completed" && !user?.role?.isAdmin && (
                 <Button
                   size="sm"
                   onClick={() => {
@@ -618,6 +629,18 @@ export default function JobsPage() {
                   }}
                 >
                   Mark as Complete
+                </Button>
+              )}
+              {user?.role?.isAdmin && selectedJobForSheet.status !== "completed" && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    handleMarkComplete(selectedJobForSheet.id)
+                    setShowBottomSheet(false)
+                  }}
+                >
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  Complete All
                 </Button>
               )}
               <Button
@@ -652,11 +675,11 @@ export default function JobsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="font-medium text-sm text-muted-foreground">Value</h3>
-                <p className="text-sm mt-1 font-medium">₦{selectedJobForSheet.jobValue.toLocaleString()}</p>
+                <MonetaryValue value={selectedJobForSheet.jobValue} className="text-sm mt-1 font-medium" />
               </div>
               <div>
                 <h3 className="font-medium text-sm text-muted-foreground">Priority</h3>
-                <Badge className={`mt-1 ${getPriorityColor(selectedJobForSheet.priority)}`}>
+                <Badge className={cn("mt-1", getPriorityColor(selectedJobForSheet.priority))}>
                   {selectedJobForSheet.priority}
                 </Badge>
               </div>

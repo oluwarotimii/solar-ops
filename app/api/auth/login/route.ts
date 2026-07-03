@@ -1,10 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getUserByEmail, verifyPassword, generateToken } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(1, "Password is required"),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const validation = loginSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 });
+    }
+    const { email, password } = validation.data;
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
@@ -56,7 +67,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Login error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

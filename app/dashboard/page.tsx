@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckCircle, Clock, MapPin, DollarSign, TrendingUp, AlertTriangle, Loader2, Briefcase } from "lucide-react"
-import { formatNaira, formatNumberWithCommas } from "@/lib/utils"
+import { formatNumberWithCommas } from "@/lib/utils"
+import { MonetaryValue } from "@/components/ui/monetary-value"
 import ClockInOut from "@/components/ClockInOut"
 
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,7 @@ export default function DashboardPage() {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNaira(stats?.totalRevenue || 0)}</div>
+          <div className="text-2xl font-bold"><MonetaryValue value={stats?.totalRevenue || 0} /></div>
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
@@ -59,7 +60,7 @@ export default function DashboardPage() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNaira(stats?.maintenanceRevenueThisMonth || 0)}</div>
+          <div className="text-2xl font-bold"><MonetaryValue value={stats?.maintenanceRevenueThisMonth || 0} /></div>
           <p className="text-xs text-muted-foreground">This month</p>
         </CardContent>
       </Card>
@@ -69,7 +70,7 @@ export default function DashboardPage() {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNaira(stats?.spilloverRevenue || 0)}</div>
+          <div className="text-2xl font-bold"><MonetaryValue value={stats?.spilloverRevenue || 0} /></div>
           <p className="text-xs text-muted-foreground">From previous months</p>
         </CardContent>
       </Card>
@@ -205,7 +206,7 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-medium">{job.title}</p>
                       <p className="text-sm text-muted-foreground">{job.jobTypeName} - {job.locationAddress}</p>
-                      <p className="text-xs text-muted-foreground">Scheduled: {new Date(job.scheduledDate).toLocaleDateString()}</p>
+                      <p className="text-xs text-muted-foreground">Scheduled: {new Date(job.scheduledDate).toLocaleDateString('en-NG')}</p>
                     </div>
                     <Badge variant="outline" className="bg-orange-100 text-orange-800">{job.status.replace("_", " ")}</Badge>
                   </div>
@@ -236,7 +237,7 @@ export default function DashboardPage() {
                             {item.type === 'job_completed' && `Job Completed: ${item.title}`}
                             {item.type === 'user_login' && `User Login: ${item.firstName} ${item.lastName}`}
                           </p>
-                          <p className="text-xs text-muted-foreground">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(item.timestamp).toLocaleTimeString('en-NG')}</p>
                         </div>
                       </div>
                     ))

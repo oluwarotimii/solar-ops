@@ -29,7 +29,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
 
   } catch (error) {
-    console.error("Debug permissions error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

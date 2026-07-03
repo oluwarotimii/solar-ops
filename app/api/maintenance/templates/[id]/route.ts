@@ -1,9 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { toCamelCase, getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
 
-// GET a single maintenance template
+const updateTemplateSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  siteLocation: z.string().optional().nullable(),
+  jobValue: z.number().optional().nullable(),
+  assignedTo: z.string().optional().nullable(),
+  recurrenceType: z.string(),
+  recurrenceInterval: z.number().int().optional().nullable(),
+  dayOfWeek: z.number().int().optional().nullable(),
+  dayOfMonth: z.number().int().optional().nullable(),
+  monthOfYear: z.number().int().optional().nullable(),
+  isActive: z.boolean().optional().nullable(),
+});
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
   if (response) {
@@ -31,10 +45,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    // Process the template to create nested user objects
     const processedTemplate = toCamelCase(template);
 
-    // Create assignedUser object if assigned user exists
     if (processedTemplate.assignedFirstName) {
       processedTemplate.assignedUser = {
         id: processedTemplate.assignedTo,
@@ -43,7 +55,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // Create createdUser object if created user exists
     if (processedTemplate.createdFirstName) {
       processedTemplate.createdUser = {
         id: processedTemplate.createdBy,
@@ -52,7 +63,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // Clean up temporary fields but preserve assignedTo
     delete processedTemplate.assignedFirstName;
     delete processedTemplate.assignedLastName;
     delete processedTemplate.createdFirstName;
@@ -60,14 +70,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(processedTemplate);
   } catch (error) {
-    console.error("Maintenance template fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 import { generateOccurrences } from "@/lib/maintenance";
 
-// UPDATE a maintenance template
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
   if (response) {
@@ -79,8 +87,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
+    const body = await request.json();
+    const parsed = updateTemplateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
+    }
+
+    const templateData = parsed.data;
     const sql = getDbSql();
-    const templateData = await request.json();
 
     const [updatedTemplate] = await sql`
       UPDATE maintenance_templates
@@ -104,17 +118,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    // Regenerate occurrences when the template is updated
     await generateOccurrences(updatedTemplate);
 
     return NextResponse.json(toCamelCase(updatedTemplate));
   } catch (error) {
-    console.error("Maintenance template update error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-// DELETE a maintenance template
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
   if (response) {
@@ -128,7 +139,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const sql = getDbSql();
     
-    // First delete all accrued values associated with occurrences of this template
     await sql`
       DELETE FROM accrued_values 
       WHERE maintenance_occurrence_id IN (
@@ -136,7 +146,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     `;
     
-    // Then delete the template, which will cascade to occurrences
     const result = await sql`
       DELETE FROM maintenance_templates WHERE id = ${params.id}
     `;
@@ -147,7 +156,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ message: "Maintenance template and its occurrences deleted successfully" });
   } catch (error) {
-    console.error("Maintenance template delete error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { MapPin, Clock, User, RefreshCw, Eye, Phone, Play, Square, Loader2, AlertTriangle } from "lucide-react"
 import TechnicianMap from "@/components/technician-map"
 
@@ -152,7 +153,7 @@ export default function TrackingPage() {
           <p className="text-muted-foreground">Real-time technician locations and job progress</p>
         </div>
         <Button onClick={refreshLocations} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
           Refresh
         </Button>
       </div>

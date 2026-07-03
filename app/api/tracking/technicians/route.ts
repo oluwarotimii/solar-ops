@@ -3,17 +3,33 @@ import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
 
+interface TechnicianRow {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  job_id: string | null;
+  job_title: string | null;
+  job_location: string | null;
+  job_status: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  last_gps_timestamp: Date | null;
+  journey_type: string | null;
+  journey_start_time: Date | null;
+}
+
 export async function GET(request: NextRequest) {
-  const { user, response } = await authenticateApiRequest(request)
-  if (response) {
-    return response
-  }
-
-  if (!user || !hasPermission(user, 'tracking:read')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   try {
+    const { user, response } = await authenticateApiRequest(request)
+    if (response) {
+      return response
+    }
+
+    if (!user || !hasPermission(user, 'tracking:read')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const sql = getDbSql();
 
     // Get technicians with their latest GPS logs and current jobs
@@ -54,7 +70,7 @@ export async function GET(request: NextRequest) {
       ORDER BY u.first_name, u.last_name
     `
 
-    const technicianLocations = result.map((row: any) => {
+    const technicianLocations = result.map((row: TechnicianRow) => {
       const data = toCamelCase(row)
 
       // Determine status based on GPS activity and job status
@@ -102,7 +118,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(technicianLocations)
   } catch (error) {
-    console.error("Tracking fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

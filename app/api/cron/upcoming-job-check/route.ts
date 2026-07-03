@@ -32,7 +32,7 @@ export async function GET(request: Request) {
         for (const admin of admins) {
           await sql`
             INSERT INTO notifications (recipient_id, title, message, type, related_job_id)
-            VALUES (${admin.id}, 'Overdue Job Alert', ${`Job "${job.title}" was scheduled for ${new Date(job.scheduled_date).toLocaleDateString()} and is not completed.`}, 'overdue_job_alert', ${job.id})
+            VALUES (${admin.id}, 'Overdue Job Alert', ${`Job "${job.title}" was scheduled for ${new Date(job.scheduled_date).toLocaleDateString('en-NG')} and is not completed.`}, 'overdue_job_alert', ${job.id})
           `;
           notificationsSent++;
         }
@@ -89,7 +89,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error("Cron job error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

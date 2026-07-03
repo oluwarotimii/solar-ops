@@ -51,7 +51,7 @@ export default function AuditLogCard({ log }: AuditLogCardProps) {
             ) : log.target_type && (
               <p className="text-sm text-muted-foreground">{log.target_type} #{log.target_id?.substring(0, 8)}</p>
             )}
-            <p className="text-xs text-muted-foreground mt-1" title={format(new Date(log.created_at), 'PPpp')}>
+            <p className="text-xs text-muted-foreground mt-1" title={format(new Date(log.created_at), 'd MMM yyyy HH:mm')}>
               {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
             </p>
           </div>

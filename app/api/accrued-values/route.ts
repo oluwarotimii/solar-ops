@@ -1,12 +1,21 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getDbSql, toCamelCase } from '@/lib/db';
+import { z } from 'zod';
+import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import { authenticateApiRequest } from '@/lib/api-auth';
 import { hasPermission } from '@/lib/auth';
+import { calculateEarnedAmount } from '@/lib/earnings';
 
-console.log('[ACCRUED_VALUES_GET] Loading route module');
+const createAccruedValueSchema = z.object({
+  userId: z.string().min(1),
+  jobId: z.string().min(1),
+  jobType: z.enum(["job", "maintenance"]),
+  rating: z.number().optional(),
+  month: z.number().int().min(1).max(12),
+  year: z.number().int(),
+})
 
 export async function GET(request: NextRequest) {
-  console.log('[ACCRUED_VALUES_GET] Received request');
   try {
     const { user, response } = await authenticateApiRequest(request);
     if (response) {
@@ -17,116 +26,99 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const sql = getDbSql();
     const { searchParams } = request.nextUrl;
     const month = searchParams.get('month');
     const year = searchParams.get('year');
     let userId = searchParams.get('userId');
-    const mode = searchParams.get('mode'); // 'detailed' or null
+    const mode = searchParams.get('mode');
 
     if (!hasPermission(user, 'accrued_values:read:all')) {
       userId = user.id;
     }
 
-    const conditions = [];
+    const where: Prisma.AccruedValueWhereInput = {};
+
     if (month && month !== 'all') {
-      conditions.push(sql`av.month = ${parseInt(month, 10)}`);
+      where.month = parseInt(month, 10);
     }
     if (year && year !== 'all') {
-      conditions.push(sql`av.year = ${parseInt(year, 10)}`);
+      where.year = parseInt(year, 10);
     }
     if (userId) {
-      conditions.push(sql`av.user_id = ${userId}`);
-    }
-
-    let whereClause = sql``;
-    if (conditions.length > 0) {
-      whereClause = sql`WHERE ${conditions.reduce((prev, curr, i) => i === 0 ? curr : sql`${prev} AND ${curr}`)}`;
+      where.userId = userId;
     }
 
     let accruedValues;
     if (mode === 'detailed') {
-      const result = await sql`
-        SELECT
-          av.*,
-          u.first_name as technician_first_name,
-          u.last_name as technician_last_name,
-          u.email as technician_email,
-          COALESCE(j.title, mt.title) as job_title,
-          jt.name as job_type_name
-        FROM accrued_values av
-        JOIN users u ON av.user_id = u.id
-        LEFT JOIN jobs j ON av.job_id = j.id
-        LEFT JOIN job_types jt ON j.job_type_id = jt.id
-        LEFT JOIN maintenance_occurrences mo ON av.maintenance_occurrence_id = mo.id
-        LEFT JOIN maintenance_templates mt ON mo.template_id = mt.id
-        ${whereClause}
-        ORDER BY av.created_at DESC
-      `;
+      const records = await prisma.accruedValue.findMany({
+        where,
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          job: { select: { id: true, title: true, jobType: { select: { name: true } } } },
+          maintenanceOccurrence: {
+            include: { template: { select: { title: true } } },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
 
-      accruedValues = result.map((row: any) => {
-        const value = toCamelCase(row);
-        return {
-          id: value.id,
-          user: {
-            id: value.userId,
-            name: `${value.technicianFirstName} ${value.technicianLastName}`,
-            email: value.technicianEmail,
-          },
-          job: {
-            id: value.jobId || value.maintenanceOccurrenceId,
-            title: value.jobTitle,
-            type: value.jobTypeName || 'Maintenance',
-          },
-          earnedAmount: value.earnedAmount,
-          rating: value.rating,
-          month: value.month,
-          year: value.year,
-          createdAt: value.createdAt,
-        };
-      });
-      console.log("Detailed Accrued Values (after map):", accruedValues);
+      accruedValues = records.map((r) => ({
+        id: r.id,
+        user: {
+          id: r.user.id,
+          name: `${r.user.firstName} ${r.user.lastName}`,
+          email: r.user.email,
+        },
+        job: {
+          id: r.jobId || r.maintenanceOccurrenceId || '',
+          title: r.job?.title || r.maintenanceOccurrence?.template?.title || 'Maintenance',
+          type: r.job?.jobType?.name || 'Maintenance',
+        },
+        earnedAmount: Number(r.earnedAmount),
+        rating: r.rating ? Number(r.rating) : undefined,
+        month: r.month,
+        year: r.year,
+        createdAt: r.createdAt.toISOString(),
+      }));
     } else {
-      // Return aggregated data for display in the UI
-      const result = await sql`
-        SELECT
-          u.id as user_id,
-          u.first_name as technician_first_name,
-          u.last_name as technician_last_name,
-          u.email as technician_email,
-          SUM(av.earned_amount) as total_earned_amount
-        FROM accrued_values av
-        JOIN users u ON av.user_id = u.id
-        ${whereClause}
-        GROUP BY u.id, u.first_name, u.last_name, u.email
-        ORDER BY total_earned_amount DESC
-      `;
-      console.log("Aggregated Query Result:", result);
-      accruedValues = result.map((row: any) => {
-        const value = toCamelCase(row);
+      const grouped = await prisma.accruedValue.groupBy({
+        by: ['userId'],
+        where,
+        _sum: { earnedAmount: true },
+        orderBy: { _sum: { earnedAmount: 'desc' } },
+      });
+
+      const userIds = grouped.map((g) => g.userId);
+      const users = userIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, firstName: true, lastName: true, email: true },
+          })
+        : [];
+      const userMap = new Map(users.map((u) => [u.id, u]));
+
+      accruedValues = grouped.map((g) => {
+        const u = userMap.get(g.userId);
         return {
           user: {
-            id: value.userId,
-            name: `${value.technicianFirstName} ${value.technicianLastName}`,
-            email: value.technicianEmail,
+            id: g.userId,
+            name: u ? `${u.firstName} ${u.lastName}` : 'Unknown',
+            email: u?.email ?? '',
           },
-          totalEarnedAmount: value.totalEarnedAmount,
+          totalEarnedAmount: Number(g._sum.earnedAmount) || 0,
         };
       });
-      console.log("Aggregated Accrued Values (after map):", accruedValues);
     }
 
-    const yearRangeResult = await sql`
-      SELECT MIN(year) as min_year, MAX(year) as max_year FROM accrued_values
-    `;
-    console.log("Year Range Result:", yearRangeResult);
-    const minYear = yearRangeResult[0]?.min_year || new Date().getFullYear();
-    const maxYear = yearRangeResult[0]?.max_year || new Date().getFullYear();
-    console.log("Final minYear, maxYear:", minYear, maxYear);
+    const yearRange = await prisma.accruedValue.aggregate({
+      _min: { year: true },
+      _max: { year: true },
+    });
+    const minYear = yearRange._min.year ?? new Date().getFullYear();
+    const maxYear = yearRange._max.year ?? new Date().getFullYear();
 
     return NextResponse.json({ accruedValues, minYear, maxYear });
   } catch (error) {
-    console.error('[ACCRUED_VALUES_GET]', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -142,84 +134,88 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { userId, jobId, jobType, rating, month, year } = await req.json();
+    const body = await req.json();
+    const parsed = createAccruedValueSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
+    }
+    const { userId, jobId, jobType, rating, month, year } = parsed.data;
 
     if (!hasPermission(user, 'accrued_values:create:all') && userId !== user.id) {
       return NextResponse.json({ error: "Forbidden: You can only create accrued values for yourself." }, { status: 403 });
     }
 
-    if (!userId || !jobId || !jobType || !month || !year) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    const sql = getDbSql();
-    let jobValue;
+    let jobValue: number;
     let earnedAmount = 0;
     let result;
 
     if (jobType === 'job') {
-      const jobResult = await sql`
-        SELECT job_value FROM jobs WHERE id = ${jobId}
-      `;
+      const job = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: { jobValue: true },
+      });
 
-      if (jobResult.length === 0) {
+      if (!job) {
         return NextResponse.json({ error: "Job not found" }, { status: 404 });
       }
-      jobValue = jobResult[0].job_value;
+      jobValue = Number(job.jobValue);
 
-      const techniciansCountResult = await sql`
-        SELECT COUNT(*) FROM job_technicians WHERE job_id = ${jobId}
-      `;
-      const numberOfTechnicians = parseInt(techniciansCountResult[0].count, 10);
+      const technicianCount = await prisma.jobTechnician.count({
+        where: { jobId },
+      });
 
-      if (numberOfTechnicians > 0) {
-        earnedAmount = jobValue / numberOfTechnicians;
-      }
+      earnedAmount = await calculateEarnedAmount(jobValue, technicianCount);
 
-      result = await sql`
-        INSERT INTO accrued_values (user_id, job_id, job_value, earned_amount, rating, month, year)
-        VALUES (${userId}, ${jobId}, ${jobValue}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
-        RETURNING *
-      `;
+      result = await prisma.accruedValue.create({
+        data: {
+          userId,
+          jobId,
+          jobValue,
+          earnedAmount,
+          rating: rating || null,
+          month,
+          year,
+        },
+      });
     } else if (jobType === 'maintenance') {
-      const occurrenceResult = await sql`
-        SELECT template_id FROM maintenance_occurrences WHERE id = ${jobId}
-      `;
+      const occurrence = await prisma.maintenanceOccurrence.findUnique({
+        where: { id: jobId },
+        select: { templateId: true },
+      });
 
-      if (occurrenceResult.length === 0) {
+      if (!occurrence) {
         return NextResponse.json({ error: "Maintenance occurrence not found" }, { status: 404 });
       }
-      const templateId = occurrenceResult[0].template_id;
 
-      const templateResult = await sql`
-        SELECT job_value, recurrence_type FROM maintenance_templates WHERE id = ${templateId}
-      `;
+      const template = await prisma.maintenanceTemplate.findUnique({
+        where: { id: occurrence.templateId },
+        select: { jobValue: true, recurrenceType: true },
+      });
 
-      if (templateResult.length === 0) {
+      if (!template) {
         return NextResponse.json({ error: "Maintenance template not found" }, { status: 404 });
       }
-      
-      jobValue = templateResult[0].job_value;
-      const recurrenceType = templateResult[0].recurrence_type;
 
-      // The job_value for maintenance templates is already the monthly value, no division needed
-      let monthlyValue = jobValue;
+      jobValue = Number(template.jobValue);
+      earnedAmount = jobValue;
 
-      // For now, we assume one technician per maintenance job
-      earnedAmount = monthlyValue;
-
-      result = await sql`
-        INSERT INTO accrued_values (user_id, maintenance_occurrence_id, job_value, earned_amount, rating, month, year)
-        VALUES (${userId}, ${jobId}, ${jobValue}, ${earnedAmount}, ${rating || null}, ${month}, ${year})
-        RETURNING *
-      `;
+      result = await prisma.accruedValue.create({
+        data: {
+          userId,
+          maintenanceOccurrenceId: jobId,
+          jobValue,
+          earnedAmount,
+          rating: rating || null,
+          month,
+          year,
+        },
+      });
     } else {
       return NextResponse.json({ error: "Invalid job type" }, { status: 400 });
     }
 
-    return NextResponse.json(toCamelCase(result[0]), { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error('[ACCRUED_VALUES_POST]', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

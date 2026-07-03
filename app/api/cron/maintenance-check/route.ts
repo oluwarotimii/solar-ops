@@ -43,7 +43,6 @@ export async function GET(request: Request) {
       missedOccurrencesUpdated: result.length,
     })
   } catch (error) {
-    console.error("Maintenance check error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

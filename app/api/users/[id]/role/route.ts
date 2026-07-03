@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getDbSql } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+import { z } from "zod";
+
+const updateRoleSchema = z.object({
+  roleId: z.string().uuid("Invalid role ID"),
+});
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
@@ -14,7 +19,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   try {
-    const { roleId } = await request.json();
+    const body = await request.json();
+    const validation = updateRoleSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 });
+    }
+
+    const { roleId } = validation.data;
     const db = getDbSql();
     await db`
       UPDATE users
@@ -23,7 +34,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     `;
     return NextResponse.json({ message: 'User role updated successfully' });
   } catch (error) {
-    console.error('Error updating user role:', error);
     return NextResponse.json({ error: 'Failed to update user role' }, { status: 500 });
   }
 }

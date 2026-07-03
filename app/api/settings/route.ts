@@ -1,8 +1,10 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from "zod";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
-import { getDbSql, toCamelCase } from "@/lib/db";
+import { prisma } from "@/lib/db";
+
+const settingsSchema = z.record(z.string(), z.string());
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,16 +17,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const sql = getDbSql();
-    const result = await sql`SELECT key, value FROM system_settings`;
-    const settings = result.reduce((acc: any, row: any) => {
-      acc[toCamelCase(row).key] = toCamelCase(row).value;
+    const settings = await prisma.systemSetting.findMany();
+    const result = settings.reduce((acc: Record<string, string>, row) => {
+      acc[row.key] = row.value;
       return acc;
     }, {});
 
-    return NextResponse.json(settings);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('[SETTINGS_GET]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }
@@ -40,22 +40,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const settings = await request.json();
-    const sql = getDbSql();
+    const body = await request.json();
+    const parsed = settingsSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", errors: parsed.error.errors }, { status: 400 });
+    }
+    const settings = parsed.data;
 
-    for (const key in settings) {
-      if (settings.hasOwnProperty(key)) {
-        await sql`
-          INSERT INTO system_settings (key, value)
-          VALUES (${key}, ${String(settings[key])})
-          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-        `;
-      }
+    for (const [key, value] of Object.entries(settings)) {
+      await prisma.systemSetting.upsert({
+        where: { key },
+        update: { value: String(value) },
+        create: { key, value: String(value) },
+      });
     }
 
     return NextResponse.json({ message: 'Settings updated successfully' });
   } catch (error) {
-    console.error('[SETTINGS_PUT]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }

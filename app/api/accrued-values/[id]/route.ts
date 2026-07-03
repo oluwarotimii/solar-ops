@@ -1,7 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getDbSql, toCamelCase } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+
+const updateAccruedValueSchema = z.object({
+  rating: z.number().optional(),
+})
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -59,7 +64,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(accruedValue);
   } catch (error) {
-    console.error("Accrued value GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -76,7 +80,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const { id } = params;
-    const { rating } = await request.json();
+    const body = await request.json();
+    const parsed = updateAccruedValueSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
+    }
+    const { rating } = parsed.data;
     const sql = getDbSql();
 
     const result = await sql`
@@ -92,7 +101,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(result[0]));
   } catch (error) {
-    console.error("Accrued value PUT error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -123,7 +131,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ message: "Accrued value deleted successfully" });
   } catch (error) {
-    console.error("Accrued value DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

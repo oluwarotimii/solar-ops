@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast"
 import UserAccruedDetailsDialog from "@/components/user-accrued-details-dialog";
 import type { AccruedValueDisplay, AccruedValueDetailed, User } from "@/types";
 import { formatNaira, formatNumberWithCommas } from "@/lib/utils";
+import { MonetaryValue } from "@/components/ui/monetary-value";
 
 export default function AccruedValuesPage() {
   const { toast } = useToast();
@@ -255,7 +256,7 @@ export default function AccruedValuesPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Total Earned Across All Users</p>
-                <p className="text-2xl font-bold">{formatNaira(totalEarned)}</p>
+                <p className="text-2xl font-bold"><MonetaryValue value={totalEarned} /></p>
               </div>
             </div>
           </CardContent>
@@ -385,7 +386,7 @@ export default function AccruedValuesPage() {
                     <CardContent>
                       <div className="flex justify-between items-center">
                         <p className="text-sm font-medium">Total Earned</p>
-                        <p className="text-lg font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</p>
+                        <p className="text-lg font-bold text-green-600"><MonetaryValue value={parseFloat(value.totalEarnedAmount.toString())} /></p>
                       </div>
                     </CardContent>
                   </Card>
@@ -417,7 +418,7 @@ export default function AccruedValuesPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="font-bold text-green-600">{formatNaira(parseFloat(value.totalEarnedAmount.toString()))}</span>
+                          <span className="font-bold text-green-600"><MonetaryValue value={parseFloat(value.totalEarnedAmount.toString())} /></span>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="outline" size="sm">View Details</Button>

@@ -1,0 +1,2 @@
+I need to work on the app all round because  first the loading screen after I edited as the admin the already staff that aready marked as completed was taken back to the assigned status it was meant to be marked as completed directly you get i had 2 techs assigned before then
+ i remove one and  like that also on the jobs page when i tried to mark as completed it was unresponsive for a while before it  marked as completed there was no form of warning  

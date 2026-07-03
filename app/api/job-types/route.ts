@@ -2,6 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { toCamelCase, getDbSql } from "@/lib/db"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/auth"
+import { z } from "zod"
+
+const createJobTypeSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  description: z.string().optional().nullable(),
+  color: z.string().min(1, "Color is required").max(7),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +28,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(jobTypes)
   } catch (error) {
-    console.error("Job types fetch error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -37,13 +43,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const sql = getDbSql();
-
-    const { name, description, color } = await request.json()
-
-    if (!name || !color) {
-      return NextResponse.json({ error: "Name and color are required" }, { status: 400 })
+    const body = await request.json()
+    const validation = createJobTypeSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 })
     }
+
+    const { name, description, color } = validation.data
+
+    const sql = getDbSql();
 
     const result = await sql`
       INSERT INTO job_types (name, description, color)
@@ -55,7 +63,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newJobType, { status: 201 })
   } catch (error) {
-    console.error("Job type creation error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

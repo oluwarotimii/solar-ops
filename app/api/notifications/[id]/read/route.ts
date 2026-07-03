@@ -1,8 +1,11 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from "zod";
 import { getDbSql } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+
+const markReadSchema = z.object({}).optional();
 
 export async function PATCH(
   request: NextRequest,
@@ -27,7 +30,6 @@ export async function PATCH(
 
     return NextResponse.json({ message: 'Notification marked as read' });
   } catch (error) {
-    console.error('[NOTIFICATION_PATCH_READ]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }

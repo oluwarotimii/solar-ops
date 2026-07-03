@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getDbSql } from '@/lib/db';
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+import { z } from "zod";
+
+const updateStatusSchema = z.object({
+  status: z.enum(["active", "inactive", "pending", "deactivated"], { required_error: "Status is required" }),
+});
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
@@ -15,11 +20,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   try {
     const { id } = params;
-    const { status } = await request.json();
-
-    if (!status) {
-      return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+    const body = await request.json();
+    const validation = updateStatusSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ errors: validation.error.errors }, { status: 400 });
     }
+
+    const { status } = validation.data;
 
     const db = getDbSql();
     const result = await db`
@@ -36,7 +43,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     return NextResponse.json(result[0]);
   } catch (error) {
-    console.error('Error updating user status:', error);
     return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 });
   }
 }

@@ -1,10 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { toCamelCase, getDbSql } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
 
-// GET a single maintenance occurrence
+const updateOccurrenceSchema = z.object({
+  status: z.string().optional(),
+  assignedTo: z.string().optional().nullable(),
+  priority: z.string().optional(),
+});
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
   if (response) {
@@ -27,12 +33,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(occurrence));
   } catch (error) {
-    console.error("Maintenance occurrence fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-// UPDATE a maintenance occurrence (e.g., change status)
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
   if (response) {
@@ -42,8 +46,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   const isAdmin = hasPermission(user, 'maintenance:update');
 
   try {
+    const body = await request.json();
+    const parsed = updateOccurrenceSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
+    }
+
+    const occurrenceData = parsed.data;
     const sql = getDbSql();
-    const occurrenceData = await request.json();
 
     const [currentOccurrence] = await sql`
       SELECT assigned_to, status, scheduled_date FROM maintenance_occurrences WHERE id = ${params.id}
@@ -83,7 +93,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const previousStatus = currentOccurrence.status;
     const newStatus = updatedOccurrence.status;
 
-    // Case 1: Job marked as completed
     if (newStatus === 'completed' && previousStatus !== 'completed') {
       const [template] = await sql`
         SELECT mt.job_value 
@@ -96,7 +105,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const completionDate = new Date();
         const [existingAccrued] = await sql`SELECT id FROM accrued_values WHERE maintenance_occurrence_id = ${updatedOccurrence.id}`;
 
-        // The job_value for maintenance templates is already the monthly value, no division needed
         const monthlyValue = template.job_value;
 
         if (existingAccrued) {
@@ -126,7 +134,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         }
       }
       
-      // Log completion event
       await logAuditEvent({
         userId: user.id,
         action: "maintenance_occurrence_completed",
@@ -140,13 +147,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         request,
       });
     }
-    // Case 2: Job no longer completed
     else if (newStatus !== 'completed' && previousStatus === 'completed') {
       await sql`
         DELETE FROM accrued_values WHERE maintenance_occurrence_id = ${params.id}
       `;
       
-      // Log status change event
       await logAuditEvent({
         userId: user.id,
         action: "maintenance_occurrence_status_changed",
@@ -160,9 +165,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         request,
       });
     }
-    // Case 3: Other status changes
     else if (newStatus !== previousStatus) {
-      // Log status change event
       await logAuditEvent({
         userId: user.id,
         action: "maintenance_occurrence_status_changed",
@@ -179,7 +182,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(updatedOccurrence));
   } catch (error) {
-    console.error("Maintenance occurrence update error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -197,12 +199,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const sql = getDbSql();
     
-    // First delete all accrued values associated with this occurrence
     await sql`
       DELETE FROM accrued_values WHERE maintenance_occurrence_id = ${params.id}
     `;
     
-    // Then delete the occurrence
     const result = await sql`
       DELETE FROM maintenance_occurrences WHERE id = ${params.id}
     `;
@@ -213,7 +213,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ message: "Maintenance occurrence deleted successfully" });
   } catch (error) {
-    console.error("Maintenance occurrence delete error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

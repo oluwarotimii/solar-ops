@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @unique @db.VarChar(100)
+  description String?
+  isAdmin     Boolean?  @default(false) @map("is_admin")
+  permissions Json?     @default("{}")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                  String                  @unique @db.VarChar(255)
+  passwordHash           String                  @map("password_hash") @db.VarChar(255)
+  firstName              String                  @map("first_name") @db.VarChar(100)
+  lastName               String                  @map("last_name") @db.VarChar(100)
+  phone                  String?                 @db.VarChar(20)
+  roleId                 String?                 @map("role_id") @db.Uuid
+  status                 String?                 @default("active") @db.VarChar(20)
+  createdAt              DateTime?               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime?               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  accruedValues          AccruedValue[]
+  auditLogs              AuditLog[]
+  checkinLogs            CheckinLog[]
+  gpsLogs                GpsLog[]
+  jobMedia               JobMedia[]
+  jobTechnicians         JobTechnician[]
+  createdJobs            Job[]                   @relation("CreatedBy")
+  maintenanceOccurrences MaintenanceOccurrence[]
+  maintenanceTemplates   MaintenanceTemplate[]   @relation("TemplateAssignedTo")
+  maintenanceCreated     MaintenanceTemplate[]   @relation("TemplateCreatedBy")
+  notificationsReceived  Notification[]          @relation("NotificationRecipient")
+  notificationsSent      Notification[]          @relation("NotificationSender")
+  pushSubscriptions      PushSubscription[]
+  timeEntries            TimeEntry[]
+  role                   Role?                   @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([email], map: "idx_users_email")
+  @@index([roleId], map: "idx_users_role_id")
+  @@map("users")
+}
+
+model JobType {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar(100)
+  description String?
+  baseValue   Decimal?  @default(0) @map("base_value") @db.Decimal(12, 2)
+  color       String?   @default("#3B82F6") @db.VarChar(7)
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  jobs        Job[]
+
+  @@map("job_types")
+}
+
+model Job {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String          @db.VarChar(255)
+  description     String?
+  jobTypeId       String?         @map("job_type_id") @db.Uuid
+  createdBy       String?         @map("created_by") @db.Uuid
+  status          String?         @default("assigned") @db.VarChar(20)
+  priority        String?         @default("medium") @db.VarChar(10)
+  locationAddress String          @map("location_address")
+  locationLat     Decimal?        @map("location_lat") @db.Decimal(10, 8)
+  locationLng     Decimal?        @map("location_lng") @db.Decimal(11, 8)
+  scheduledDate   DateTime?       @map("scheduled_date") @db.Date
+  scheduledTime   DateTime?       @map("scheduled_time") @db.Time(6)
+  jobValue        Decimal?        @default(0) @map("job_value") @db.Decimal(12, 2)
+  instructions    String?
+  completedAt     DateTime?       @map("completed_at") @db.Timestamptz(6)
+  isArchived      Boolean?        @default(false) @map("is_archived")
+  archivedAt      DateTime?       @map("archived_at") @db.Timestamptz(6)
+  createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime?       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  accruedValues   AccruedValue[]
+  checkinLogs     CheckinLog[]
+  gpsLogs         GpsLog[]
+  jobMedia        JobMedia[]
+  jobTechnicians  JobTechnician[]
+  createdUser     User?           @relation("CreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jobType         JobType?        @relation(fields: [jobTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  notifications   Notification[]
+  timeEntries     TimeEntry[]
+
+  @@index([createdAt], map: "idx_jobs_created_at")
+  @@index([status], map: "idx_jobs_status")
+  @@map("jobs")
+}
+
+model JobTechnician {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId        String?   @map("job_id") @db.Uuid
+  technicianId String?   @map("technician_id") @db.Uuid
+  role         String?   @default("assistant") @db.VarChar(20)
+  rating       Decimal?  @db.Decimal(3, 2)
+  feedback     String?
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  job          Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  technician   User?     @relation(fields: [technicianId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([jobId], map: "idx_job_technicians_job_id")
+  @@index([technicianId], map: "idx_job_technicians_technician_id")
+  @@map("job_technicians")
+}
+
+model GpsLog {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?   @map("user_id") @db.Uuid
+  jobId       String?   @map("job_id") @db.Uuid
+  latitude    Decimal   @db.Decimal(10, 8)
+  longitude   Decimal   @db.Decimal(11, 8)
+  accuracy    Decimal?  @db.Decimal(8, 2)
+  timestamp   DateTime? @default(now()) @db.Timestamptz(6)
+  journeyType String?   @default("active") @map("journey_type") @db.VarChar(20)
+  job         Job?      @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([timestamp], map: "idx_gps_logs_timestamp")
+  @@index([userId], map: "idx_gps_logs_user_id")
+  @@map("gps_logs")
+}
+
+model CheckinLog {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  jobId     String?   @map("job_id") @db.Uuid
+  type      String    @db.VarChar(10)
+  latitude  Decimal?  @db.Decimal(10, 8)
+  longitude Decimal?  @db.Decimal(11, 8)
+  notes     String?
+  timestamp DateTime? @default(now()) @db.Timestamptz(6)
+  job       Job?      @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("checkin_logs")
+}
+
+model JobMedia {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId       String?   @map("job_id") @db.Uuid
+  uploadedBy  String?   @map("uploaded_by") @db.Uuid
+  fileName    String    @map("file_name") @db.VarChar(255)
+  fileType    String    @map("file_type") @db.VarChar(50)
+  fileSize    Int?      @map("file_size")
+  storagePath String    @map("storage_path")
+  caption     String?
+  uploadedAt  DateTime? @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  job         Job?      @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        User?     @relation(fields: [uploadedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("job_media")
+}
+
+model MaintenanceTemplate {
+  id                 String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String                  @db.VarChar(255)
+  description        String?
+  siteLocation       String?                 @map("site_location")
+  jobValue           Decimal?                @default(0) @map("job_value") @db.Decimal(12, 2)
+  assignedTo         String?                 @map("assigned_to") @db.Uuid
+  createdBy          String?                 @map("created_by") @db.Uuid
+  recurrenceType     String                  @map("recurrence_type") @db.VarChar(20)
+  recurrenceInterval Int?                    @default(1) @map("recurrence_interval")
+  dayOfWeek          Int?                    @map("day_of_week")
+  dayOfMonth         Int?                    @map("day_of_month")
+  monthOfYear        Int?                    @map("month_of_year")
+  isActive           Boolean?                @default(true) @map("is_active")
+  createdAt          DateTime?               @default(now()) @map("created_at") @db.Timestamptz(6)
+  occurrences        MaintenanceOccurrence[]
+  assignedUser       User?                   @relation("TemplateAssignedTo", fields: [assignedTo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser        User?                   @relation("TemplateCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([assignedTo], map: "idx_maintenance_templates_assigned_to")
+  @@map("maintenance_templates")
+}
+
+model MaintenanceOccurrence {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId    String?              @map("template_id") @db.Uuid
+  scheduledDate DateTime             @map("scheduled_date") @db.Date
+  assignedTo    String?              @map("assigned_to") @db.Uuid
+  status        String?              @default("scheduled") @db.VarChar(20)
+  priority      String?              @default("medium") @db.VarChar(10)
+  completedAt   DateTime?            @map("completed_at") @db.Timestamptz(6)
+  createdAt     DateTime?            @default(now()) @map("created_at") @db.Timestamptz(6)
+  accruedValues AccruedValue[]
+  assignedUser  User?                @relation(fields: [assignedTo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  template      MaintenanceTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([assignedTo], map: "idx_maintenance_occurrences_assigned_to")
+  @@index([scheduledDate], map: "idx_maintenance_occurrences_scheduled_date")
+  @@index([status], map: "idx_maintenance_occurrences_status")
+  @@index([templateId], map: "idx_maintenance_occurrences_template_id")
+  @@map("maintenance_occurrences")
+}
+
+model AccruedValue {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String?                @map("user_id") @db.Uuid
+  jobId                   String?                @map("job_id") @db.Uuid
+  maintenanceOccurrenceId String?                @map("maintenance_occurrence_id") @db.Uuid
+  jobValue                Decimal                @map("job_value") @db.Decimal(12, 2)
+  earnedAmount            Decimal                @map("earned_amount") @db.Decimal(12, 2)
+  rating                  Decimal?               @db.Decimal(3, 2)
+  month                   Int
+  year                    Int
+  createdAt               DateTime?              @default(now()) @map("created_at") @db.Timestamptz(6)
+  job                     Job?                   @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  maintenanceOccurrence   MaintenanceOccurrence? @relation(fields: [maintenanceOccurrenceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                    User?                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([jobId, userId])
+  @@unique([maintenanceOccurrenceId, userId])
+  @@index([month, year], map: "idx_accrued_values_month_year")
+  @@index([userId], map: "idx_accrued_values_user_id")
+  @@map("accrued_values")
+}
+
+model Notification {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientId  String?   @map("recipient_id") @db.Uuid
+  senderId     String?   @map("sender_id") @db.Uuid
+  title        String    @db.VarChar(255)
+  message      String
+  type         String?   @default("general") @db.VarChar(50)
+  relatedJobId String?   @map("related_job_id") @db.Uuid
+  readAt       DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  recipient    User?     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  relatedJob   Job?      @relation(fields: [relatedJobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sender       User?     @relation("NotificationSender", fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([recipientId], map: "idx_notifications_recipient_id")
+  @@map("notifications")
+}
+
+model SystemSetting {
+  key         String    @id @db.VarChar(100)
+  value       String
+  description String?
+  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_settings")
+}
+
+model PushSubscription {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  endpoint  String
+  p256dhKey String    @map("p256dh_key")
+  authKey   String    @map("auth_key")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
+}
+
+model AuditLog {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?   @map("user_id") @db.Uuid
+  action     String    @db.VarChar(255)
+  targetType String?   @map("target_type") @db.VarChar(100)
+  targetId   String?   @map("target_id") @db.Uuid
+  details    Json?
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  user       User?     @relation(fields: [userId], references: [id], onUpdate: NoAction)
+
+  @@index([targetType, targetId], map: "idx_audit_logs_target")
+  @@index([userId], map: "idx_audit_logs_user_id")
+  @@map("audit_logs")
+}
+
+model TimeEntry {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  jobId     String?   @map("job_id") @db.Uuid
+  clockIn   DateTime  @default(now()) @map("clock_in") @db.Timestamptz(6)
+  clockOut  DateTime? @map("clock_out") @db.Timestamptz(6)
+  latitude  Decimal?  @map("latitude") @db.Decimal(10, 8)
+  longitude Decimal?  @map("longitude") @db.Decimal(11, 8)
+  notes     String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  job       Job?      @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("time_entries")
+}

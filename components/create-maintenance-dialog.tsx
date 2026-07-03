@@ -115,12 +115,12 @@ export default function CreateMaintenanceDialog({ users, onTemplateCreated }: Cr
               id="siteLocation"
               value={formData.siteLocation}
               onChange={(e) => setFormData((prev) => ({ ...prev, siteLocation: e.target.value }))}
-              placeholder="123 Main St, City, State ZIP"
+              placeholder="15 Ahmadu Bello Way, Lagos"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jobValue">Job Value</Label>
+            <Label htmlFor="jobValue">Job Value (NGN)</Label>
             <Input
               id="jobValue"
               type="number"

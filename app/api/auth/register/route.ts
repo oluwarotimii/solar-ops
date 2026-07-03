@@ -23,16 +23,13 @@ export async function POST(request: NextRequest) {
     const { email, password, firstName, lastName, phone } = validation.data;
 
     const db = getDbSql();
-    console.log(`[Register Debug] Attempting to register user: ${email}`);
 
     // Check if user already exists
     const existingUser = await db`
       SELECT id FROM users WHERE email = ${email}
     `
-    console.log(`[Register Debug] Existing user check for ${email}:`, existingUser);
 
     if (existingUser.length > 0) {
-      console.log(`[Register Debug] User already exists: ${email}`);
       return NextResponse.json({ error: "User already exists" }, { status: 409 })
     }
 
@@ -40,10 +37,8 @@ export async function POST(request: NextRequest) {
     const userRole = await db`
       SELECT id FROM roles WHERE name = 'User'
     `;
-    console.log(`[Register Debug] User role found:`, userRole);
 
     if (userRole.length === 0) {
-      console.log(`[Register Debug] Default role 'User' not found.`);
       return NextResponse.json({ error: "System error: Default role not found" }, { status: 500 })
     }
 
@@ -61,7 +56,6 @@ export async function POST(request: NextRequest) {
       userId: result[0].id,
     })
   } catch (error) {
-    console.error("Registration error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

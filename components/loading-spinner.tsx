@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface LoadingSpinnerProps {
   text?: string
@@ -21,7 +22,7 @@ export default function LoadingSpinner({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 shadow-lg flex flex-col items-center">
-          <Loader2 className={`${sizeClasses[size]} animate-spin text-primary`} />
+          <Loader2 className={cn(sizeClasses[size], "animate-spin text-primary")} />
           <p className="mt-2 text-sm text-muted-foreground">{text}</p>
         </div>
       </div>
@@ -30,7 +31,7 @@ export default function LoadingSpinner({
 
   return (
     <div className="flex items-center justify-center">
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-primary mr-2`} />
+      <Loader2 className={cn(sizeClasses[size], "animate-spin text-primary mr-2")} />
       <span className="text-sm text-muted-foreground">{text}</span>
     </div>
   )

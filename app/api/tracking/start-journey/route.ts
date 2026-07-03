@@ -1,21 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { authenticateApiRequest } from "@/lib/api-auth"
 import { getDbSql } from "@/lib/db"
 import { hasPermission } from "@/lib/auth"
 import { logAuditEvent } from "@/lib/audit"
 
+const startJourneySchema = z.object({
+  jobId: z.string().min(1),
+  latitude: z.number(),
+  longitude: z.number(),
+})
+
 export async function POST(request: NextRequest) {
-  const { user, response } = await authenticateApiRequest(request);
-  if (response) {
-    return response;
-  }
-
-  if (!user || !hasPermission(user, 'tracking:start_journey')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
   try {
-    const { jobId, latitude, longitude } = await request.json()
+    const { user, response } = await authenticateApiRequest(request);
+    if (response) {
+      return response;
+    }
+
+    if (!user || !hasPermission(user, 'tracking:start_journey')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await request.json()
+    const parsed = startJourneySchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.format() }, { status: 400 })
+    }
+    const { jobId, latitude, longitude } = parsed.data
 
     const sql = getDbSql();
     await sql`

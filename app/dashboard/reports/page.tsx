@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, TrendingUp, Download, Calendar, DollarSign, Users, Target, Loader2, AlertCircle } from "lucide-react"
+import { BarChart3, TrendingUp, Download, Calendar, DollarSign, Users, Target, Loader2, AlertCircle, Clock } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { formatNaira } from "@/lib/utils"
+import { MonetaryValue } from "@/components/ui/monetary-value"
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState("30")
@@ -63,14 +65,6 @@ export default function ReportsPage() {
       setCompletionRate(rate);
     }
   }, [reportData])
-
-  const formatNaira = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
 
   const handleExport = () => {
     if (!reportData) {
@@ -282,6 +276,68 @@ export default function ReportsPage() {
         description: "Trend data is not yet available for export." 
       })
       return
+    } else if (reportType === 'time' && reportData.timeOverview) {
+      // Time analytics overview
+      headers = ["Metric", "Value"]
+      rows = [
+        ["Active Technicians", reportData.timeOverview.activeTechnicians],
+        ["Total Shifts", reportData.timeOverview.totalShifts],
+        ["Total Hours Worked", parseFloat(reportData.timeOverview.totalHoursWorked).toFixed(1)],
+      ]
+      csvContent += "Time Analytics Overview\n"
+      csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+      rows.forEach(row => {
+        const escapedRow = row.map(field => {
+          if (field === null || field === undefined) return '""'
+          return `"${String(field).replace(/"/g, '""')}"`
+        })
+        csvContent += escapedRow.join(",") + "\n"
+      })
+      csvContent += "\n"
+
+      // Hours by Technician
+      if (reportData.hoursByTechnician) {
+        headers = ["Name", "Email", "Shifts", "Total Hours", "Avg Shift (h)"]
+        rows = reportData.hoursByTechnician.map((d: any) => [
+          d.name, d.email, d.shiftsCount,
+          parseFloat(d.totalHours).toFixed(1),
+          parseFloat(d.avgShiftHours).toFixed(1)
+        ])
+        csvContent += "Hours by Technician\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+        csvContent += "\n"
+      }
+
+      // Hours by Job
+      if (reportData.hoursByJob) {
+        headers = ["Job Title", "Type", "Clock-ins", "Total Hours", "Avg/Shift", "Job Value"]
+        rows = reportData.hoursByJob.map((d: any) => [
+          d.title, d.jobType || 'N/A', d.clockIns,
+          parseFloat(d.totalHours).toFixed(1),
+          parseFloat(d.avgHoursPerShift).toFixed(1),
+          formatNaira(d.jobValue || 0)
+        ])
+        csvContent += "Hours by Job\n"
+        csvContent += headers.map(field => `"${field}"`).join(",") + "\n"
+        rows.forEach(row => {
+          const escapedRow = row.map(field => {
+            if (field === null || field === undefined) return '""'
+            return `"${String(field).replace(/"/g, '""')}"`
+          })
+          csvContent += escapedRow.join(",") + "\n"
+        })
+      }
+
+      // Reset
+      headers = []
+      rows = []
     } else {
       toast({ 
         title: "Export not available", 
@@ -342,6 +398,7 @@ export default function ReportsPage() {
           <TabsTrigger value="jobs">Job Analysis</TabsTrigger>
           <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
           <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+          <TabsTrigger value="time">Time</TabsTrigger>
           <TabsTrigger value="trends">Trends</TabsTrigger>
         </TabsList>
 
@@ -397,7 +454,7 @@ export default function ReportsPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.totalRevenue || 0)}</div>
+                <div className="text-2xl font-bold"><MonetaryValue value={reportData?.overviewStats?.totalRevenue || 0} /></div>
               </CardContent>
             </Card>
 
@@ -407,7 +464,7 @@ export default function ReportsPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.completedRevenue || 0)}</div>
+                <div className="text-2xl font-bold"><MonetaryValue value={reportData?.overviewStats?.completedRevenue || 0} /></div>
               </CardContent>
             </Card>
 
@@ -417,7 +474,7 @@ export default function ReportsPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNaira(reportData?.overviewStats?.averageJobValue || 0)}</div>
+                <div className="text-2xl font-bold"><MonetaryValue value={reportData?.overviewStats?.averageJobValue || 0} /></div>
               </CardContent>
             </Card>
           </div>
@@ -510,7 +567,7 @@ export default function ReportsPage() {
                   <div key={index} className="space-y-1">
                     <div className="flex justify-between text-sm font-medium">
                       <span>{job.name}</span>
-                      <span>{formatNaira(job.totalValue)}</span>
+                      <MonetaryValue value={job.totalValue} />
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>{job.jobCount} jobs</span>
@@ -551,7 +608,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="text-left md:text-right">
                           <span className="md:hidden font-semibold">Total Earned: </span>
-                          {formatNaira(tech.totalEarned)}
+                          <MonetaryValue value={tech.totalEarned} />
                         </div>
                         <div className="text-left md:text-right">
                           <span className="md:hidden font-semibold">Avg. Rating: </span>
@@ -616,11 +673,11 @@ export default function ReportsPage() {
                         </div>
                         <div className="text-left md:text-right">
                           <span className="md:hidden font-semibold">Total Value: </span>
-                          {formatNaira(user.totalValue)}
+                          <MonetaryValue value={user.totalValue} />
                         </div>
                         <div className="text-left md:text-right">
                           <span className="md:hidden font-semibold">Total Earned: </span>
-                          {formatNaira(user.totalEarned)}
+                          <MonetaryValue value={user.totalEarned} />
                         </div>
                       </div>
                     ))}
@@ -695,6 +752,106 @@ export default function ReportsPage() {
               <p className="mt-1 text-sm text-gray-500">Historical data charts will be available here in a future update.</p>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="time" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Technicians</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData?.timeOverview?.activeTechnicians || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Shifts</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportData?.timeOverview?.totalShifts || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Hours Worked</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{parseFloat(reportData?.timeOverview?.totalHoursWorked || 0).toFixed(1)}h</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Hours by Technician */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Hours by Technician</CardTitle>
+              <CardDescription>Shift and hour breakdown per technician for the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <div className="border rounded-lg">
+                  <div className="hidden md:grid md:grid-cols-4 font-semibold p-4 bg-gray-50 dark:bg-gray-700">
+                    <div>Name</div>
+                    <div className="text-right">Shifts</div>
+                    <div className="text-right">Total Hours</div>
+                    <div className="text-right">Avg Shift (h)</div>
+                  </div>
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {reportData?.hoursByTechnician?.map((tech: any) => (
+                      <div key={tech.id} className="grid grid-cols-2 md:grid-cols-4 p-4 gap-4 items-center">
+                        <div className="md:col-span-1 col-span-2">
+                          <p className="font-medium">{tech.name}</p>
+                          <p className="text-xs text-muted-foreground">{tech.email}</p>
+                        </div>
+                        <div className="text-left md:text-right">{tech.shiftsCount}</div>
+                        <div className="text-left md:text-right">{parseFloat(tech.totalHours).toFixed(1)}h</div>
+                        <div className="text-left md:text-right">{parseFloat(tech.avgShiftHours).toFixed(1)}h</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hours by Job */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Time Spent Per Job</CardTitle>
+              <CardDescription>Hours logged against specific jobs for the selected period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <div className="border rounded-lg">
+                  <div className="hidden md:grid md:grid-cols-5 font-semibold p-4 bg-gray-50 dark:bg-gray-700">
+                    <div>Job Title</div>
+                    <div className="text-right">Clock-ins</div>
+                    <div className="text-right">Total Hours</div>
+                    <div className="text-right">Avg/Shift</div>
+                    <div className="text-right">Job Value</div>
+                  </div>
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {reportData?.hoursByJob?.map((job: any) => (
+                      <div key={job.id} className="grid grid-cols-2 md:grid-cols-5 p-4 gap-4 items-center">
+                        <div className="md:col-span-1 col-span-2">
+                          <p className="font-medium">{job.title}</p>
+                          <p className="text-xs text-muted-foreground">{job.jobType || 'N/A'}</p>
+                        </div>
+                        <div className="text-left md:text-right">{job.clockIns}</div>
+                        <div className="text-left md:text-right">{parseFloat(job.totalHours).toFixed(1)}h</div>
+                        <div className="text-left md:text-right">{parseFloat(job.avgHoursPerShift).toFixed(1)}h</div>
+                        <div className="text-left md:text-right"><MonetaryValue value={job.jobValue || 0} /></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     )

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getDbSql } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { authenticateApiRequest } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 
@@ -14,35 +14,31 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const db = getDbSql();
+    const existingEntry = await prisma.timeEntry.findFirst({
+      where: { userId: user.id, clockOut: null },
+      select: { id: true },
+    });
 
-    // Find the open time entry
-    const existingEntry = await db`
-      SELECT id FROM time_entries WHERE user_id = ${user.id} AND clock_out IS NULL
-    `;
-
-    if (existingEntry.length === 0) {
+    if (!existingEntry) {
       return NextResponse.json({ error: 'User is not clocked in' }, { status: 409 });
     }
 
-    const result = await db`
-      UPDATE time_entries
-      SET clock_out = NOW()
-      WHERE id = ${existingEntry[0].id}
-      RETURNING id, clock_in, clock_out, notes;
-    `;
+    const result = await prisma.timeEntry.update({
+      where: { id: existingEntry.id },
+      data: { clockOut: new Date() },
+      select: { id: true, clockIn: true, clockOut: true, jobId: true, notes: true },
+    });
 
     await logAuditEvent({
       userId: user.id,
       action: 'user_clock_out',
       targetType: 'time_entry',
-      targetId: String(result[0].id), // Convert integer ID to string
+      targetId: result.id,
       request,
     });
 
-    return NextResponse.json(result[0]);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error clocking out:', error);
     return NextResponse.json({ error: 'Failed to clock out' }, { status: 500 });
   }
 }

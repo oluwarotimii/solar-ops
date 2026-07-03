@@ -1,7 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getDbSql, toCamelCase } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
+
+const updateNotificationSchema = z.object({
+  title: z.string().min(1),
+  message: z.string().min(1),
+  type: z.string().optional().default('general'),
+  readAt: z.string().nullable().optional(),
+});
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { user, response } = await authenticateApiRequest(request);
@@ -25,7 +33,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(notification[0]));
   } catch (error) {
-    console.error('[NOTIFICATION_GET]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }
@@ -41,7 +48,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const { title, message, type, readAt } = await request.json();
+    const body = await request.json();
+    const parsed = updateNotificationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
+    }
+
+    const { title, message, type, readAt } = parsed.data;
     const sql = getDbSql();
 
     const result = await sql`
@@ -61,7 +74,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json(toCamelCase(result[0]));
   } catch (error) {
-    console.error('[NOTIFICATION_PUT]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }
@@ -88,7 +100,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Notification deleted' });
   } catch (error) {
-    console.error('[NOTIFICATION_DELETE]', error);
     return new NextResponse('Internal Error', { status: 500 });
   }
 }

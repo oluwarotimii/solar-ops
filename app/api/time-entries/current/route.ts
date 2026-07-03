@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getDbSql } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { authenticateApiRequest } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
@@ -13,19 +13,29 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const db = getDbSql();
+    const result = await prisma.timeEntry.findFirst({
+      where: { userId: user.id, clockOut: null },
+      include: {
+        job: { select: { title: true, status: true } },
+      },
+    });
 
-    const result = await db`
-      SELECT id, clock_in, notes FROM time_entries WHERE user_id = ${user.id} AND clock_out IS NULL
-    `;
-
-    if (result.length === 0) {
+    if (!result) {
       return NextResponse.json({ isClockedIn: false });
     }
 
-    return NextResponse.json({ isClockedIn: true, ...result[0] });
+    return NextResponse.json({
+      isClockedIn: true,
+      id: result.id,
+      jobId: result.jobId,
+      jobTitle: result.job?.title ?? null,
+      jobStatus: result.job?.status ?? null,
+      clockIn: result.clockIn,
+      latitude: result.latitude ? Number(result.latitude) : null,
+      longitude: result.longitude ? Number(result.longitude) : null,
+      notes: result.notes,
+    });
   } catch (error) {
-    console.error('Error fetching current time entry:', error);
     return NextResponse.json({ error: 'Failed to fetch current time entry' }, { status: 500 });
   }
 }

@@ -22,7 +22,6 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
-  MapPin,
   Wrench,
   TrendingUp,
   Bell,
@@ -34,14 +33,14 @@ import {
   DollarSign,
   Shield,
   History,
-  Archive
+  Archive,
+
 } from "lucide-react"
 import type { User as UserType } from "@/types"
 
 import { usePermissions } from "@/contexts/permission-context";
 import { useSidebar } from "@/components/ui/sidebar";
 
-// Navigation items
 const navConfig = [
   {
     title: "Overview",
@@ -137,7 +136,6 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
   const { isMobile, setOpenMobile } = useSidebar();
   const { hasPermission, isLoading } = usePermissions();
 
-  // Get user info from localStorage (demo)
   const userEmail = user.email;
   const userName = user.email
     .split("@")[0]
@@ -160,20 +158,19 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
   };
 
   if (isLoading) {
-    // Optionally, render a loading state for the sidebar
-    return <Sidebar {...props}><SidebarHeader /><SidebarContent><div>Loading...</div></SidebarContent><SidebarFooter /></Sidebar>;
+    return <Sidebar {...props}><SidebarHeader /><SidebarContent><div className="px-4 py-8 text-sm text-sidebar-foreground/60">Loading...</div></SidebarContent><SidebarFooter /></Sidebar>;
   }
 
   return (
     <Sidebar {...props}>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: "hsl(var(--brand-gold))", color: "hsl(var(--brand-navy))" }}>
             <TrendingUp className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <span className="font-semibold">Solar Field Ops</span>
-            <span className="text-xs text-muted-foreground">Management System</span>
+            <span className="font-semibold text-sidebar-foreground">Solar Field Ops</span>
+            <span className="text-xs text-sidebar-foreground/60">Management System</span>
           </div>
         </div>
       </SidebarHeader>
@@ -196,7 +193,7 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
                       <Link href={item.url} onClick={() => { if (isMobile) setOpenMobile(false); }}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                    </Link>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -213,13 +210,13 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="w-full">
                   <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs">{getInitials(displayName)}</AvatarFallback>
+                    <AvatarFallback className="text-xs bg-sidebar-accent text-sidebar-accent-foreground">{getInitials(displayName)}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-medium">{displayName}</span>
-                    <span className="text-xs text-muted-foreground">{userEmail}</span>
+                    <span className="text-sm font-medium text-sidebar-foreground">{displayName}</span>
+                    <span className="text-xs text-sidebar-foreground/60">{userEmail}</span>
                   </div>
-                  <ChevronUp className="ml-auto h-4 w-4" />
+                  <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/60" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">

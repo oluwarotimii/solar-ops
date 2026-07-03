@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(technicians);
   } catch (error) {
-    console.error('Error fetching technicians:', error);
     return NextResponse.json({ error: 'Failed to fetch technicians' }, { status: 500 });
   }
 }

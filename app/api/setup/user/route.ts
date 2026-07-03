@@ -1,16 +1,23 @@
 import { NextRequest } from 'next/server';
 import { getDbSql } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { z } from "zod";
+
+const createUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email"),
+  phone: z.string().min(1, "Phone is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, password } = body;
-    
-    // Validate input
-    if (!name || !email || !phone || !password) {
-      return Response.json({ message: 'All fields are required' }, { status: 400 });
+    const parsed = createUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return Response.json({ message: "Validation failed", errors: parsed.error.errors }, { status: 400 });
     }
+    const { name, email, phone, password } = parsed.data;
     
     const sql = getDbSql();
     
@@ -51,7 +58,6 @@ export async function POST(request: NextRequest) {
     
     return Response.json({ message: 'Super Admin user created successfully' });
   } catch (error) {
-    console.error('User creation error:', error);
     return Response.json({ message: 'Failed to create user', error: error.message }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import type React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { ChevronRight, Edit, Trash2, CheckSquare } from "lucide-react"
 
 interface MobileTableCardProps {
@@ -48,7 +49,7 @@ function MobileTableCard({
               {status && (
                 <Badge
                   variant="outline"
-                  className={`text-xs px-2.5 py-1 font-medium ${statusColor || "bg-gray-100 text-gray-700"}`}
+                  className={cn("text-xs px-2.5 py-1 font-medium", statusColor || "bg-gray-100 text-gray-700")}
                 >
                   {status}
                 </Badge>
