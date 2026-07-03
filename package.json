@@ -8,7 +8,8 @@
     "lint": "next lint",
     "start": "next start",
     "generate-icons": "node generate-icons.js",
-    "setup-db": "curl -X POST http://localhost:3000/api/setup/init"
+    "setup-db": "curl -X POST http://localhost:3000/api/setup/init",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
