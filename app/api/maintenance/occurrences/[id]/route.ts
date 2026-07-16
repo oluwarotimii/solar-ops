@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { toCamelCase, getDbSql } from "@/lib/db";
+import { toCamelCase, getDbSql, prisma } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
@@ -203,11 +203,11 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       DELETE FROM accrued_values WHERE maintenance_occurrence_id = ${params.id}
     `;
     
-    const result = await sql`
+    const result = await prisma.$executeRaw`
       DELETE FROM maintenance_occurrences WHERE id = ${params.id}
     `;
 
-    if (result.count === 0) {
+    if (result === 0) {
       return NextResponse.json({ error: "Occurrence not found" }, { status: 404 });
     }
 

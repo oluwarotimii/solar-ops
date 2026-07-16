@@ -1,6 +1,5 @@
-import { neon } from "@neondatabase/serverless"
 import { PrismaClient } from "@prisma/client"
-import { PrismaNeon } from "@prisma/adapter-neon"
+import { PrismaPg } from "@prisma/adapter-pg"
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
 
@@ -9,7 +8,7 @@ export function getPrisma(): PrismaClient {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL environment variable is required for PrismaClient")
     }
-    const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL })
+    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
     globalForPrisma.prisma = new PrismaClient({ adapter })
   }
   return globalForPrisma.prisma
@@ -17,24 +16,12 @@ export function getPrisma(): PrismaClient {
 
 export const prisma = getPrisma()
 
-const sql = neon(process.env.DATABASE_URL);
-
-export { sql };
-
 export function getDbSql() {
   if (!process.env.DATABASE_URL) {
-    console.error("[DB Debug] DATABASE_URL environment variable is not set!");
     throw new Error("DATABASE_URL environment variable is required");
   }
-  
-  try {
-    const sql = neon(process.env.DATABASE_URL);
-    console.log("[DB Debug] Database connection successfully created");
-    return sql;
-  } catch (error) {
-    console.error("[DB Debug] Failed to create database connection:", error);
-    throw new Error("Failed to initialize database connection");
-  }
+  return (strings: TemplateStringsArray, ...values: any[]) =>
+    prisma.$queryRaw(strings, ...values) as Promise<any[]>
 }
 
 // Helper function to convert snake_case to camelCase

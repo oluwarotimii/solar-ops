@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getDbSql, toCamelCase } from "@/lib/db";
+import { getDbSql, toCamelCase, prisma } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission, hashPassword } from "@/lib/auth";
 import { z } from "zod";
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const values = keys.map((k) => updates[k]);
     values.push(params.id);
     const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${keys.length + 1} RETURNING id;`;
-    const result = await db.query(query, values);
+    const result = await prisma.$queryRawUnsafe(query, ...values) as any[];
 
     if (result.length === 0) {
       return NextResponse.json({ error: "User not found or no changes made" }, { status: 404 });

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDbSql } from '@/lib/db';
+import { getDbSql, prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { generate } from 'generate-password';
 import { authenticateApiRequest } from '@/lib/api-auth';
@@ -31,9 +31,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const sql = getDbSql();
 
-    const result = await sql`UPDATE users SET password_hash = ${hashedPassword} WHERE id = ${userId}`;
+    const updated = await prisma.$executeRaw`UPDATE users SET password_hash = ${hashedPassword} WHERE id = ${userId}`;
 
-    if (result.count === 0) {
+    if (updated === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 

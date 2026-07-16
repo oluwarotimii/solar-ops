@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { toCamelCase, getDbSql } from "@/lib/db";
+import { toCamelCase, getDbSql, prisma } from "@/lib/db";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import { hasPermission } from "@/lib/auth";
 
@@ -146,11 +146,11 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     `;
     
-    const result = await sql`
+    const result = await prisma.$executeRaw`
       DELETE FROM maintenance_templates WHERE id = ${params.id}
     `;
 
-    if (result.count === 0) {
+    if (result === 0) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 

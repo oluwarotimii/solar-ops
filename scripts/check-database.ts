@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless"
+import { Pool } from "pg"
 
 async function checkDatabase() {
   if (!process.env.DATABASE_URL) {
@@ -6,51 +6,52 @@ async function checkDatabase() {
     process.exit(1)
   }
 
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+
   try {
     console.log("🔗 Connecting to database...")
-    const sql = neon(process.env.DATABASE_URL)
 
-    // Test connection
-    await sql`SELECT 1`
+    const client = await pool.connect()
+    await client.query("SELECT 1")
     console.log("✅ Database connection successful")
 
-    // Check if tables exist
-    const tables = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      ORDER BY table_name
-    `
+    const tablesResult = await client.query(
+      `SELECT table_name 
+       FROM information_schema.tables 
+       WHERE table_schema = 'public' 
+       ORDER BY table_name`
+    )
+    const tables = tablesResult.rows
 
-    console.log("\n📋 Found ${tables.length} tables:") 
+    console.log(`\n📋 Found ${tables.length} tables:`)
     tables.forEach((table: any) => {
       console.log(`  - ${table.table_name}`)
     })
 
-    // Check if we have any roles
-    const roleCount = await sql`SELECT COUNT(*) as count FROM roles`
-    console.log(`
-👥 Roles in database: ${roleCount[0].count}`)
+    const roleResult = await client.query("SELECT COUNT(*) as count FROM roles")
+    console.log(`\n👥 Roles in database: ${roleResult.rows[0].count}`)
 
-    // Check if we have any users
-    const userCount = await sql`SELECT COUNT(*) as count FROM users`
-    console.log(`👤 Users in database: ${userCount[0].count}`)
+    const userResult = await client.query("SELECT COUNT(*) as count FROM users")
+    console.log(`👤 Users in database: ${userResult.rows[0].count}`)
 
-    // Check if we have any job types
-    const jobTypeCount = await sql`SELECT COUNT(*) as count FROM job_types`
-    console.log(`🔧 Job types in database: ${jobTypeCount[0].count}`)
+    const jobTypeResult = await client.query("SELECT COUNT(*) as count FROM job_types")
+    console.log(`🔧 Job types in database: ${jobTypeResult.rows[0].count}`)
 
     if (tables.length === 0) {
       console.log("\n⚠️  No tables found. Run 'npm run setup-db' to create them.")
-    } else if (roleCount[0].count === 0) {
+    } else if (parseInt(roleResult.rows[0].count) === 0) {
       console.log("\n⚠️  No roles found. Run 'npm run setup-db' to seed initial data.")
     } else {
       console.log("\n🎉 Database appears to be set up correctly!")
     }
+
+    client.release()
   } catch (error) {
     console.error("❌ Database check failed:")
     console.error(error)
     process.exit(1)
+  } finally {
+    await pool.end()
   }
 }
 
