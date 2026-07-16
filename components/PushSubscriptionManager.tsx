@@ -71,6 +71,11 @@ export function PushSubscriptionManager() {
         const publicKeyResponse = await fetch('/api/notifications/vapid-public-key');
         const { publicKey } = await publicKeyResponse.json();
 
+        if (!publicKey) {
+          console.log('VAPID public key not configured, skipping push subscription.');
+          return;
+        }
+
         const newSubscription = await swReg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey),

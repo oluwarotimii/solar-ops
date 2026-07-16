@@ -1,0 +1,43 @@
+"use strict";(()=>{var e={};e.id=2461,e.ids=[2461],e.modules={53524:e=>{e.exports=require("@prisma/client")},20399:e=>{e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},30517:e=>{e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},78893:e=>{e.exports=require("buffer")},84770:e=>{e.exports=require("crypto")},76162:e=>{e.exports=require("stream")},21764:e=>{e.exports=require("util")},8678:e=>{e.exports=import("pg")},32275:(e,t,r)=>{r.a(e,async(e,n)=>{try{r.r(t),r.d(t,{originalPathname:()=>f,patchFetch:()=>u,requestAsyncStorage:()=>p,routeModule:()=>c,serverHooks:()=>d,staticGenerationAsyncStorage:()=>m});var s=r(73278),a=r(45002),i=r(54877),o=r(64991),l=e([o]);o=(l.then?(await l)():l)[0];let c=new s.AppRouteRouteModule({definition:{kind:a.x.APP_ROUTE,page:"/api/maintenance/occurrences/route",pathname:"/api/maintenance/occurrences",filename:"route",bundlePath:"app/api/maintenance/occurrences/route"},resolvedPagePath:"C:\\Users\\ADMIN\\Desktop\\code\\Rotex\\solar-ops\\app\\api\\maintenance\\occurrences\\route.ts",nextConfigOutput:"",userland:o}),{requestAsyncStorage:p,staticGenerationAsyncStorage:m,serverHooks:d}=c,f="/api/maintenance/occurrences/route";function u(){return(0,i.patchFetch)({serverHooks:d,staticGenerationAsyncStorage:m})}n()}catch(e){n(e)}})},64991:(e,t,r)=>{r.a(e,async(e,n)=>{try{r.r(t),r.d(t,{GET:()=>c,POST:()=>p});var s=r(71309),a=r(93389),i=r(1035),o=r(47392),l=r(16910),u=e([i,o,l]);[i,o,l]=u.then?(await u)():u;let m=a.Ry({templateId:a.Z_().min(1),scheduledDate:a.Z_().min(1),status:a.Z_().optional().default("pending"),assignedTo:a.Z_().optional().nullable()});async function c(e){let{user:t,response:r}=await (0,o.P)(e);if(r)return r;if(!t||!(0,l.Fs)(t,"maintenance:read"))return s.NextResponse.json({error:"Forbidden"},{status:403});try{let r=(0,i.JF)(),{searchParams:n}=e.nextUrl,a=parseInt(n.get("page")||"1",10),o=parseInt(n.get("limit")||"12",10),u=(a-1)*o,c=r``;!0===t.role.permissions.all?c=r``:(0,l.Fs)(t,"maintenance:read:all")||(c=r`AND mo.assigned_to = ${t.id}`);let p=await r`
+      SELECT 
+        mo.*,
+        mt.title as template_title,
+        mt.site_location as template_site_location,
+        mt.description as template_description,
+        au.first_name as assigned_first_name, au.last_name as assigned_last_name
+      FROM maintenance_occurrences mo
+      JOIN maintenance_templates mt ON mo.template_id = mt.id
+      LEFT JOIN users au ON mo.assigned_to = au.id
+      WHERE mt.is_active = true
+      ${c}
+      ORDER BY mo.scheduled_date ASC
+      LIMIT ${o}
+      OFFSET ${u}
+    `,[{count:m}]=await r`
+      SELECT COUNT(*) as count
+      FROM maintenance_occurrences mo
+      JOIN maintenance_templates mt ON mo.template_id = mt.id
+      WHERE mt.is_active = true
+      ${c}
+    `,d=p.map(e=>{let t=(0,i.zW)(e);return t.templateTitle&&(t.template={id:t.templateId,title:t.templateTitle,siteLocation:t.templateSiteLocation,description:t.templateDescription}),t.assignedFirstName&&(t.assignedUser={id:t.assignedTo,firstName:t.assignedFirstName,lastName:t.assignedLastName}),delete t.templateTitle,delete t.templateSiteLocation,delete t.templateDescription,delete t.assignedFirstName,delete t.assignedLastName,t});return s.NextResponse.json({occurrences:d,total:parseInt(m,10),page:a,limit:o})}catch(e){return s.NextResponse.json({error:"Internal server error"},{status:500})}}async function p(e){let{user:t,response:r}=await (0,o.P)(e);if(r)return r;if(!t||!(0,l.Fs)(t,"maintenance:create"))return s.NextResponse.json({error:"Forbidden"},{status:403});try{let t=await e.json(),r=m.safeParse(t);if(!r.success)return s.NextResponse.json({error:r.error.errors},{status:400});let n=r.data,a=(0,i.JF)(),[o]=await a`
+      INSERT INTO maintenance_occurrences (
+        template_id, scheduled_date, status, assigned_to
+      ) VALUES (
+        ${n.templateId},
+        ${n.scheduledDate},
+        ${n.status||"pending"},
+        ${n.assignedTo||null}
+      ) RETURNING *
+    `;return s.NextResponse.json({id:o.id,message:"Maintenance occurrence created successfully"},{status:201})}catch(e){return s.NextResponse.json({error:"Internal server error"},{status:500})}}n()}catch(e){n(e)}})},47392:(e,t,r)=>{r.a(e,async(e,n)=>{try{r.d(t,{P:()=>o});var s=r(71309),a=r(16910),i=e([a]);async function o(e){let t=e.cookies.get("token")?.value;if(!t){let r=e.headers.get("authorization");r&&r.startsWith("Bearer ")&&(t=r.substring(7))}if(!t)return{user:null,response:s.NextResponse.json({error:"Unauthorized"},{status:401})};try{let e=(0,a.WX)(t);if(!e)return{user:null,response:s.NextResponse.json({error:"Unauthorized"},{status:401})};let r=await (0,a.GA)(e.userId);if(!r)return{user:null,response:s.NextResponse.json({error:"Unauthorized"},{status:401})};return{user:r}}catch(e){return console.error("API authentication error:",e),{user:null,response:s.NextResponse.json({error:"Unauthorized"},{status:401})}}}a=(i.then?(await i)():i)[0],n()}catch(e){n(e)}})},16910:(e,t,r)=>{r.a(e,async(e,n)=>{try{r.d(t,{CX:()=>f,Fs:()=>g,GA:()=>d,Gv:()=>c,RA:()=>p,WX:()=>m,c_:()=>u});var s=r(93981),a=r(67390),i=r.n(a),o=r(1035),l=e([o]);o=(l.then?(await l)():l)[0];let _=process.env.JWT_SECRET||"your-secret-key-change-in-production";async function u(e){return s.ZP.hash(e,12)}async function c(e,t){console.log("[Auth Debug] Verifying password...");let r=await s.ZP.compare(e,t);return console.log(`[Auth Debug] Password verification result: ${r}`),r}function p(e){console.log(`[Auth Debug] Generating token for userId: ${e}`);let t=i().sign({userId:e},_,{expiresIn:"7d"});return console.log(`[Auth Debug] Token generated (first 10 chars): ${t.substring(0,10)}...`),t}function m(e){try{return i().verify(e,_)}catch{return null}}async function d(e){try{let t=await (0,o.JF)()`
+      SELECT u.*, r.name as role_name, r.description as role_description, 
+             r.is_admin as role_is_admin, r.permissions as role_permissions
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE u.id = ${e} AND u.status = 'active'
+    `;if(0===t.length)return null;let r=(0,o.zW)(t[0]);return r.roleName&&(r.role={id:r.roleId,name:r.roleName,description:r.roleDescription,isAdmin:r.roleIsAdmin,permissions:"string"==typeof r.rolePermissions?JSON.parse(r.rolePermissions):r.rolePermissions}),r}catch(e){return console.error("Error getting user by ID:",e),null}}async function f(e){try{console.log(`[Auth Debug] Attempting to get user by email: ${e}`);let t=await (0,o.JF)()`
+      SELECT u.*, r.name as role_name, r.description as role_description, 
+             r.is_admin as role_is_admin, r.permissions as role_permissions
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE u.email = ${e}
+    `;if(0===t.length)return console.log(`[Auth Debug] User with email ${e} not found.`),null;let r=(0,o.zW)(t[0]);return console.log(`[Auth Debug] User found: ${r.email}, Status: ${r.status}`),r.roleName&&(r.role={id:r.roleId,name:r.roleName,description:r.roleDescription,isAdmin:r.roleIsAdmin,permissions:r.rolePermissions}),r}catch(e){return console.error("Error getting user by email:",e),null}}function g(e,t){if(!e.role||!e.role.permissions)return!1;if(!0===e.role.permissions.all)return!0;let r=t.split(":"),n=e.role.permissions;for(let e=0;e<r.length;e++){let t=r[e],s=r.slice(e).join(":");if(!0===n[s])return!0;if(void 0===n[t])break;if("boolean"==typeof n[t])return n[t];n=n[t]}return!1}n()}catch(e){n(e)}})},1035:(e,t,r)=>{r.a(e,async(e,n)=>{try{r.d(t,{JF:()=>o,_B:()=>c,zW:()=>function e(t){if(null==t)return t;if(Array.isArray(t))return t.map(e);if("object"!=typeof t||t instanceof Date)return t;let r={};for(let[n,s]of Object.entries(t))r[n.replace(/_([a-z])/g,(e,t)=>t.toUpperCase())]=e(s);return r}});var s=r(53524),a=r(23907),i=e([a]);a=(i.then?(await i)():i)[0];let u=globalThis,c=function(){if(!u.prisma){if(!process.env.DATABASE_URL)throw Error("DATABASE_URL environment variable is required for PrismaClient");let e=new a.g({connectionString:process.env.DATABASE_URL});u.prisma=new s.PrismaClient({adapter:e})}return u.prisma}();function o(){if(!process.env.DATABASE_URL)throw Error("DATABASE_URL environment variable is required");return(e,...t)=>c.$queryRaw(e,...t)}function l(e){if(null==e)return e;if(Array.isArray(e))return e.map(l);if("object"!=typeof e)return e;let t={};for(let[r,n]of Object.entries(e))t[r.replace(/[A-Z]/g,e=>`_${e.toLowerCase()}`)]=l(n);return t}n()}catch(e){n(e)}})}};var t=require("../../../../webpack-runtime.js");t.C(e);var r=e=>t(t.s=e),n=t.X(0,[9379,4739,1309,3981,7390,3389],()=>r(32275));module.exports=n})();

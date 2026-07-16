@@ -52,20 +52,23 @@ export async function GET(req: Request) {
     const totalUsersResult = await sql`SELECT COUNT(*) as count FROM users`;
     const pendingMaintenanceResult = await sql`SELECT COUNT(*) as count FROM maintenance_occurrences WHERE status != 'completed' AND status != 'missed'`;
 
+    const toNum = (v: any): number => v != null ? Number(v) : 0;
+
     const stats = {
-      totalJobsValue: totalJobsValueResult[0].total_value || 0,
-      totalRevenue: completedJobsValueResult[0].total_value || 0,
-      maintenanceRevenueThisMonth: maintenanceRevenueResult[0].total_value || 0,
-      spilloverRevenue: spilloverRevenueResult[0].spillover_value || 0,
-      totalJobs: totalJobsResult[0].count || 0,
-      activeJobs: activeJobsResult[0].count || 0,
-      completedJobs: completedJobsResult[0].count || 0,
-      totalUsers: totalUsersResult[0].count || 0,
-      pendingMaintenance: pendingMaintenanceResult[0].count || 0,
+      totalJobsValue: toNum(totalJobsValueResult[0].total_value),
+      totalRevenue: toNum(completedJobsValueResult[0].total_value),
+      maintenanceRevenueThisMonth: toNum(maintenanceRevenueResult[0].total_value),
+      spilloverRevenue: toNum(spilloverRevenueResult[0].spillover_value),
+      totalJobs: toNum(totalJobsResult[0].count),
+      activeJobs: toNum(activeJobsResult[0].count),
+      completedJobs: toNum(completedJobsResult[0].count),
+      totalUsers: toNum(totalUsersResult[0].count),
+      pendingMaintenance: toNum(pendingMaintenanceResult[0].count),
     };
 
     return NextResponse.json(stats);
   } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('[Dashboard Stats Error]', error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

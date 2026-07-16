@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "RAYON_NUM_THREADS=1 npm run build",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",

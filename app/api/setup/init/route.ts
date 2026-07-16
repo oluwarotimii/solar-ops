@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
           phone VARCHAR(20),
           role_id UUID REFERENCES roles(id),
           status VARCHAR(20) DEFAULT 'active',
-          referral_points INTEGER DEFAULT 0 NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
@@ -67,8 +66,7 @@ export async function POST(request: NextRequest) {
           is_archived BOOLEAN DEFAULT FALSE,
           archived_at TIMESTAMP WITH TIME ZONE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          referrer_id UUID REFERENCES users(id) ON DELETE SET NULL
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `;
     

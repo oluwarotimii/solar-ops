@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
-import { isSetupComplete } from '@/lib/setup-check';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, origin } = request.nextUrl;
   
   // Skip middleware for API routes and static assets
   if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.')) {
     return NextResponse.next();
   }
   
-  // Check if setup is complete
-  const setupComplete = await isSetupComplete();
+  // Check if setup is complete via API (Edge-compatible)
+  let setupComplete = false;
+  try {
+    const res = await fetch(`${origin}/api/setup/status`);
+    const data = await res.json();
+    setupComplete = data.setupComplete;
+  } catch {}
   
   // If setup is complete and user is trying to access setup page, redirect to login
   if (setupComplete && pathname === '/setup') {
